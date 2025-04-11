@@ -1,0 +1,11 @@
+{
+  "display_name": "text-to-image-converter",
+  "loading_order": 1,
+  "requires": [],
+  "optional": [],
+  "js": "index.js",
+  "css": "style.css",
+  "author": "xaxaxaxakk",
+  "version": "1.2.4",
+  "homePage": ""
+}

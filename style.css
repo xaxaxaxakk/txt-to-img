@@ -1,0 +1,668 @@
+* {
+  margin: 0;
+  padding: 0;
+  font-family: "Pretendard-Regular", sans-serif;
+  box-sizing: border-box;
+}
+::-webkit-scrollbar {
+  width: 4px;
+}
+body {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);
+}
+
+#text-to-image {
+  max-width: 600px;
+  margin: 20px auto;
+  padding: 0 15px;
+}
+
+.text-to-image-converter-settings {
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+.inline-drawer-content:not(:first-child) > .flex-container {
+  margin-top: 20px !important;
+}
+
+.flex-container {
+  margin-bottom: 15px;
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+h4 {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  color: #2c3e50;
+  font-size: 18px;
+  gap: 8px;
+}
+h5 {
+  margin: 15px 0;
+}
+#import_preset {
+  margin-left: auto;
+}
+#preset_name {
+  width: calc(100% - 60px) !important;
+  height: 45px !important;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  color: #2c3e50;
+  font-size: 14px;
+  backdrop-filter: blur(5px);
+}
+
+.preset-control {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+#preset_selector {
+  width: calc(100% - 170px) !important;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  color: #2c3e50;
+  font-size: 14px;
+  backdrop-filter: blur(5px);
+}
+.text-to-image-btn {
+  margin-left: auto;
+  margin-left: 4px;
+  width: 45px !important;
+  height: 45px !important;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
+  color: #2c3e50;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.text-to-image-btn:hover {
+  background: #a29bfe;
+  color: #fff;
+}
+
+.text-to-image-btn.clear {
+  background: rgba(255, 105, 97, 0.7);
+}
+
+.text-to-image-btn.clear:hover {
+  background: #ff6f61;
+  color: #fff;
+}
+
+#text_to_image {
+  width: 100%;
+  min-height: 150px;
+  margin-bottom: 10px;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  color: #2c3e50;
+  font-size: 14px;
+  backdrop-filter: blur(5px);
+  resize: vertical;
+}
+
+#clear_text_btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 105, 97, 0.7);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s;
+  gap: 8px;
+}
+
+#clear_text_btn:hover {
+  background: #ff6f61;
+}
+
+.flex-container:has(> .replacer_box) {
+  display: flex;
+  justify-content: space-between !important;
+  flex-wrap: wrap;
+}
+.replacer_box {
+  width: 48%;
+  margin-bottom: 10px;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  color: #2c3e50;
+  font-size: 14px;
+  backdrop-filter: blur(5px);
+}
+.replace-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+#clear_replace {
+  margin-right: auto;
+}
+
+.tab-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 10px;
+}
+.tab-btn {
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  height: 45px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
+  color: #2c3e50;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.tab-btn.active {
+  background: #a29bfe;
+  color: white;
+}
+.tab-content {
+  display: none;
+}
+.tab-content.active {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.tab-content h4 {
+  width: 100%;
+  margin-bottom: 10px;
+}
+.tab-content select,
+.tab-content input[type="text"],
+.tab-content input[type="color"] {
+  width: calc(100% - 100px);
+  height: 40px;
+  margin: 5px 0 10px;
+  padding: 10px;
+  border: none !important;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  color: #2c3e50;
+  font-size: 14px;
+  backdrop-filter: blur(5px);
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+
+  &::-webkit-color-swatch {
+    border: 0px !important;
+    border-radius: 10px;
+  }
+}
+.tab-content input[type="range"] {
+  width: 100%;
+  margin: 5px 0 10px;
+  accent-color: #a29bfe;
+}
+.tab-content label {
+  width: 60px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  color: #2c3e50;
+  font-size: 14px;
+}
+
+.bgColor {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+#use_background_color {
+  width: 20px !important;
+  height: 20px !important;
+  border-radius: 50% !important;
+}
+#background_color {
+  width: calc(100% - 50px);
+}
+
+.background-gallery {
+  display: grid;
+  width: 100%;
+  padding: 10px;
+  max-height: 300px;
+  margin-top: 10px;
+  grid-template-columns: repeat(4, 1fr);
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 5px;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.bg-image-item {
+  position: relative;
+  width: 100%;
+  padding-top: 100%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  box-sizing: border-box;
+
+  & .delete-bg-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    font-size: 16px;
+    line-height: 18px;
+    text-align: center;
+    opacity: 0;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  &:hover .delete-bg-btn {
+    opacity: 1;
+  }
+}
+
+.bg-image-item.selected {
+  border-color: #a29bfe;
+}
+
+.bg-image-item img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.custom-bg {
+  width: 100% !important;
+  margin-top: 30px;
+}
+.custom-bg-upload {
+  width: 100%;
+}
+.custom-bg-upload label {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.custom-bg-upload label:hover {
+  background: #a29bfe;
+  color: #fff;
+}
+
+.image-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  &:empty {
+    display: none;
+  }
+}
+.flex-container:has(> .image-preview:empty) h4 {
+  margin: 0 !important;
+}
+.image-preview-item {
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.image-preview-item img {
+  max-width: 100%;
+  border-radius: 10px;
+}
+
+.download-btn {
+  display: block;
+  width: 150px;
+  margin: 10px auto;
+  padding: 8px;
+  border: none;
+  border-radius: 10px;
+  background: #a29bfe;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.download-btn:hover {
+  background: #6b7280;
+}
+
+@media (max-width: 620px) {
+  #text-to-image {
+    margin: 0 auto !important;
+    padding: 0 !important;
+  }
+  .tab-btn {
+    flex: unset !important;
+    width: 48%;
+  }
+  .preset-control:has(#preset_selector) {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px 0;
+  }
+  #preset_selector {
+    width: 100% !important;
+  }
+}
+
+@font-face {
+  font-family: "Pretendard-Regular";
+  font-weight: 400;
+  src: url("https://fastly.jsdelivr.net/gh/Project-Noonnu/noonfonts_2107@1.1/Pretendard-Regular.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "SUIT-Regular";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_suit@1.0/SUIT-Regular.woff2")
+    format("woff2");
+  font-style: normal;
+}
+@font-face {
+  font-family: "Chosunilbo_myungjo";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/Chosunilbo_myungjo.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "ChosunSm";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@1.1/ChosunSm.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "ChosunGu";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@1.0/ChosunGu.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "ChosunSg";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@1.0/ChosunSg.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "RIDIBatang";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_twelve@1.0/RIDIBatang.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "NotoSerifKR";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_two@1.0/NotoSerifKR.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "GangwonEdu_OTFBoldA";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2201-2@1.0/GangwonEdu_OTFBoldA.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "MaruBuriSemiBold";
+  src: url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.eot);
+  src: url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.eot?#iefix)
+      format("embedded-opentype"),
+    url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff2)
+      format("woff2"),
+    url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff)
+      format("woff"),
+    url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.ttf)
+      format("truetype");
+}
+@font-face {
+  font-family: "SunBatang-Light";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_eight@1.0/SunBatang-Light.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "S-CoreDream-3Light";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-3Light.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "KyoboHandwriting2020A";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2112@1.0/KyoboHandwriting2020A.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "Ownglyph_corncorn-Rg";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2412-1@1.0/Ownglyph_corncorn-Rg.woff2")
+    format("woff2");
+  font-style: normal;
+}
+@font-face {
+  font-family: "SDKukdetopokki";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_two@1.0/SDKukdetopokki.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "MapoGoldenPier";
+  font-weight: normal;
+  src: url("https://gcore.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/MapoGoldenPierA.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "Iropke Batang";
+  font-weight: 400;
+  font-style: normal;
+  src: url(//cdn.jsdelivr.net/font-iropke-batang/1.2/IropkeBatangM.eot);
+  src: url(//cdn.jsdelivr.net/font-iropke-batang/1.2/IropkeBatangM.eot?#iefix)
+      format("embedded-opentype"),
+    url(//cdn.jsdelivr.net/font-iropke-batang/1.2/IropkeBatangM.woff) format("woff"),
+    url(//cdn.jsdelivr.net/font-iropke-batang/1.2/IropkeBatangM.ttf) format("truetype");
+}
+@font-face {
+  font-family: "Jeju Myeongjo";
+  font-weight: 400;
+  font-style: normal;
+  src: url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.eot);
+  src: url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.eot?#iefix)
+      format("embedded-opentype"),
+    url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.woff2) format("woff2"),
+    url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.woff) format("woff"),
+    url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.ttf) format("truetype");
+}
+@font-face {
+  font-family: "Father_loveletter";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/naverfont_03@1.0/Father_loveletter.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "KyoboHand";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@1.0/KyoboHand.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "Danjo-bold-Regular";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2307-1@1.1/Danjo-bold-Regular.woff2")
+    format("woff2");
+  font-style: normal;
+}
+@font-face {
+  font-family: "Ownglyph_wiseelist-Rg";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2501-1@1.1/Ownglyph_wiseelist-Rg.woff2")
+    format("woff2");
+  font-style: normal;
+}
+@font-face {
+  font-family: "Ownglyph_ParkDaHyun";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2411-3@1.0/Ownglyph_ParkDaHyun.woff2")
+    format("woff2");
+  font-style: normal;
+}
+@font-face {
+  font-family: "Uiyeun";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2105@1.1/Uiyeun.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "Yoonwoo";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2105@1.1/Yoonwoo.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "Ownglyph_ryuttung-Rg";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2405-2@1.0/Ownglyph_ryuttung-Rg.woff2")
+    format("woff2");
+  font-style: normal;
+}
+@font-face {
+  font-family: "GowunDodum-Regular";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2108@1.1/GowunDodum-Regular.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "SF_HambakSnow";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2106@1.1/SF_HambakSnow.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "LeeSeoyun";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2202-2@1.0/LeeSeoyun.woff")
+    format("woff");
+  font-style: normal;
+}
+@font-face {
+  font-family: "ANDONG264TTF";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2502-1@1.0/ANDONG264TTF.woff2")
+    format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "SimKyungha";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2202-2@1.0/SimKyungha.woff")
+    format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "KCC-Sonkeechung";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2212@1.0/KCC-Sonkeechung.woff2")
+    format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "KyoboHandwriting2023wsa";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2404-2@1.0/KyoboHandwriting2023wsa.woff2")
+    format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Ownglyph_kimkonghae";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2408@1.0/Ownglyph_kimkonghae.woff2")
+    format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Pretty_Left_handed";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/naverfont_09@1.0/Pretty_Left_handed.woff")
+    format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "mom_to_daughter";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/naverfont_08@1.0/mom_to_daughter.woff")
+    format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Saying_tobe_strong";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/naverfont_09@1.0/Saying_tobe_strong.woff")
+    format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
