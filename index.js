@@ -632,8 +632,9 @@ function replaceWords() {
 function findKoreanWord(text, originalWord, replacementWord) {
   const originalLower = originalWord.toLowerCase();
   const verbEndingPattern = /^[자고며다요네죠게서써도구나군요까봐서라야지거든만큼]/;
-  const particlePattern = /^(?:[은는이가의을를로으로과와께에게에서한테하고랑이랑도이도만까지마저조차부터밖에야말로서처럼보다]|으로)/;
-  
+  const particlePattern =
+    /^(?:[은는이가의을를로으로과와께에게에서한테하고랑이랑도이도만까지마저조차부터밖에야말로서처럼보다]|으로)/;
+
   const wordBoundaryPattern = /[\s\.,;:!?\(\)\[\]{}"'<>\/\\\-_=\+\*&\^%\$#@~`|]/;
   let result = "";
 
@@ -648,7 +649,7 @@ function findKoreanWord(text, originalWord, replacementWord) {
       const nextChar = text[endPos] || "";
 
       const isVerbEnding = verbEndingPattern.test(nextChar);
-      
+
       const isEndBoundary =
         endPos === text.length ||
         wordBoundaryPattern.test(nextChar) ||
@@ -656,33 +657,27 @@ function findKoreanWord(text, originalWord, replacementWord) {
         !/[가-힣a-zA-Z0-9]/.test(nextChar);
 
       if (isStartBoundary && isEndBoundary && !isVerbEnding) {
-
         let particle = "";
         let nextPart = text.slice(endPos);
-        
+
         const particleMatch = nextPart.match(particlePattern);
         if (particleMatch && nextPart.startsWith(particleMatch[0])) {
           particle = particleMatch[0];
-          
+
           const hasEndConsonant = hasConsonantLetter(replacementWord);
-          
-          if (particle === '가' && hasEndConsonant) particle = '이';
-          else if (particle === '이' && !hasEndConsonant) particle = '가';
-          
-          else if (particle === '는' && hasEndConsonant) particle = '은';
-          else if (particle === '은' && !hasEndConsonant) particle = '는';
-          
-          else if (particle === '를' && hasEndConsonant) particle = '을';
-          else if (particle === '을' && !hasEndConsonant) particle = '를';
-          
-          else if (particle === '와' && hasEndConsonant) particle = '과';
-          else if (particle === '과' && !hasEndConsonant) particle = '와';
-          
-          else if (particle === '랑' && hasEndConsonant) particle = '이랑';
-          else if (particle === '이랑' && !hasEndConsonant) particle = '랑';
-          
-          else if (particle === '로' && hasEndConsonant) particle = '으로';
-          else if (particle === '으로' && !hasEndConsonant) particle = '로';
+
+          if (particle === "가" && hasEndConsonant) particle = "이";
+          else if (particle === "이" && !hasEndConsonant) particle = "가";
+          else if (particle === "는" && hasEndConsonant) particle = "은";
+          else if (particle === "은" && !hasEndConsonant) particle = "는";
+          else if (particle === "를" && hasEndConsonant) particle = "을";
+          else if (particle === "을" && !hasEndConsonant) particle = "를";
+          else if (particle === "와" && hasEndConsonant) particle = "과";
+          else if (particle === "과" && !hasEndConsonant) particle = "와";
+          else if (particle === "랑" && hasEndConsonant) particle = "이랑";
+          else if (particle === "이랑" && !hasEndConsonant) particle = "랑";
+          else if (particle === "로" && hasEndConsonant) particle = "으로";
+          else if (particle === "으로" && !hasEndConsonant) particle = "로";
         }
 
         result += replacementWord + particle;
@@ -696,7 +691,7 @@ function findKoreanWord(text, originalWord, replacementWord) {
 }
 function hasConsonantLetter(word) {
   if (!word || word.length === 0) return false;
-  
+
   const lastChar = word.charAt(word.length - 1);
   if (/[가-힣]/.test(lastChar)) {
     const charCode = lastChar.charCodeAt(0) - 44032;
@@ -786,22 +781,57 @@ function enableMarkdown(text) {
   let currentText = "";
   let bold = false;
   let italic = false;
+  let fontColor = null;
+  let bgColor = null;
+  let i = 0;
+  let colorHighlight = false;
 
-  for (let i = 0; i < text.length; i++) {
+  while (i < text.length) {
     if (text.slice(i, i + 2) === "**") {
-      if (currentText) spans.push({text: currentText, bold, italic});
+      if (currentText) spans.push({text: currentText, bold, italic, fontColor, bgColor});
       bold = !bold;
       currentText = "";
-      i++;
-    } else if (text[i] === "*" && text[i + 1] !== "*") {
-      if (currentText) spans.push({text: currentText, bold, italic});
+      i += 2;
+    } else if (text[i] === "*" && (i + 1 >= text.length || text[i + 1] !== "*")) {
+      if (currentText) spans.push({text: currentText, bold, italic, fontColor, bgColor});
       italic = !italic;
       currentText = "";
+      i++;
+    } else if (text.slice(i, i + 2) === "=(" && i + 2 < text.length) {
+      if (currentText) spans.push({text: currentText, bold, italic, fontColor, bgColor});
+      currentText = "";
+      colorHighlight = true;
+
+      i += 2;
+      let colorPick = "";
+      while (i < text.length && text[i] !== ")") {
+        colorPick += text[i];
+        i++;
+      }
+      if (i < text.length) i++;
+
+      const colorMatch = colorPick.match(/^(#[0-9a-fA-F]{6})?(?:\|(#[0-9a-fA-F]{6})?)?$/);
+      if (colorMatch) {
+        fontColor = colorMatch[1] || null;
+        bgColor = colorMatch[2] || null;
+      } else {
+        currentText += "=(" + colorPick + ")";
+        colorHighlight = false;
+      }
+    } else if (text[i] === "=" && colorHighlight) {
+      if (currentText) spans.push({text: currentText, bold, italic, fontColor, bgColor});
+      fontColor = null;
+      bgColor = null;
+      currentText = "";
+      colorHighlight = false;
+      i++;
     } else {
       currentText += text[i];
+      i++;
     }
   }
-  if (currentText) spans.push({text: currentText, bold, italic});
+
+  if (currentText) spans.push({text: currentText, bold, italic, fontColor, bgColor});
   return spans;
 }
 
@@ -827,56 +857,65 @@ function wrappingTexts(text) {
         currentPage = [];
         lineCount = 0;
       } else if (currentPage.length > 0) {
-        currentPage.push([{text: "", bold: false, italic: false}]);
+        currentPage.push([{text: "", bold: false, italic: false, fontColor: null, bgColor: null}]);
         lineCount++;
       }
       return;
     }
 
-    const paragraphLines = [];
+    const wrapLine = [];
     const spans = enableMarkdown(line);
     let currentLine = [];
     let currentLineText = "";
 
     spans.forEach((span) => {
-      span.text.split(" ").forEach((word) => {
-        const testText = currentLineText ? `${currentLineText} ${word}` : word;
+      const words = span.text.match(/\S+\s*|\s+/g) || [];
+
+      words.forEach((word) => {
+        const testText = currentLineText + word;
         ctx.font = `${
           span.bold ? "bold" : span.italic ? "italic" : extension_settings[extensionName].fontWeight
         } ${fontSize}px ${extension_settings[extensionName].fontFamily}`;
 
         if (ctx.measureText(testText).width <= maxWidth) {
           currentLineText = testText;
-          if (word) {
-            currentLine.push({text: word, bold: span.bold, italic: span.italic});
-          }
+          currentLine.push({
+            text: word,
+            bold: span.bold,
+            italic: span.italic,
+            fontColor: span.fontColor,
+            bgColor: span.bgColor,
+          });
         } else {
           if (currentLine.length) {
-            paragraphLines.push(currentLine);
+            wrapLine.push(currentLine);
           }
-          currentLine = [];
-          if (word) {
-            currentLine.push({text: word, bold: span.bold, italic: span.italic});
-          }
+          currentLine = [
+            {
+              text: word,
+              bold: span.bold,
+              italic: span.italic,
+              fontColor: span.fontColor,
+              bgColor: span.bgColor,
+            },
+          ];
           currentLineText = word;
         }
       });
     });
 
     if (currentLine.length) {
-      paragraphLines.push(currentLine);
+      wrapLine.push(currentLine);
     }
-
-    const paragraphLineCount = paragraphLines.length;
-
-    if (lineCount + paragraphLineCount > maxLines && currentPage.length > 0) {
+    const wrapLineCount = wrapLine.length;
+    if (lineCount + wrapLineCount > maxLines && currentPage.length > 0) {
       pages.push(currentPage);
       currentPage = [];
       lineCount = 0;
     }
 
-    currentPage = currentPage.concat(paragraphLines);
-    lineCount += paragraphLineCount;
+    currentPage = currentPage.concat(wrapLine);
+    lineCount += wrapLineCount;
   });
 
   if (currentPage.length) {
@@ -908,12 +947,7 @@ function generateTextImage(chunk, index) {
   const settings = extension_settings[extensionName];
 
   const drawText = () => {
-    ctx.fillStyle = settings.fontColor || "#000000";
     const strokeWidth = parseFloat(settings.strokeWidth) || 0;
-    if (strokeWidth > 0) {
-      ctx.strokeStyle = ctx.fillStyle;
-      ctx.lineWidth = strokeWidth;
-    }
 
     const totalTextHeight = chunk.length * lineHeight;
     const footerHeight = 30;
@@ -922,7 +956,8 @@ function generateTextImage(chunk, index) {
       40 + lineHeight / 2
     );
 
-    ctx.fontAlign = settings.fontAlign || "left";
+    ctx.textAlign = settings.fontAlign || "left";
+
     chunk.forEach((line) => {
       let totalTextWidth = 0;
       line.forEach((span) => {
@@ -941,14 +976,42 @@ function generateTextImage(chunk, index) {
       } else {
         x = 40;
       }
+
       line.forEach((span) => {
         ctx.font = `${
           span.bold ? "bold" : span.italic ? "italic" : settings.fontWeight
         } ${fontSize}px ${settings.fontFamily}`;
+
+        ctx.fillStyle = span.fontColor || settings.fontColor || "#000000";
+        if (strokeWidth > 0) {
+          ctx.strokeStyle = ctx.fillStyle;
+          ctx.lineWidth = strokeWidth;
+        }
+
+        if (span.bgColor) {
+          ctx.fillStyle = span.bgColor;
+          const hightTexts = ctx.measureText(span.text);
+          const textWidth = hightTexts.width;
+          const textHeight = fontSize;
+
+          const paddingX = 2;
+          const paddingY = 2;
+          ctx.fillRect(
+            x - paddingX,
+            y - textHeight + paddingY,
+            textWidth + 2 * paddingX,
+            textHeight + 2 * paddingY
+          );
+
+          ctx.fillStyle = span.fontColor || settings.fontColor || "#000000";
+        }
+
         if (strokeWidth > 0) ctx.strokeText(span.text, x, y);
         ctx.fillText(span.text, x, y);
-        x += ctx.measureText(span.text + " ").width;
+
+        x += ctx.measureText(span.text).width;
       });
+
       y += lineHeight;
     });
   };
