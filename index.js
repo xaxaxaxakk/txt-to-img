@@ -631,8 +631,9 @@ function replaceWords() {
 }
 function findKoreanWord(text, originalWord, replacementWord) {
   const originalLower = originalWord.toLowerCase();
-  const josaPattern =
-    /[은는이가의을를로으로과와께에게에서한테하고랑이랑도이도만까지마저조차부터밖에야말로]|\([^()]*\)/g;
+  const verbEndingPattern = /^[자고며다요네죠게서써도구나군요까봐서라야지거든만큼]/;
+  const particlePattern = /^(?:[은는이가의을를로으로과와께에게에서한테하고랑이랑도이도만까지마저조차부터밖에야말로서처럼보다]|으로)/;
+  
   const wordBoundaryPattern = /[\s\.,;:!?\(\)\[\]{}"'<>\/\\\-_=\+\*&\^%\$#@~`|]/;
   let result = "";
 
@@ -644,24 +645,64 @@ function findKoreanWord(text, originalWord, replacementWord) {
       const isStartBoundary = i === 0 || wordBoundaryPattern.test(text[i - 1]);
 
       const endPos = i + originalWord.length;
+      const nextChar = text[endPos] || "";
+
+      const isVerbEnding = verbEndingPattern.test(nextChar);
+      
       const isEndBoundary =
         endPos === text.length ||
-        wordBoundaryPattern.test(text[endPos]) ||
-        josaPattern.test(text[endPos]);
+        wordBoundaryPattern.test(nextChar) ||
+        particlePattern.test(nextChar) ||
+        !/[가-힣a-zA-Z0-9]/.test(nextChar);
 
-      if (isStartBoundary && isEndBoundary) {
-        const restStart = endPos;
-        const josaMatch = text.slice(restStart).match(josaPattern);
-        const josa = josaMatch && josaMatch[0].startsWith(text[restStart]) ? josaMatch[0] : "";
+      if (isStartBoundary && isEndBoundary && !isVerbEnding) {
 
-        result += replacementWord + josa;
-        i = restStart + josa.length - 1;
+        let particle = "";
+        let nextPart = text.slice(endPos);
+        
+        const particleMatch = nextPart.match(particlePattern);
+        if (particleMatch && nextPart.startsWith(particleMatch[0])) {
+          particle = particleMatch[0];
+          
+          const hasEndConsonant = hasConsonantLetter(replacementWord);
+          
+          if (particle === '가' && hasEndConsonant) particle = '이';
+          else if (particle === '이' && !hasEndConsonant) particle = '가';
+          
+          else if (particle === '는' && hasEndConsonant) particle = '은';
+          else if (particle === '은' && !hasEndConsonant) particle = '는';
+          
+          else if (particle === '를' && hasEndConsonant) particle = '을';
+          else if (particle === '을' && !hasEndConsonant) particle = '를';
+          
+          else if (particle === '와' && hasEndConsonant) particle = '과';
+          else if (particle === '과' && !hasEndConsonant) particle = '와';
+          
+          else if (particle === '랑' && hasEndConsonant) particle = '이랑';
+          else if (particle === '이랑' && !hasEndConsonant) particle = '랑';
+          
+          else if (particle === '로' && hasEndConsonant) particle = '으로';
+          else if (particle === '으로' && !hasEndConsonant) particle = '로';
+        }
+
+        result += replacementWord + particle;
+        i = endPos + particle.length - 1;
         continue;
       }
     }
     result += text[i];
   }
   return result;
+}
+function hasConsonantLetter(word) {
+  if (!word || word.length === 0) return false;
+  
+  const lastChar = word.charAt(word.length - 1);
+  if (/[가-힣]/.test(lastChar)) {
+    const charCode = lastChar.charCodeAt(0) - 44032;
+    return charCode % 28 !== 0;
+  }
+  return false;
 }
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
