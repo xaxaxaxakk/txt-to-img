@@ -1267,4 +1267,8 @@ jQuery(async () => {
   $("#clear_replace").on("click", () => {
     $(".replacer_box").val("");
   });
+
+  $("#how_to_use").on("click", () => {
+    $(".how_to_use_box").slideToggle();
+  });
 });

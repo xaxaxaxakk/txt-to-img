@@ -4,13 +4,11 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>깡갤 로그 발췌</title>
     <link
       rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    />
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
     <link type="text/css" rel="stylesheet" href="./style.css" />
@@ -18,6 +16,58 @@
     <script src="./etc.js"></script>
   </head>
   <body id="text-to-image">
+    <div id="how_to_use">
+      <i class="fa-solid fa-lightbulb"></i>
+      사용법 (v1.2.5 기준)
+    </div>
+    <div class="how_to_use_box">
+      <span>🔹 각종 옵션들을 설정한 다음 미리보기 확인 후 다운로드</span>
+      <span>🔹 설정한 옵션을 계속 사용하고자 한다면 프리셋에 저장하기</span>
+      <span>
+        🔹 챗에 추가된 카메라 버튼 사용 방법 (자동 발췌 & 다운로드)
+        <span>🔔 미리 적용시킬 프리셋으로 바꿔두기</span>
+        <span>
+          🌼
+          <b>전체 발췌:</b>
+          드래그 없이 버튼만 클릭
+        </span>
+        <span>
+          🌼
+          <b>특정 텍스트 발췌:</b>
+          부분 드래그 후 버튼 클릭 👉 드래그 취소 및 15초 지났을 때 버튼을 누르지 않으면 리셋됨
+        </span>
+        <span class="desc">
+          📌 PC에서는 각각의 이미지가 순차적으로 다운로드 되고, 모바일에서는 이미지들이 새 탭으로 뜸
+          <br />
+          👉 브라우저 팝업 허용하기
+        </span>
+      </span>
+      <span>
+        🔹 하이라이트 기능 추가
+        <span>
+          - 강조하고자 하는 문구를
+          <b>= =</b>
+          로 감싸고,
+          <b>(#글씨색상|#배경색상)</b>
+          코드를 추가하여 형광펜 표시할 수 있음.
+        </span>
+        <span>
+          - 색상코드는
+          <b>#ffffff</b>
+          와 같은 여섯자리 헥스코드여야함. #ffffff80, rgb() 이런거 안됨
+        </span>
+        <span>
+          ✨ 예시문 (입력칸에 붙여넣어서 결과 확인해보기):
+          <br />
+          =(#000000|#ffffff)테스트를 위해 입력된 문구=입니다. 특정 텍스트에 **색상**과 *배경색*을
+          지정하여 =(#000000|#eeee22)강조= 효과를 줄 수 있습니다. =(#000000|#ffffff)첫번째
+          색상코드는 글씨색, 두번째 색상코드는 배경색=입니다.
+          <br />
+          <br />
+          =(#eaf107)글씨색만 적용=할 수도 있고, =(|#207c85)배경색만 적용=할 수도 있음
+        </span>
+      </span>
+    </div>
     <div class="text-to-image-converter-settings">
       <div class="inline-drawer">
         <div class="inline-drawer-content">
@@ -76,56 +126,48 @@
                 type="text"
                 id="original_word_1"
                 class="replacer_box"
-                placeholder="원래 단어"
-              />
+                placeholder="원래 단어" />
               <input
                 type="text"
                 id="replacement_word_1"
                 class="replacer_box"
-                placeholder="바꿀 단어"
-              />
+                placeholder="바꿀 단어" />
             </div>
             <div class="flex-container">
               <input
                 type="text"
                 id="original_word_2"
                 class="replacer_box"
-                placeholder="원래 단어"
-              />
+                placeholder="원래 단어" />
               <input
                 type="text"
                 id="replacement_word_2"
                 class="replacer_box"
-                placeholder="바꿀 단어"
-              />
+                placeholder="바꿀 단어" />
             </div>
             <div class="flex-container">
               <input
                 type="text"
                 id="original_word_3"
                 class="replacer_box"
-                placeholder="원래 단어"
-              />
+                placeholder="원래 단어" />
               <input
                 type="text"
                 id="replacement_word_3"
                 class="replacer_box"
-                placeholder="바꿀 단어"
-              />
+                placeholder="바꿀 단어" />
             </div>
             <div class="flex-container">
               <input
                 type="text"
                 id="original_word_4"
                 class="replacer_box"
-                placeholder="원래 단어"
-              />
+                placeholder="원래 단어" />
               <input
                 type="text"
                 id="replacement_word_4"
                 class="replacer_box"
-                placeholder="바꿀 단어"
-              />
+                placeholder="바꿀 단어" />
             </div>
             <div class="replace-buttons">
               <button id="clear_replace" class="text-to-image-btn clear">

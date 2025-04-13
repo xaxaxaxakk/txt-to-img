@@ -12,6 +12,61 @@ body {
   background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);
 }
 
+/* how to use */
+& #how_to_use {
+  display: inline-block;
+  margin-bottom: 20px;
+  padding: 10px 15px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  cursor: pointer !important;
+  transition: border-color 0.3s;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  &:hover {
+    border-color: #007bff;
+  }
+  & i {
+    margin-right: 5px;
+    color: #007bff;
+    vertical-align: top;
+  }
+}
+& .how_to_use_box {
+  display: none;
+  margin-bottom: 20px;
+  padding: 10px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+
+  & > span {
+    margin: 16px 0;
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 5px solid #007bff !important;
+  }
+  & span {
+    display: block !important;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.3);
+    font-size: 14px !important;
+    line-height: 1.3rem;
+
+    & > span {
+      margin-top: 10px;
+      padding: 13px;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.5);
+    }
+  }
+}
+
 #text-to-image {
   max-width: 600px;
   margin: 20px auto;
@@ -82,10 +137,10 @@ h5 {
   backdrop-filter: blur(5px);
 }
 .text-to-image-btn {
-  margin-left: auto;
-  margin-left: 4px;
   width: 45px !important;
   height: 45px !important;
+  margin-left: auto;
+  margin-left: 4px;
   border: none;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.7);
@@ -167,8 +222,8 @@ h5 {
 
 .tab-container {
   display: flex;
-  flex-wrap: wrap;
   justify-content: space-between;
+  flex-wrap: wrap;
   margin-bottom: 20px;
   gap: 10px;
 }
@@ -258,13 +313,13 @@ label {
 .background-gallery {
   display: grid;
   width: 100%;
-  padding: 10px;
   max-height: 300px;
   margin-top: 10px;
+  padding: 10px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.5);
   grid-template-columns: repeat(4, 1fr);
   overflow-y: auto;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 5px;
 
   &:empty {
     display: none;
@@ -386,8 +441,8 @@ label {
     width: 48%;
   }
   .preset-control:has(#preset_selector) {
-    flex-wrap: wrap;
     justify-content: flex-end;
+    flex-wrap: wrap;
     gap: 8px 0;
   }
   #preset_selector {
@@ -612,57 +667,57 @@ label {
 }
 @font-face {
   font-family: "ANDONG264TTF";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2502-1@1.0/ANDONG264TTF.woff2")
     format("woff2");
-  font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: "SimKyungha";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2202-2@1.0/SimKyungha.woff")
     format("woff");
-  font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: "KCC-Sonkeechung";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2212@1.0/KCC-Sonkeechung.woff2")
     format("woff2");
-  font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: "KyoboHandwriting2023wsa";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2404-2@1.0/KyoboHandwriting2023wsa.woff2")
     format("woff2");
-  font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: "Ownglyph_kimkonghae";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2408@1.0/Ownglyph_kimkonghae.woff2")
     format("woff2");
-  font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: "Pretty_Left_handed";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/naverfont_09@1.0/Pretty_Left_handed.woff")
     format("woff");
-  font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: "mom_to_daughter";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/naverfont_08@1.0/mom_to_daughter.woff")
     format("woff");
-  font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: "Saying_tobe_strong";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/naverfont_09@1.0/Saying_tobe_strong.woff")
     format("woff");
-  font-weight: normal;
   font-style: normal;
 }
