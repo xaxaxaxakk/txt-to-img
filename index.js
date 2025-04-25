@@ -637,9 +637,9 @@ function replaceWords() {
 
 function findKoreanWord(text, originalWord, replacementWord) {
   const originalLower = originalWord.toLowerCase();
-  const verbEndingPattern = /^[자고며다요네죠게서써도구나군요까봐서라야지거든만큼]/;
+  const verbEndingPattern = /^[자고며다요네죠게서써도구나군요까봐서라지거든만큼]/;
   const particlePattern =
-    /^(?:[은는이가의을를로으로과와께에게에서한테하고랑이랑도이도만까지마저조차부터밖에야말로서처럼보다]|으로)/;
+    /^(?:[은|는|이|가|아|야|의|을|를|로|으로|과|와|께|에게|에서|한테|하고|랑|이랑|도|이도|만|까지|마저|조차|부터|밖에|야말로|서|처럼|보다])/;
 
   const wordBoundaryPattern = /[\s\.,;:!?\(\)\[\]{}"'<>\/\\\-_=\+\*&\^%\$#@~`|]/;
   let result = "";
@@ -678,12 +678,14 @@ function findKoreanWord(text, originalWord, replacementWord) {
           else if (particle === "은" && !hasEndConsonant) particle = "는";
           else if (particle === "를" && hasEndConsonant) particle = "을";
           else if (particle === "을" && !hasEndConsonant) particle = "를";
+          else if (particle === "아" && !hasEndConsonant) particle = "야";
+          else if (particle === "야" && hasEndConsonant) particle = "아";
           else if (particle === "와" && hasEndConsonant) particle = "과";
           else if (particle === "과" && !hasEndConsonant) particle = "와";
           else if (particle === "랑" && hasEndConsonant) particle = "이랑";
           else if (particle === "이랑" && !hasEndConsonant) particle = "랑";
           else if (particle === "로" && hasEndConsonant) particle = "으로";
-          else if (particle === "으로" && !hasEndConsonant) particle = "로";
+          else if (particle === "으로" && !hasEndConsonant) particle = "로";          
         }
 
         result += replacementWord + particle;
