@@ -1176,7 +1176,7 @@ function generateTextImage(chunk, index) {
 function autoDownload(allDLbuttons, delay = 1500) {
   setTimeout(() => {
     const DLbuttons = $(allDLbuttons);
-    if (DLbuttons.length > 3) {
+    if (DLbuttons.length > 1) {
       zipDL(DLbuttons);
     }
   }, delay);
