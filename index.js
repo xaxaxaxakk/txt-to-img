@@ -1,4 +1,6 @@
 const extension_settings = JSON.parse(localStorage.getItem("txt-to-img") || "{}");
+const JSZipCDN = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+const FileSaverCDN = "https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js";
 
 const extensionName = "txt-to-img";
 const extensionFolderPath = `https://xaxaxaxakk.github.io/${extensionName}`;
@@ -1170,62 +1172,73 @@ function generateTextImage(chunk, index) {
 }
 
 
+
 function autoDownload(allDLbuttons, delay = 1500) {
   setTimeout(() => {
     const DLbuttons = $(allDLbuttons);
-    if (isMobileDevice() && DLbuttons.length > 1) {
-      openAllImages(DLbuttons);
-    } else {
-      let index = 0;
-      controlDL(DLbuttons, index);
+    if (DLbuttons.length > 3) {
+      zipDL(DLbuttons);
     }
   }, delay);
 }
-function isMobileDevice() {
-  return /Android|webOS|iPhone|iPad/i.test(navigator.userAgent);
-}
-function openAllImages(DLbuttons) {
-  const newTab = window.open("", "_blank");
-  let htmlContent = `
-    <html>
-      <body style="margin: 0; padding: 0;">
-  `;
+async function zipDL(DLbuttons) {
+  if (typeof JSZip === 'undefined') {
+    await loadScript(JSZipCDN);
+  }
+  if (typeof saveAs === 'undefined') {
+    await loadScript(FileSaverCDN);
+  }
+
+  const zip = new JSZip();
+  const now = new Date();
+  const dateString = `[Log] ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+    now.getDate()
+  ).padStart(2, "0")}-${now.getHours()}-${now.getMinutes()}`;
+  
+  const zipper = `${dateString}`;
+  const zipFormat = '.zip';
+  const promises = [];
+
   for (let i = 0; i < DLbuttons.length; i++) {
     const $img = $(DLbuttons[i]).siblings("img");
     const imgSrc = $img.attr("src");
-    htmlContent += `
-      <div style="margin-bottom: 20px;">
-        <img src="${imgSrc}" style="width: 100%; display: block;">
-      </div>
-    `;
+    const imageName = `${zipper} (${i+1}).png`;
+  
+    const base64ori = imgSrc.split(',')[1];
+    const imageData = atob(base64ori);
+    const imgArray = new Uint8Array(imageData.length);
+    
+    for (let j = 0; j < imageData.length; j++) {
+      imgArray[j] = imageData.charCodeAt(j);
+    }
+    
+    zip.file(imageName, imgArray);
   }
-  htmlContent += `
-      </body>
-    </html>
-  `;
-  if (newTab) {
-    newTab.document.write(htmlContent);
-    newTab.document.close();
-  }
+  Promise.all(promises).then(() => {
+    zip.generateAsync({ type: 'blob' }).then(content => {
+      saveAs(content, zipper + zipFormat);
+    });
+  });
 }
-function controlDL(DLbuttons, index) {
-  if (index < DLbuttons.length) {
-    $(DLbuttons[index]).trigger("click");
-    index++;
-    setTimeout(() => controlDL(DLbuttons, index), 1000);
-  }
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
 }
-
 
 function saveImage(dataUrl, filename) {
   const now = new Date();
-  const dateString = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(
+  const dateString = `[Log] ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
     now.getDate()
-  ).padStart(2, "0")}_${now.getHours()}${now.getMinutes()}${now.getSeconds()}`;
+  ).padStart(2, "0")}-${now.getHours()}-${now.getMinutes()}`;
   const index = filename.replace(".png", "");
   const link = document.createElement("a");
   link.href = dataUrl;
-  link.download = `${dateString}_${index}.png`;
+  link.download = `${dateString} (${index}).png`;
   link.click();
 }
 
