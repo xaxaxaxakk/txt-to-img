@@ -640,8 +640,7 @@ function replaceWords() {
 function findKoreanWord(text, originalWord, replacementWord) {
   const originalLower = originalWord.toLowerCase();
   const verbEndingPattern = /^[자고며다요네죠게서써도구나군요까봐서라지거든만큼]/;
-  const particlePattern =
-    /^(?:[은|는|이|가|아|야|의|을|를|로|으로|과|와|께|에게|에서|한테|하고|랑|이랑|도|이도|만|까지|마저|조차|부터|밖에|야말로|서|처럼|보다])/;
+  const particlePattern = /^(?:[은|는|이|가|아|야|의|을|를|로|으로|과|와|께|에게|에서|한테|하고|랑|이랑|도|이도|만|까지|마저|조차|부터|밖에|야말로|서|처럼|보다|였])/;
 
   const wordBoundaryPattern = /[\s\.,;:!?\(\)\[\]{}"'<>\/\\\-_=\+\*&\^%\$#@~`|]/;
   let result = "";
