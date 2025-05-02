@@ -626,23 +626,37 @@ function replaceWords() {
   wordPairs.forEach(({original, replacement}) => {
     if (original && replacement) {
       const containsKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(original);
-      text = containsKorean
-        ? findKoreanWord(text, original, replacement)
-        : text.replace(new RegExp(`\\b${escapeRegExp(original)}\\b`, "gi"), replacement);
+      if (containsKorean) {
+        text = findKoreanWord(text, original, replacement);
+      } else {
+        text = replaceString(text, original, replacement);
+      }
     }
   });
 
   $("#text_to_image").val(text);
   refreshPreview();
 }
+function replaceString(text, original, replacement) {
+  const parts = text.split(new RegExp(escapeRegExp(original), "i"));
+  if (parts.length === 1) return text;
+  let result = parts[0];
+  let searchStartPos = parts[0].length;
 
+  for (let i = 1; i < parts.length; i++) {
+    const matchedOriginal = text.substring(searchStartPos, searchStartPos + original.length);
+    result += replacement + parts[i];
+    searchStartPos += matchedOriginal.length + parts[i].length;
+  }
 
+  return result;
+}
 function findKoreanWord(text, originalWord, replacementWord) {
   const originalLower = originalWord.toLowerCase();
   const verbEndingPattern = /^[자고며다요네죠게서써도구나군요까봐서라지거든만큼]/;
   const particlePattern = /^(?:[은|는|이|가|아|야|의|을|를|로|으로|과|와|께|에게|에서|한테|하고|랑|이랑|도|이도|만|까지|마저|조차|부터|밖에|야말로|서|처럼|보다|였])/;
 
-  const wordBoundaryPattern = /[\s\.,;:!?\(\)\[\]{}"'<>\/\\\-_=\+\*&\^%\$#@~`|]/;
+  const wordBoundary = /[\s\.,;:!?\(\)\[\]{}"'<>\/\\\-_=\+\*&\^%\$#@~`|]/;
   let result = "";
 
   for (let i = 0; i < text.length; i++) {
@@ -650,7 +664,7 @@ function findKoreanWord(text, originalWord, replacementWord) {
       i <= text.length - originalWord.length &&
       text.slice(i, i + originalWord.length).toLowerCase() === originalLower
     ) {
-      const isStartBoundary = i === 0 || wordBoundaryPattern.test(text[i - 1]);
+      const isStartBoundary = i === 0 || wordBoundary.test(text[i - 1]);
 
       const endPos = i + originalWord.length;
       const nextChar = text[endPos] || "";
@@ -659,11 +673,14 @@ function findKoreanWord(text, originalWord, replacementWord) {
 
       const isEndBoundary =
         endPos === text.length ||
-        wordBoundaryPattern.test(nextChar) ||
+        wordBoundary.test(nextChar) ||
         particlePattern.test(nextChar) ||
         !/[가-힣a-zA-Z0-9]/.test(nextChar);
 
-      if (isStartBoundary && isEndBoundary && !isVerbEnding) {
+      const containSymbols = /[^\w가-힣]/.test(originalWord);
+      const toReplace = containSymbols || (isStartBoundary && isEndBoundary && !isVerbEnding);
+
+      if (toReplace) {
         let particle = "";
         let nextPart = text.slice(endPos);
 
