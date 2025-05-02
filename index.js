@@ -1015,7 +1015,7 @@ function generateTextImage(chunk, index) {
       40 + lineHeight / 2
     );
 
-    ctx.textAlign = settings.fontAlign || "left";
+    const setAlign = settings.fontAlign || "left";
 
     chunk.forEach((line) => {
       let totalTextWidth = 0;
@@ -1023,18 +1023,20 @@ function generateTextImage(chunk, index) {
         ctx.font = `${
           span.bold ? "bold" : span.italic ? "italic" : settings.fontWeight
         } ${fontSize}px ${settings.fontFamily}`;
-        totalTextWidth += ctx.measureText(span.text + " ").width;
+        totalTextWidth += ctx.measureText(span.text).width;
       });
 
-      let x;
-      if (settings.fontAlign === "center") {
-        x = (width - totalTextWidth) / 2;
-      } else if (settings.fontAlign === "right") {
-        const rightMargin = 40;
-        x = width - totalTextWidth - rightMargin;
+      let alignX;
+      if (setAlign === "center") {
+        alignX = width / 2 - totalTextWidth / 2;
+      } else if (setAlign === "right") {
+        alignX = width - totalTextWidth - 40;
       } else {
-        x = 40;
+        alignX = 40;
       }
+
+      ctx.textAlign = "left";
+      let x = alignX;
 
       line.forEach((span) => {
         ctx.font = `${
