@@ -624,12 +624,13 @@ function replaceWords() {
   ];
 
   wordPairs.forEach(({original, replacement}) => {
-    if (original && replacement) {
+    if (original) {
+      const replacementText = replacement || "";
       const containsKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(original);
       if (containsKorean) {
-        text = findKoreanWord(text, original, replacement);
+        text = findKoreanWord(text, original, replacementText);
       } else {
-        text = replaceString(text, original, replacement);
+        text = replaceString(text, original, replacementText);
       }
     }
   });
