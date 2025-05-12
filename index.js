@@ -643,8 +643,8 @@ function replaceWords() {
     const {replacement} = wordGroup[i];
     const temp = originalTemp[i];
     const replacementText = replacement || "";
-    
-    text = text.split(temp).join(replacementText);
+  
+    const regex = new RegExp(`${temp}([은는이가를과와이랑랑으로로아야]*)`, "g");
   }
 
   $("#text_to_image").val(text);
