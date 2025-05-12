@@ -645,6 +645,29 @@ function replaceWords() {
     const replacementText = replacement || "";
   
     const regex = new RegExp(`${temp}([은는이가를과와이랑랑으로로아야]*)`, "g");
+  
+    text = text.replace(regex, (_, particle) => {
+      let newParticle = particle;
+  
+      const hasEndConsonant = hasConsonantLetter(replacementText);
+  
+      if (particle === "는" && hasEndConsonant) newParticle = "은";
+      else if (particle === "은" && !hasEndConsonant) newParticle = "는";
+      else if (particle === "가" && hasEndConsonant) newParticle = "이";
+      else if (particle === "이" && !hasEndConsonant) newParticle = "가";
+      else if (particle === "를" && hasEndConsonant) newParticle = "을";
+      else if (particle === "을" && !hasEndConsonant) newParticle = "를";
+      else if (particle === "아" && !hasEndConsonant) newParticle = "야";
+      else if (particle === "야" && hasEndConsonant) newParticle = "아";
+      else if (particle === "와" && hasEndConsonant) newParticle = "과";
+      else if (particle === "과" && !hasEndConsonant) newParticle = "와";
+      else if (particle === "랑" && hasEndConsonant) newParticle = "이랑";
+      else if (particle === "이랑" && !hasEndConsonant) newParticle = "랑";
+      else if (particle === "로" && hasEndConsonant) newParticle = "으로";
+      else if (particle === "으로" && !hasEndConsonant) newParticle = "로";
+  
+      return replacementText + newParticle;
+    });
   }
 
   $("#text_to_image").val(text);
