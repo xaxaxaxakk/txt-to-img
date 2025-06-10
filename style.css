@@ -280,8 +280,9 @@ h5 {
   }
 }
 .tab-content input[type="range"] {
-  width: 100%;
+  width: calc(100% - 100px);
   margin: 5px 0 10px;
+  padding: 10px;
   accent-color: #a29bfe;
 }
 .tab-content label {

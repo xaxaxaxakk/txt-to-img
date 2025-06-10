@@ -11,6 +11,7 @@ const defaultSettings = {
   fontAlign: "left",
   fontColor: "#000000",
   strokeWidth: "0",
+  lineBreak: "byWord",
   selectedBackgroundImage: `${extensionFolderPath}/default-backgrounds/bg40.png`,
   useBackgroundColor: false,
   backgroundColor: "#ffffff",
@@ -47,6 +48,7 @@ async function initSettings() {
     fontAlign,
     fontColor,
     strokeWidth,
+    lineBreak,
     imageRatio,
     useBackgroundColor,
     backgroundColor,
@@ -67,6 +69,7 @@ async function initSettings() {
   $("#text_image_font_align").val(fontAlign);
   $("#text_image_font_color").val(fontColor);
   $("#text_image_stroke_width").val(strokeWidth);
+  $("#text_image_line_break").val(lineBreak);
   $("#text_image_ratio").val(imageRatio);
   $("#use_background_color").prop("checked", useBackgroundColor);
   $("#background_color").val(backgroundColor);
@@ -189,6 +192,7 @@ function deletePreset() {
     $("#text_image_font_align").val(defaultSettings.fontAlign);
     $("#text_image_font_color").val(defaultSettings.fontColor);
     $("#text_image_stroke_width").val(defaultSettings.strokeWidth);
+    $("#text_image_line_break").val(defaultSettings.lineBreak);
     $("#text_image_ratio").val(defaultSettings.imageRatio);
     $("#bg_blur").val(defaultSettings.bgBlur);
     $("#bg_brightness").val(defaultSettings.bgBrightness);
@@ -231,6 +235,7 @@ function selectPreset() {
     $("#text_image_font_align").val(defaultSettings.fontAlign);
     $("#text_image_font_color").val(defaultSettings.fontColor);
     $("#text_image_stroke_width").val(defaultSettings.strokeWidth);
+    $("#text_image_line_break").val(defaultSettings.lineBreak);
     $("#text_image_ratio").val(defaultSettings.imageRatio);
     $("#bg_blur").val(defaultSettings.bgBlur);
     $("#bg_brightness").val(defaultSettings.bgBrightness);
@@ -312,6 +317,9 @@ function applyPreset(presetName) {
         break;
       case "strokeWidth":
         $("#text_image_stroke_width").val(value);
+        break;
+      case "lineBreak":
+        $("#text_image_line_break").val(value);
         break;
       case "imageRatio":
         $("#text_image_ratio").val(value);
@@ -777,6 +785,11 @@ function strokeWidth(event) {
   saveSettings();
   refreshPreview();
 }
+function lineBreak(event) {
+  extension_settings[extensionName].lineBreak = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
 function fontSize(event) {
   extension_settings[extensionName].fontSize = event.target.value;
   saveSettings();
@@ -832,7 +845,10 @@ function getCanvasSize() {
 
 function refreshPreview() {
   const text = $("#text_to_image").val() || "";
-  const chunks = wrappingTexts(text);
+  const lineBreak = extension_settings[extensionName].lineBreak || "byWord";
+  
+  const chunks = wrappingTexts(text, lineBreak === "byWord" ? "word" : "char");
+  
   const $container = $("#image_preview_container").empty();
 
   chunks.forEach((chunk, i) => {
@@ -918,10 +934,10 @@ function enableMarkdown(text) {
 }
 
 
-function wrappingTexts(text) {
+function wrappingTexts(text, mode = "word") {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
-  const {width, height} = getCanvasSize();
+  const { width, height } = getCanvasSize();
   const maxWidth = width - 80;
   const fontSize = parseInt(extension_settings[extensionName].fontSize);
   const lineHeight = fontSize * 1.5;
@@ -933,37 +949,50 @@ function wrappingTexts(text) {
 
   const lines = text.split(/\n/);
 
-  lines.forEach((line) => {
-    if (line.trim() === "") {
+  lines.forEach((lineText) => {
+    const isBlank = lineText.trim() === "";
+
+    if (isBlank) {
       if (lineCount >= maxLines) {
         pages.push(currentPage);
         currentPage = [];
         lineCount = 0;
-      } else if (currentPage.length > 0) {
-        currentPage.push([{text: "", bold: false, italic: false, fontColor: null, bgColor: null}]);
+      } else {
+        if (mode === "word") {
+          currentPage.push([{ text: "", bold: false, italic: false, fontColor: null, bgColor: null }]);
+        } else {
+          currentPage.push({
+            spans: [{ text: "", bold: false, italic: false }],
+            softBreak: false,
+          });
+        }
         lineCount++;
       }
       return;
     }
 
     const wrapLine = [];
-    const spans = enableMarkdown(line);
+    const spans = enableMarkdown(lineText);
     let currentLine = [];
     let currentLineText = "";
 
     spans.forEach((span) => {
-      const words = span.text.match(/\S+\s*|\s+/g) || [];
+      const units = mode === "word"
+        ? (span.text.match(/\S+\s*|\s+/g) || [])
+        : span.text.split("");
 
-      words.forEach((word) => {
-        const testText = currentLineText + word;
+      units.forEach((unit) => {
+        if (mode === "char" && (unit === " " || unit === "\t") && currentLine.length === 0) return;
+
         ctx.font = `${
           span.bold ? "bold" : span.italic ? "italic" : extension_settings[extensionName].fontWeight
         } ${fontSize}px ${extension_settings[extensionName].fontFamily}`;
 
+        const testText = currentLineText + unit;
         if (ctx.measureText(testText).width <= maxWidth) {
           currentLineText = testText;
           currentLine.push({
-            text: word,
+            text: unit,
             bold: span.bold,
             italic: span.italic,
             fontColor: span.fontColor,
@@ -971,52 +1000,87 @@ function wrappingTexts(text) {
           });
         } else {
           if (currentLine.length) {
-            wrapLine.push(currentLine);
+            if (mode === "word") {
+              wrapLine.push(currentLine);
+            } else {
+              wrapLine.push({
+                spans: currentLine,
+                softBreak: true,
+              });
+            }
           }
-          currentLine = [
-            {
-              text: word,
-              bold: span.bold,
-              italic: span.italic,
-              fontColor: span.fontColor,
-              bgColor: span.bgColor,
-            },
-          ];
-          currentLineText = word;
+
+          currentLine = [{
+            text: unit.trimStart(),
+            bold: span.bold,
+            italic: span.italic,
+            fontColor: span.fontColor,
+            bgColor: span.bgColor,
+          }];
+          currentLineText = unit.trimStart();
         }
       });
     });
 
     if (currentLine.length) {
-      wrapLine.push(currentLine);
+      if (mode === "word") {
+        wrapLine.push(currentLine);
+      } else {
+        wrapLine.push({
+          spans: currentLine,
+          softBreak: true,
+        });
+      }
     }
-    const wrapLineCount = wrapLine.length;
-    if (lineCount + wrapLineCount > maxLines && currentPage.length > 0) {
+
+    if (mode === "char" && wrapLine.length > 0) {
+      wrapLine.forEach((line, idx) => {
+        const isLast = idx === wrapLine.length - 1;
+        if (line.softBreak && !isLast) {
+          line.spans = trimLineEdges(line.spans);
+        }
+      });
+      wrapLine[wrapLine.length - 1].softBreak = false;
+    }
+
+    if (lineCount + wrapLine.length > maxLines && currentPage.length > 0) {
       pages.push(currentPage);
       currentPage = [];
       lineCount = 0;
     }
 
     currentPage = currentPage.concat(wrapLine);
-    lineCount += wrapLineCount;
+    lineCount += wrapLine.length;
   });
 
-  if (currentPage.length) {
-    pages.push(currentPage);
-  }
+  if (currentPage.length) pages.push(currentPage);
 
   return pages
     .map((page) => {
-      while (page.length > 0 && page[0].every((span) => span.text.trim() === "")) {
-        page.shift();
-      }
-      while (page.length > 0 && page[page.length - 1].every((span) => span.text.trim() === "")) {
-        page.pop();
-      }
+      while (page.length && isBlankLine(page[0], mode)) page.shift();
+      while (page.length && isBlankLine(page[page.length - 1], mode)) page.pop();
       return page;
     })
     .filter((page) => page.length > 0);
 }
+function trimLineEdges(spans) {
+  let first = 0;
+  let last = spans.length - 1;
+
+  while (first <= last && spans[first].text.trim() === "") first++;
+  while (last >= first && spans[last].text.trim() === "") last--;
+
+  return spans.slice(first, last + 1);
+}
+
+function isBlankLine(line, mode) {
+  if (mode === "word") {
+    return line.every((span) => span.text.trim() === "");
+  } else {
+    return line.spans.every((span) => span.text.trim() === "");
+  }
+}
+
 function generateTextImage(chunk, index) {
   const {width, height} = getCanvasSize();
   const canvas = document.createElement("canvas");
@@ -1034,70 +1098,114 @@ function generateTextImage(chunk, index) {
     const totalTextHeight = chunk.length * lineHeight;
     const footerHeight = 30;
     let y = Math.max(
-      (height - totalTextHeight - footerHeight) / 2 + lineHeight,
+      (height - totalTextHeight - footerHeight) / 2 + lineHeight, 
       40 + lineHeight / 2
     );
-
     const setAlign = settings.fontAlign || "left";
 
-    chunk.forEach((line) => {
-      let totalTextWidth = 0;
-      line.forEach((span) => {
-        ctx.font = `${
-          span.bold ? "bold" : span.italic ? "italic" : settings.fontWeight
-        } ${fontSize}px ${settings.fontFamily}`;
-        totalTextWidth += ctx.measureText(span.text).width;
-      });
+    const lineBreak = extension_settings[extensionName].lineBreak || "byWord";
+    const maxLineWidth = width - 80;
 
-      let alignX;
-      if (setAlign === "center") {
-        alignX = width / 2 - totalTextWidth / 2;
-      } else if (setAlign === "right") {
-        alignX = width - totalTextWidth - 40;
-      } else {
-        alignX = 40;
-      }
+    function setFont(span) {
+    ctx.font = `${span.bold ? "bold" : span.italic ? "italic" : settings.fontWeight} ${fontSize}px ${settings.fontFamily}`;
+    }
 
-      ctx.textAlign = "left";
-      let x = alignX;
+    function renderSpan(span, x, y) {
+    setFont(span);
+    const metrics = ctx.measureText(span.text);
+    const textWidth = metrics.width;
+    const textHeight = fontSize;
 
-      line.forEach((span) => {
-        ctx.font = `${
-          span.bold ? "bold" : span.italic ? "italic" : settings.fontWeight
-        } ${fontSize}px ${settings.fontFamily}`;
+    ctx.fillStyle = span.fontColor || settings.fontColor || "#000000";
+    if (strokeWidth > 0) {
+        ctx.strokeStyle = ctx.fillStyle;
+        ctx.lineWidth = strokeWidth;
+    }
 
+    if (span.bgColor) {
+        const paddingX = 2;
+        const paddingY = 2;
+        ctx.fillStyle = span.bgColor;
+        ctx.fillRect(
+        x - paddingX,
+        y - textHeight + paddingY,
+        textWidth + 2 * paddingX,
+        textHeight + 2 * paddingY
+        );
         ctx.fillStyle = span.fontColor || settings.fontColor || "#000000";
-        if (strokeWidth > 0) {
-          ctx.strokeStyle = ctx.fillStyle;
-          ctx.lineWidth = strokeWidth;
-        }
+    }
 
-        if (span.bgColor) {
-          ctx.fillStyle = span.bgColor;
-          const hightTexts = ctx.measureText(span.text);
-          const textWidth = hightTexts.width;
-          const textHeight = fontSize;
+    if (strokeWidth > 0) ctx.strokeText(span.text, x, y);
+    ctx.fillText(span.text, x, y);
 
-          const paddingX = 2;
-          const paddingY = 2;
-          ctx.fillRect(
-            x - paddingX,
-            y - textHeight + paddingY,
-            textWidth + 2 * paddingX,
-            textHeight + 2 * paddingY
-          );
+    return textWidth;
+    }
 
-          ctx.fillStyle = span.fontColor || settings.fontColor || "#000000";
-        }
+    if (lineBreak === "byWord") {
+        chunk.forEach((line) => {
+            let totalTextWidth = 0;
+            const measuredWidths = [];
 
-        if (strokeWidth > 0) ctx.strokeText(span.text, x, y);
-        ctx.fillText(span.text, x, y);
+            line.forEach((span) => {
+            setFont(span);
+            const width = ctx.measureText(span.text).width;
+            measuredWidths.push(width);
+            totalTextWidth += width;
+            });
 
-        x += ctx.measureText(span.text).width;
-      });
+            let alignX = 40;
+            if (setAlign === "center") {
+            alignX = width / 2 - totalTextWidth / 2;
+            } else if (setAlign === "right") {
+            alignX = width - totalTextWidth - 40;
+            }
 
-      y += lineHeight;
-    });
+            ctx.textAlign = "left";
+            let x = alignX;
+
+            line.forEach((span, i) => {
+            x += renderSpan(span, x, y);
+            });
+
+            y += lineHeight;
+        });
+    } else {
+        chunk.forEach((lineObj, index) => {
+            const line = lineObj.spans;
+            const isLastLine = index === chunk.length - 1;
+            const isBlankLine = line.every((span) => span.text.trim() === "");
+            const shouldJustify = setAlign === "left" && !isLastLine && lineObj.softBreak && !isBlankLine;
+
+            let totalTextWidth = 0;
+            const measuredWidths = [];
+
+            line.forEach((span) => {
+            setFont(span);
+            const width = ctx.measureText(span.text).width;
+            measuredWidths.push(width);
+            totalTextWidth += width;
+            });
+
+            let alignX = 40;
+            if (setAlign === "center") {
+            alignX = width / 2 - totalTextWidth / 2;
+            } else if (setAlign === "right") {
+            alignX = width - totalTextWidth - 40;
+            }
+
+            const gapCount = line.length - 1;
+            const spacing = (gapCount > 0 && shouldJustify) ? (maxLineWidth - totalTextWidth) / gapCount : 0;
+
+            let x = alignX;
+
+            line.forEach((span, i) => {
+            x += renderSpan(span, x, y);
+            if (i < line.length - 1) x += spacing;
+            });
+
+            y += lineHeight;
+        });
+    }
   };
 
   const textWallpaper = (img) => {
@@ -1310,6 +1418,7 @@ jQuery(async () => {
   $("#text_image_font_align").on("change", fontAlign);
   $("#text_image_font_color").on("change", fontColor);
   $("#text_image_stroke_width").on("change", strokeWidth);
+  $("#text_image_line_break").on("change", lineBreak);
   $("#text_image_ratio").on("change", aspectRatio);
   $("#text_to_image").on("change", refreshPreview);
   $("#use_background_color").on("change", useBackgroundColor);

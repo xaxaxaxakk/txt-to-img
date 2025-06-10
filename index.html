@@ -24,9 +24,11 @@
       <span>
         ▶️ v1.2.8
         <br />
-        - 폰트 정렬 & 치환 오류 수정
+        - 폰트 정렬, 치환 오류 수정
         <br />
         - 특수문자 / 특수문자+단어 혼합 / 빈칸 치환 (문자 없애기) / 병렬 치환 (예시: {{user}}<=>{{char}})
+        <br />
+          - 줄바꿈 옵션 추가 (의견 및 개선해준 깡 고마움!)
       </span>
       <span>🔹 각종 옵션들을 설정한 다음 미리보기 확인 후 다운로드</span>
       <span>🔹 설정한 옵션을 계속 사용하고자 한다면 프리셋에 저장하기</span>
@@ -204,6 +206,11 @@
             </select>
             <label>색상</label>
             <input type="color" id="text_image_font_color" value="#000000" />
+            <label for="text_image_line_break">줄바꿈</label>
+            <select id="text_image_line_break">
+              <option value="byWord">단어 기준</option>
+              <option value="byChar">글자 기준</option>
+            </select>
           </div>
 
           <div id="background" class="tab-content flex-container">
