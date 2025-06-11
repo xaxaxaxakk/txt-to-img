@@ -979,7 +979,7 @@ function wrappingTexts(text, mode = "word") {
     spans.forEach((span) => {
       const units = mode === "word"
         ? (span.text.match(/\S+\s*|\s+/g) || [])
-        : span.text.split("");
+        : Array.from(span.text);
 
       units.forEach((unit) => {
         if (mode === "char" && (unit === " " || unit === "\t") && currentLine.length === 0) return;
