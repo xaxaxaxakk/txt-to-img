@@ -750,3 +750,9 @@ label {
     font-weight: normal;
     font-style: normal;
 }
+@font-face {
+    font-family: 'Ownglyph_jiwoosonang';
+    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/2408@1.0/Ownglyph_jiwoosonang.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}
