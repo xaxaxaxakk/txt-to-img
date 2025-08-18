@@ -52,10 +52,6 @@
     "value": "S-CoreDream-3Light"
   },
   {
-    "label": "교보손글씨 2020 박도연",
-    "value": "KyoboHandwriting2020A"
-  },
-  {
     "label": "온글잎 콘콘체",
     "value": "Ownglyph_corncorn-Rg"
   },
@@ -78,6 +74,10 @@
   {
     "label": "온글잎 류뚱체",
     "value": "Ownglyph_ryuttung-Rg"
+  },
+  {
+    "label": "온글잎 대롱체",
+    "value": "Ownglyph_daelong-Rg"
   },
   {
     "label": "국대떡볶이",
@@ -108,6 +108,18 @@
     "value": "KyoboHand"
   },
   {
+    "label": "교보손글씨 2020 박도연",
+    "value": "KyoboHandwriting2020A"
+  },
+  {
+    "label": "교보손글씨 2023 우선아",
+    "value": "KyoboHandwriting2023wsa"
+  },
+  {
+    "label": "교보손글씨 2024 박서우",
+    "value": "KyoboHandwriting2024psw"
+  },
+  {
     "label": "단조",
     "value": "Danjo-bold-Regular"
   },
@@ -122,10 +134,6 @@
   {
     "label": "심경하체",
     "value": "SimKyungha"
-  },
-  {
-    "label": "교보손글씨 2023 우선아",
-    "value": "KyoboHandwriting2023wsa"
   },
   {
     "label": "온글잎 김콩해",

@@ -738,3 +738,15 @@ label {
     format("woff");
   font-style: normal;
 }
+@font-face {
+    font-family: 'Ownglyph_daelong-Rg';
+    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/2507-2@1.0/Ownglyph_daelong-Rg.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}
+@font-face {
+    font-family: 'KyoboHandwriting2024psw';
+    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/2507-1@1.0/KyoboHandwriting2024psw.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}
