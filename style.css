@@ -176,11 +176,16 @@ h5 {
   resize: vertical;
 }
 
-#clear_text_btn {
+.text-field-buttons {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
+  height: 45px;
   width: 100%;
+}
+#clear_text_btn {
+  width: calc(100% - 60px);
+  height: 100%;
   padding: 12px;
   border: none;
   border-radius: 10px;
@@ -190,7 +195,6 @@ h5 {
   transition: all 0.3s;
   gap: 8px;
 }
-
 #clear_text_btn:hover {
   background: #ff6f61;
 }

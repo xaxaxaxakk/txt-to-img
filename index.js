@@ -880,6 +880,7 @@ function enableMarkdown(text) {
   let bold = false;
   let italic = false;
   let strikethrough = false;
+  let underline = false;
   let fontColor = null;
   let bgColor = null;
   let i = 0;
@@ -887,28 +888,33 @@ function enableMarkdown(text) {
 
   while (i < text.length) {
     if (text.slice(i, i + 3) === "***") {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
       bold = !bold;
       italic = !italic;
       currentText = "";
       i += 3;
     } else if (text.slice(i, i + 2) === "**") {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
       bold = !bold;
       currentText = "";
       i += 2;
+    } else if (text.slice(i, i + 2) === "__") {
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
+      underline = !underline;
+      currentText = "";
+      i += 2;
     } else if (text.slice(i, i + 2) === "~~") {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
       strikethrough = !strikethrough;
       currentText = "";
       i += 2;
     } else if (text[i] === "*" && (i + 1 >= text.length || text[i + 1] !== "*")) {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
       italic = !italic;
       currentText = "";
       i++;
     } else if (text.slice(i, i + 2) === "=(" && i + 2 < text.length) {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
       currentText = "";
       colorHighlight = true;
 
@@ -929,7 +935,7 @@ function enableMarkdown(text) {
         colorHighlight = false;
       }
     } else if (text[i] === "=" && colorHighlight) {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
       fontColor = null;
       bgColor = null;
       currentText = "";
@@ -941,7 +947,7 @@ function enableMarkdown(text) {
     }
   }
 
-  if (currentText) spans.push({text: currentText, bold, italic, strikethrough, fontColor, bgColor});
+  if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
   return spans;
 }
 
@@ -971,10 +977,10 @@ function wrappingTexts(text, mode = "word") {
         lineCount = 0;
       } else {
         if (mode === "word") {
-          currentPage.push([{ text: "", bold: false, italic: false, strikethrough: false, fontColor: null, bgColor: null }]);
+          currentPage.push([{ text: "", bold: false, italic: false, strikethrough: false, underline: false, fontColor: null, bgColor: null }]);
         } else {
           currentPage.push({
-            spans: [{ text: "", bold: false, italic: false, strikethrough: false }],
+            spans: [{ text: "", bold: false, italic: false, strikethrough: false, underline: false }],
             softBreak: false,
           });
         }
@@ -1008,6 +1014,7 @@ function wrappingTexts(text, mode = "word") {
             bold: span.bold,
             italic: span.italic,
             strikethrough: span.strikethrough,
+            underline: span.underline,
             fontColor: span.fontColor,
             bgColor: span.bgColor,
           });
@@ -1028,6 +1035,7 @@ function wrappingTexts(text, mode = "word") {
             bold: span.bold,
             italic: span.italic,
             strikethrough: span.strikethrough,
+            underline: span.underline,
             fontColor: span.fontColor,
             bgColor: span.bgColor,
           }];
@@ -1158,6 +1166,15 @@ function generateTextImage(chunk, index) {
       ctx.beginPath();
       ctx.moveTo(x, y - textHeight / 3);
       ctx.lineTo(x + textWidth, y - textHeight / 3);
+      ctx.strokeStyle = span.fontColor || settings.fontColor || "#000000";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    if (span.underline) {
+      ctx.beginPath();
+      ctx.moveTo(x, y + 4);
+      ctx.lineTo(x + textWidth, y + 4);
       ctx.strokeStyle = span.fontColor || settings.fontColor || "#000000";
       ctx.lineWidth = 1;
       ctx.stroke();
@@ -1458,9 +1475,18 @@ jQuery(async () => {
   $("#footer_text").on("change", footerText);
   $("#footer_color").on("change", footerColor);
 
+  let deletedText = "";
   $("#clear_text_btn").on("click", () => {
+    deletedText = $("#text_to_image").val();
     $("#text_to_image").val("");
     refreshPreview();
+  });
+  $("#restore_text_btn").on("click", () => {
+    if (deletedText !== "") {
+      $("#text_to_image").val(deletedText);
+      refreshPreview();
+      deletedText = "";
+    }
   });
   $("#create_preset").on("click", () => {
     $("#preset_name").val("");
