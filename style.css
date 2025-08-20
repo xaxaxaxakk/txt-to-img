@@ -257,6 +257,10 @@ h5 {
   align-items: center;
   flex-wrap: wrap;
 }
+#custom-font-color {
+  margin-top: 15px;
+  width: 100%;
+}
 .tab-content h4 {
   width: 100%;
   margin-bottom: 10px;
@@ -295,20 +299,27 @@ h5 {
 
 label {
   display: block;
-  margin-bottom: 5px;
   color: #2c3e50;
   font-size: 14px;
 }
 
-.bgColor {
+div:has(> input[type="checkbox"]):has(> input[type="color"]) {
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
+
+  & label {
+    width: 80px !important;
+  }
+
+  & input[type="color"] {
+    width: calc(100% - 110px) !important;
+  }
 }
-#use_background_color {
-  width: 20px !important;
-  height: 20px !important;
+input[type="checkbox"] {
+  width: 15px !important;
+  height: 15px !important;
   border-radius: 50% !important;
 }
 #background_color {
@@ -395,7 +406,6 @@ label {
   background: #a29bfe;
   color: #fff;
 }
-
 
 .dl_all {
   margin-left: auto;
@@ -743,20 +753,23 @@ label {
   font-style: normal;
 }
 @font-face {
-    font-family: 'Ownglyph_daelong-Rg';
-    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/2507-2@1.0/Ownglyph_daelong-Rg.woff2') format('woff2');
-    font-weight: normal;
-    font-style: normal;
+  font-family: "Ownglyph_daelong-Rg";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2507-2@1.0/Ownglyph_daelong-Rg.woff2")
+    format("woff2");
+  font-weight: normal;
+  font-style: normal;
 }
 @font-face {
-    font-family: 'KyoboHandwriting2024psw';
-    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/2507-1@1.0/KyoboHandwriting2024psw.woff2') format('woff2');
-    font-weight: normal;
-    font-style: normal;
+  font-family: "KyoboHandwriting2024psw";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2507-1@1.0/KyoboHandwriting2024psw.woff2")
+    format("woff2");
+  font-weight: normal;
+  font-style: normal;
 }
 @font-face {
-    font-family: 'Ownglyph_jiwoosonang';
-    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/2408@1.0/Ownglyph_jiwoosonang.woff2') format('woff2');
-    font-weight: normal;
-    font-style: normal;
+  font-family: "Ownglyph_jiwoosonang";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2408@1.0/Ownglyph_jiwoosonang.woff2")
+    format("woff2");
+  font-weight: normal;
+  font-style: normal;
 }
