@@ -205,7 +205,7 @@ h5 {
   justify-content: space-between !important;
   flex-wrap: wrap;
   margin: 10px 0;
-  padding: 6px 10px !important;
+  padding: 10px !important;
 }
 .replacer_box {
   width: 48%;
