@@ -336,6 +336,7 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
 }
 .custom-font-uploader .buttons {
   width: calc(calc(100% - 70px) / 2 - 5px) !important;
+  font-family: "Pretendard-Regular" !important;
 }
 #delete-local-font {
   margin-left: 10px;
