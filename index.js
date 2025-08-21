@@ -42,7 +42,6 @@ const defaultSettings = {
 function saveSettings() {
   localStorage.setItem(extensionName, JSON.stringify(extension_settings[extensionName]));
 }
-
 async function initSettings() {
   const savedSettings = JSON.parse(localStorage.getItem(extensionName));
 
@@ -123,7 +122,7 @@ async function initSettings() {
   }
 }
 
-
+// 프리셋
 function presetUI() {
   $("#create_preset").on("click", createPreset);
   $("#save_preset").on("click", savePreset);
@@ -137,6 +136,11 @@ function getPresetSettings() {
   const settings = {...extension_settings[extensionName]};
   delete settings.presets;
   delete settings.currentPreset;
+
+  if (currentCustomFont && oriFontFamily) {
+    settings.fontFamily = oriFontFamily;
+  }
+
   settings.originalWord1 = $("#original_word_1").val();
   settings.replacementWord1 = $("#replacement_word_1").val();
   settings.originalWord2 = $("#original_word_2").val();
@@ -530,7 +534,14 @@ function presetBackupSys() {
   });
 }
 
+// 폰트 패밀리
+function fontFamily(event) {
+  extension_settings[extensionName].fontFamily = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
 
+// 폰트 로드
 async function loadFonts() {
   try {
     const response = await fetch(`${extensionFolderPath}/font-family.json`);
@@ -548,10 +559,96 @@ async function loadFonts() {
     await Promise.all(fontPromises);
     select.val(extension_settings[extensionName].fontFamily);
     refreshPreview();
-  } catch (error) {}
+  } catch (error) {
+    console.error('폰트 로드 에러:', error);
+  }
 }
 
+// 로컬 폰트 로드
+let currentCustomFont = null;
+let oriFontFamily = null;
 
+function addLocalFont() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.ttf,.otf,.woff,.woff2';
+  
+  input.onchange = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const checkFontFormat = ['.ttf', '.otf', '.woff', '.woff2'];
+    const fontFormat = '.' + file.name.split('.').pop().toLowerCase();
+    
+    if (!checkFontFormat.includes(fontFormat)) {
+      alert('.ttf, .otf, .woff, .woff2 형식의 파일만 등록할 수 있습니다.');
+      return;
+    }
+    
+    const fontReader = new FileReader();
+    fontReader.onload = function(e) {
+      const fontData = e.target.result;
+      const fontName = 'CustomFont_' + Date.now();
+      
+      const fontFace = new FontFace(fontName, fontData);
+      
+      fontFace.load().then(function(loadedFont) {
+        document.fonts.add(loadedFont);
+
+        if (!oriFontFamily) {
+          oriFontFamily = extension_settings[extensionName].fontFamily;
+        }
+        
+        currentCustomFont = fontName;
+        extension_settings[extensionName].fontFamily = fontName;
+        
+        $("#tti_font_family").prop("disabled", true);
+        
+        $("#upload-local-font").text("로컬 폰트 변경");
+        $("#delete-local-font").prop("disabled", false);
+        
+        refreshPreview();
+      }).catch(function(error) {
+        console.error('폰트 로드 실패:', error);
+        alert('폰트 파일을 로드할 수 없습니다. 파일이 손상되었거나 지원되지 않는 형식일 수 있습니다.');
+      });
+    };
+    
+    fontReader.onerror = function() {
+      alert('파일을 읽을 수 없습니다.');
+    };
+    
+    fontReader.readAsArrayBuffer(file);
+  };
+  
+  input.click();
+}
+function deleteLocalFont() {
+  if (!currentCustomFont) return;
+  
+  if (document.fonts && currentCustomFont) {
+    const fonts = Array.from(document.fonts);
+    const customFontFamily = fonts.find(font => font.family === currentCustomFont);
+    if (customFontFamily) {
+      document.fonts.delete(customFontFamily);
+    }
+  }
+
+  extension_settings[extensionName].fontFamily = oriFontFamily || 'Pretendard-Regular';
+
+  $("#tti_font_family").val(extension_settings[extensionName].fontFamily).prop("disabled", false);
+  
+  currentCustomFont = null;
+  oriFontFamily = null;
+  
+  $("#upload-local-font").text("로컬 폰트 등록");
+  $("#delete-local-font").prop("disabled", true);
+  
+  saveSettings();
+  refreshPreview();
+}
+
+// 배경이미지 로드
 async function loadBG() {
   try {
     const response = await fetch(`${extensionFolderPath}/backgrounds-list.json`);
@@ -579,6 +676,8 @@ function deleteBackground(name) {
   delete customBackgrounds[name];
   localStorage.setItem("textToImageCustomBgs", JSON.stringify(customBackgrounds));
 }
+
+// 커스텀 배경이미지 로드
 function loadCustomBG() {
   const customBackgrounds = JSON.parse(localStorage.getItem("textToImageCustomBgs") || "{}");
   const gallery = $("#custom_background_gallery").empty();
@@ -626,7 +725,7 @@ function removeCustomBg(event) {
   }
 }
 
-
+// 배경 & 이미지 편집
 function useBackgroundColor(event) {
   extension_settings[extensionName].useBackgroundColor = event.target.checked;
   saveSettings();
@@ -672,8 +771,35 @@ function overlayColor(event) {
   saveSettings();
   refreshPreview();
 }
+function selectCanvasBG(event) {
+  if ($(event.target).hasClass("delete-bg-btn")) return;
+  const path = $(this).data("path");
+  $(".bg-image-item").removeClass("selected");
+  $(this).addClass("selected");
+  extension_settings[extensionName].selectedBackgroundImage = path;
+  saveSettings();
+  refreshPreview();
+}
+function getCanvasSize() {
+  const ratio = extension_settings[extensionName].imageRatio;
+  switch (ratio) {
+    case "square":
+      return {width: 700, height: 700};
+    case "rectangular":
+      return {width: 700, height: 1100};
+    case "longer":
+      return {width: 700, height: 2000};
+    default:
+      return {width: 700, height: 700};
+  }
+}
+function aspectRatio(event) {
+  extension_settings[extensionName].imageRatio = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
 
-
+// 단어 치환
 function setupWordReplacer() {
   let originalText = "";
   $("#apply_replacement").on("click", () => {
@@ -853,13 +979,7 @@ function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-
-function fontFamily(event) {
-  extension_settings[extensionName].fontFamily = event.target.value;
-  saveSettings();
-  refreshPreview();
-}
-
+// 텍스트 커스텀
 function strokeWidth(event) {
   extension_settings[extensionName].strokeWidth = event.target.value;
   saveSettings();
@@ -935,11 +1055,8 @@ function underlineFontColor(event) {
   saveSettings();
   refreshPreview();
 }
-function aspectRatio(event) {
-  extension_settings[extensionName].imageRatio = event.target.value;
-  saveSettings();
-  refreshPreview();
-}
+
+// 바닥글
 function footerText(event) {
   extension_settings[extensionName].footerText = event.target.value;
   saveSettings();
@@ -950,29 +1067,8 @@ function footerColor(event) {
   saveSettings();
   refreshPreview();
 }
-function selectCanvasBG(event) {
-  if ($(event.target).hasClass("delete-bg-btn")) return;
-  const path = $(this).data("path");
-  $(".bg-image-item").removeClass("selected");
-  $(this).addClass("selected");
-  extension_settings[extensionName].selectedBackgroundImage = path;
-  saveSettings();
-  refreshPreview();
-}
-function getCanvasSize() {
-  const ratio = extension_settings[extensionName].imageRatio;
-  switch (ratio) {
-    case "square":
-      return {width: 700, height: 700};
-    case "rectangular":
-      return {width: 700, height: 1100};
-    case "longer":
-      return {width: 700, height: 2000};
-    default:
-      return {width: 700, height: 700};
-  }
-}
 
+// 미리보기
 function refreshPreview() {
   const text = $("#text_to_image").val() || "";
   const lineBreak = extension_settings[extensionName].lineBreak || "byWord";
@@ -1004,6 +1100,7 @@ function refreshPreview() {
   }
 }
 
+// 마크다운
 function enableMarkdown(text) {
   const spans = [];
   let currentText = "";
@@ -1081,7 +1178,7 @@ function enableMarkdown(text) {
   return spans;
 }
 
-
+// 텍스트 정리
 function wrappingTexts(text, mode = "word") {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -1224,7 +1321,6 @@ function trimLineEdges(spans) {
 
   return spans.slice(first, last + 1);
 }
-
 function isBlankLine(line, mode) {
   if (mode === "word") {
     return line.every((span) => span.text.trim() === "");
@@ -1233,6 +1329,7 @@ function isBlankLine(line, mode) {
   }
 }
 
+// 텍스트를 이미지로
 function generateTextImage(chunk, index) {
   const {width, height} = getCanvasSize();
   const canvas = document.createElement("canvas");
@@ -1522,8 +1619,7 @@ function generateTextImage(chunk, index) {
   return $preview;
 }
 
-
-
+// 일괄 다운 zip
 function autoDownload(allDLbuttons, delay = 1500) {
   setTimeout(() => {
     const DLbuttons = $(allDLbuttons);
@@ -1581,6 +1677,7 @@ function loadScript(src) {
   });
 }
 
+// 저장 이미지 형식
 function saveImage(dataUrl, filename) {
   const now = new Date();
   const dateString = `[Log] ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
@@ -1592,7 +1689,6 @@ function saveImage(dataUrl, filename) {
   link.download = `${dateString} (${index}).png`;
   link.click();
 }
-
 
 jQuery(async () => {
   await initSettings();
@@ -1631,6 +1727,8 @@ jQuery(async () => {
   $("#overlay_opacity").on("change", addOverlay);
   $("#footer_text").on("change", footerText);
   $("#footer_color").on("change", footerColor);
+  $("#upload-local-font").on("click", addLocalFont);
+  $("#delete-local-font").on("click", deleteLocalFont);
 
   let deletedText = "";
   $("#clear_text_btn").on("click", () => {

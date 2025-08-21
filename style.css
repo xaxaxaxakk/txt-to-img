@@ -138,7 +138,7 @@ h5 {
   font-size: 14px;
   backdrop-filter: blur(5px);
 }
-.text-to-image-btn {
+.buttons {
   width: 45px !important;
   height: 45px !important;
   margin-left: auto;
@@ -150,14 +150,14 @@ h5 {
   cursor: pointer;
   transition: all 0.3s;
 }
-.text-to-image-btn:hover {
+.buttons:not(:disabled):hover {
   background: #a29bfe;
   color: #fff;
 }
-.text-to-image-btn.clear {
+.buttons.clear {
   background: rgba(255, 105, 97, 0.7);
 }
-.text-to-image-btn.clear:hover {
+.buttons.clear:hover {
   background: #ff6f61;
   color: #fff;
 }
@@ -322,6 +322,33 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
 #custom-font-color {
   width: 100%;
   margin-top: 15px;
+}
+#tti_font_family:disabled {
+  background: rgba(0, 0, 0, 0.07);
+}
+.custom-font-uploader {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end !important;
+  margin-bottom: 20px;
+}
+.custom-font-uploader .buttons {
+  width: calc(calc(100% - 100px) / 2 - 5px) !important;
+}
+#delete-local-font {
+  margin-left: 10px;
+
+  &:not(:disabled) {
+    background: rgba(255, 105, 97, 0.7);
+    transition: all 0.3s;
+  }
+  &:not(:disabled):hover {
+    background: #ff6f61;
+  }
+}
+#delete-local-font:disabled {
+  background: rgba(0, 0, 0, 0.07) !important;
+  cursor: default;
 }
 
 /* 배경이미지 탭 */
@@ -766,5 +793,26 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
   font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2408@1.0/Ownglyph_jiwoosonang.woff2")
     format("woff2");
+  font-style: normal;
+}
+@font-face {
+  font-family: "TTBookendBatangR";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2410-2@1.0/TTBookendBatangR.woff2")
+    format("woff2");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "JNE-Bareun-TTF-Bold";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2408-1@1.0/JNE-Bareun-TTF-Bold.woff2")
+    format("woff2");
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Ownglyph_Dailyokja-Rg";
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2403@1.0/Ownglyph_Dailyokja-Rg.woff2")
+    format("woff2");
+  font-weight: normal;
   font-style: normal;
 }

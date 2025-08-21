@@ -84,6 +84,10 @@
     "value": "Ownglyph_daelong-Rg"
   },
   {
+    "label": "온글잎 매일옥자체",
+    "value": "Ownglyph_Dailyokja-Rg"
+  },
+  {
     "label": "국대떡볶이",
     "value": "SDKukdetopokki"
   },
@@ -154,5 +158,13 @@
   {
     "label": "힘내라는 말보단",
     "value": "Saying_tobe_strong"
+  },
+  {
+    "label": "북엔드 바탕",
+    "value": "TTBookendBatangR"
+  },
+  {
+    "label": "전남교육바른체",
+    "value": "JNE-Bareun-TTF-Bold"
   }
 ]
