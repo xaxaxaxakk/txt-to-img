@@ -12,7 +12,7 @@ body {
   background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);
 }
 
-/* how to use */
+/* 사용법 설명서 */
 & #how_to_use {
   display: inline-block;
   margin-bottom: 20px;
@@ -67,12 +67,12 @@ body {
   }
 }
 
+/* 기본 디자인 */
 #text-to-image {
   max-width: 600px;
   margin: 20px auto;
   padding: 0 15px;
 }
-
 .text-to-image-converter-settings {
   padding: 20px;
   border: 1px solid rgba(255, 255, 255, 0.3);
@@ -81,29 +81,31 @@ body {
   backdrop-filter: blur(10px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
-.inline-drawer-content:not(:first-child) > .flex-container {
-  margin-top: 20px !important;
-}
-
 .flex-container {
-  margin-bottom: 15px;
+  width: 100%;
   padding: 15px;
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 15px;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.4);
 }
-
+.inline-drawer-content > .flex-container:not(:first-child) {
+  margin-top: 20px !important;
+}
 h4 {
   display: flex;
   align-items: center;
-  margin-bottom: 15px;
-  color: #2c3e50;
-  font-size: 18px;
+  width: 100%;
+  margin-bottom: 14px;
+  color: #2c3e50 !important;
+  font-size: 16px !important;
   gap: 8px;
 }
 h5 {
   margin: 15px 0;
+  font-size: 15px !important;
 }
+
+/* 프리셋 */
 #import_preset {
   margin-left: auto;
 }
@@ -111,21 +113,20 @@ h5 {
   width: calc(100% - 60px) !important;
   height: 45px !important;
   padding: 12px;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.5);
   color: #2c3e50;
   font-size: 14px;
   backdrop-filter: blur(5px);
 }
-
 .preset-control {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  width: 100%;
   margin-top: 10px;
 }
-
 #preset_selector {
   width: calc(100% - 170px) !important;
   padding: 12px;
@@ -152,16 +153,15 @@ h5 {
   background: #a29bfe;
   color: #fff;
 }
-
 .text-to-image-btn.clear {
   background: rgba(255, 105, 97, 0.7);
 }
-
 .text-to-image-btn.clear:hover {
   background: #ff6f61;
   color: #fff;
 }
 
+/* 텍스트 입력 박스 */
 #text_to_image {
   width: 100%;
   min-height: 150px;
@@ -175,13 +175,12 @@ h5 {
   backdrop-filter: blur(5px);
   resize: vertical;
 }
-
 .text-field-buttons {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 45px;
   width: 100%;
+  height: 45px;
 }
 #clear_text_btn {
   width: calc(100% - 60px);
@@ -199,6 +198,7 @@ h5 {
   background: #ff6f61;
 }
 
+/* 단어 치환 */
 .flex-container:has(> .replacer_box) {
   display: flex;
   justify-content: space-between !important;
@@ -224,11 +224,12 @@ h5 {
   margin-right: auto;
 }
 
+/* 카테고리 탭 */
 .tab-container {
   display: flex;
   justify-content: space-between;
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin: 20px 0 10px 0;
   gap: 10px;
 }
 .tab-btn {
@@ -256,10 +257,6 @@ h5 {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-}
-#custom-font-color {
-  margin-top: 15px;
-  width: 100%;
 }
 .tab-content h4 {
   width: 100%;
@@ -293,16 +290,17 @@ h5 {
   padding: 10px;
   accent-color: #a29bfe;
 }
-.tab-content label {
-  width: 60px;
-}
-
 label {
+  width: 60px;
   display: block;
   color: #2c3e50;
   font-size: 14px;
 }
-
+input[type="checkbox"] {
+  width: 15px !important;
+  height: 15px !important;
+  border-radius: 50% !important;
+}
 div:has(> input[type="checkbox"]):has(> input[type="color"]) {
   display: flex;
   justify-content: space-between;
@@ -317,15 +315,17 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
     width: calc(100% - 110px) !important;
   }
 }
-input[type="checkbox"] {
-  width: 15px !important;
-  height: 15px !important;
-  border-radius: 50% !important;
+
+/* 텍스트 스타일 설정 탭 */
+#custom-font-color {
+  width: 100%;
+  margin-top: 15px;
 }
+
+/* 배경이미지 탭 */
 #background_color {
   width: calc(100% - 50px);
 }
-
 .background-gallery {
   display: grid;
   width: 100%;
@@ -341,7 +341,6 @@ input[type="checkbox"] {
     display: none;
   }
 }
-
 .bg-image-item {
   position: relative;
   width: 100%;
@@ -370,11 +369,9 @@ input[type="checkbox"] {
     opacity: 1;
   }
 }
-
 .bg-image-item.selected {
   border-color: #a29bfe;
 }
-
 .bg-image-item img {
   position: absolute;
   top: 0;
@@ -383,7 +380,6 @@ input[type="checkbox"] {
   height: 100%;
   object-fit: cover;
 }
-
 .custom-bg {
   width: 100% !important;
   margin-top: 30px;
@@ -401,12 +397,12 @@ input[type="checkbox"] {
   cursor: pointer;
   transition: all 0.3s;
 }
-
 .custom-bg-upload label:hover {
   background: #a29bfe;
   color: #fff;
 }
 
+/* 미리보기 */
 .dl_all {
   margin-left: auto;
   padding: 10px 15px;
@@ -422,7 +418,6 @@ input[type="checkbox"] {
     color: #fff;
   }
 }
-
 .image-preview {
   display: flex;
   flex-wrap: wrap;
@@ -440,7 +435,6 @@ input[type="checkbox"] {
   border-radius: 15px;
   background: rgba(255, 255, 255, 0.3);
 }
-
 .image-preview-item img {
   max-width: 100%;
   border-radius: 10px;
@@ -457,7 +451,6 @@ input[type="checkbox"] {
   cursor: pointer;
   transition: all 0.3s;
 }
-
 .download-btn:hover {
   background: #6b7280;
 }
@@ -754,22 +747,22 @@ input[type="checkbox"] {
 }
 @font-face {
   font-family: "Ownglyph_daelong-Rg";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2507-2@1.0/Ownglyph_daelong-Rg.woff2")
     format("woff2");
-  font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: "KyoboHandwriting2024psw";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2507-1@1.0/KyoboHandwriting2024psw.woff2")
     format("woff2");
-  font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: "Ownglyph_jiwoosonang";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2408@1.0/Ownglyph_jiwoosonang.woff2")
     format("woff2");
-  font-weight: normal;
   font-style: normal;
 }
