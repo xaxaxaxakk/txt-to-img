@@ -267,6 +267,14 @@ function deletePreset() {
 }
 function selectPreset() {
   const presetName = $(this).val();
+  if (currentCustomFont && presetName && presetName !== "nonePreset") {
+    const presets = extension_settings[extensionName].presets;
+    const preset = presets[presetName];
+    if (preset && preset.fontFamily) {
+      oriFontFamily = preset.fontFamily;
+    }
+  }
+  
   if (presetName === "nonePreset") {
     extension_settings[extensionName] = {
       ...defaultSettings,
@@ -274,6 +282,10 @@ function selectPreset() {
       currentPreset: null,
     };
 
+    if (currentCustomFont) {
+      extension_settings[extensionName].fontFamily = currentCustomFont;
+      oriFontFamily = defaultSettings.fontFamily;
+    }
     $("#tti_font_family").val(defaultSettings.fontFamily);
     $("#tti_font_size").val(defaultSettings.fontSize);
     $("#tti_font_align").val(defaultSettings.fontAlign);
@@ -354,6 +366,13 @@ function applyPreset(presetName) {
     ) {
       continue;
     }
+
+    if (key === "fontFamily" && currentCustomFont) {
+      oriFontFamily = value;
+      $("#tti_font_family").val(value);
+      continue;
+    }
+
     extension_settings[extensionName][key] = value;
 
     switch (key) {
@@ -634,7 +653,7 @@ function deleteLocalFont() {
     }
   }
 
-  extension_settings[extensionName].fontFamily = oriFontFamily || 'Pretendard-Regular';
+  extension_settings[extensionName].fontFamily = oriFontFamily || extension_settings[extensionName].fontFamily || 'Pretendard-Regular';
 
   $("#tti_font_family").val(extension_settings[extensionName].fontFamily).prop("disabled", false);
   
@@ -1689,6 +1708,7 @@ function saveImage(dataUrl, filename) {
   link.download = `${dateString} (${index}).png`;
   link.click();
 }
+
 
 jQuery(async () => {
   await initSettings();
