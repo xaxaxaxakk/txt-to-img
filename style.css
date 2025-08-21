@@ -130,7 +130,7 @@ h5 {
 }
 #preset_selector {
   width: calc(100% - 140px) !important;
-  padding: 12px;
+  height: 35px;
   border: none;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.5);
