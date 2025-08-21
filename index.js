@@ -578,9 +578,7 @@ async function loadFonts() {
     await Promise.all(fontPromises);
     select.val(extension_settings[extensionName].fontFamily);
     refreshPreview();
-  } catch (error) {
-    console.error('폰트 로드 에러:', error);
-  }
+  } catch (error) {}
 }
 
 // 로컬 폰트 로드
@@ -720,6 +718,7 @@ function addBGtoGallery(name, imageData) {
   bgElement.on("click", selectCanvasBG);
   bgElement.find(".delete-bg-btn").on("click", removeCustomBg);
 }
+
 function uploadImage(event) {
   const file = event.target.files[0];
   if (!file) return;
