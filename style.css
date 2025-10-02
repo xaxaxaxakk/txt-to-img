@@ -146,8 +146,8 @@ h5 {
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.7);
   color: #2c3e50;
-  cursor: pointer;
   font-size: 13px !important;
+  cursor: pointer;
   transition: all 0.3s;
 }
 .buttons:not(:disabled):hover {
@@ -160,6 +160,42 @@ h5 {
 .buttons.clear:hover {
   background: #ff6f61;
   color: #fff;
+}
+
+/* 봇카드 */
+.botCard {
+  display: inline-flex;
+  justify-content: space-between;
+}
+.botCard h4 {
+  width: 100px;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+}
+.bot-datas {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.bot-datas button {
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
+  color: #2c3e50;
+  cursor: pointer;
+  font-size: 12px !important;
+  transition: all 0.3s;
+
+  &:hover {
+    background: #a29bfe;
+    color: white;
+  }
 }
 
 /* 텍스트 입력 박스 */
@@ -191,8 +227,9 @@ h5 {
   border-radius: 10px;
   background: rgba(255, 105, 97, 0.7);
   color: #fff;
-  cursor: pointer;
   font-size: 12px;
+  line-height: 50%;
+  cursor: pointer;
   transition: all 0.3s;
 }
 #clear_text_btn:hover {
@@ -209,8 +246,8 @@ h5 {
 }
 .replacer_box {
   width: 48%;
-  padding: 8px 10px;
   height: 40px;
+  padding: 8px 10px;
   border: none;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.5);
@@ -329,8 +366,8 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
 }
 .custom-font-uploader {
   display: flex;
-  width: 100%;
   justify-content: flex-end !important;
+  width: 100%;
   margin-bottom: 20px;
 }
 .custom-font-uploader .buttons {
@@ -431,6 +468,57 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
 .custom-bg-upload label:hover {
   background: #a29bfe;
   color: #fff;
+}
+
+/* 미리보기 제어 */
+.preview-control {
+  margin-left: auto;
+
+  & label {
+    width: auto !important;
+    font-size: 12px;
+    cursor: pointer;
+  }
+}
+#preview_toggle + label {
+  opacity: 0.5;
+}
+#preview_toggle + label::before {
+  margin-right: 3px;
+  font-family: "Font Awesome 7 Free";
+  font-size: 12px;
+  content: "\f204";
+}
+#preview_toggle:checked + label {
+  opacity: 1;
+}
+#preview_toggle:checked + label::before {
+  color: #a29bfe;
+  font-family: "Font Awesome 7 Free";
+  font-size: 12px;
+  content: "\f205";
+}
+.refresh-preview {
+  display: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 105, 97, 0.7);
+  font-size: 12px !important;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+
+  &.shown {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  &:hover {
+    background: rgba(255, 105, 97, 0.7);
+    color: #fff;
+  }
 }
 
 /* 미리보기 */
@@ -799,22 +887,22 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
 }
 @font-face {
   font-family: "TTBookendBatangR";
+  font-weight: 400;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2410-2@1.0/TTBookendBatangR.woff2")
     format("woff2");
-  font-weight: 400;
   font-style: normal;
 }
 @font-face {
   font-family: "JNE-Bareun-TTF-Bold";
+  font-weight: 700;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2408-1@1.0/JNE-Bareun-TTF-Bold.woff2")
     format("woff2");
-  font-weight: 700;
   font-style: normal;
 }
 @font-face {
   font-family: "Ownglyph_Dailyokja-Rg";
+  font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2403@1.0/Ownglyph_Dailyokja-Rg.woff2")
     format("woff2");
-  font-weight: normal;
   font-style: normal;
 }

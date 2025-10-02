@@ -8,7 +8,7 @@
     <title>로그 발췌</title>
     <link
       rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
     <link type="text/css" rel="stylesheet" href="./style.css" />
@@ -18,7 +18,7 @@
   <body id="text-to-image">
     <div id="how_to_use">
       <i class="fa-solid fa-lightbulb"></i>
-      V 1.3.0
+      V 1.3.1
     </div>
     <div class="how_to_use_box">
       <span>
@@ -87,10 +87,36 @@
             </div>
           </div>
 
+          <div class="flex-container botCard">
+            <h4>
+              <i class="fa-solid fa-robot"></i>
+              봇카드
+            </h4>
+            <div class="bot-datas">
+              <button class="bot-data" data-type="description">
+                <i class="fa-solid fa-address-card"></i>
+              </button>
+              <button class="bot-data" data-type="greeting">
+                <i class="fa-solid fa-message"></i>
+              </button>
+              <button class="bot-data" data-type="scenario">
+                <i class="fa-solid fa-video"></i>
+              </button>
+            </div>
+          </div>
+
           <div class="flex-container">
             <h4>
               <i class="fa-solid fa-pen"></i>
               텍스트 입력
+              <div class="preview-control">
+                <input
+                  type="checkbox"
+                  id="preview_toggle"
+                  name="preview_toggle"
+                  style="display: none" />
+                <label for="preview_toggle">미리보기</label>
+              </div>
             </h4>
             <textarea id="text_to_image" placeholder="여기에 텍스트를 입력하세요"></textarea>
             <div class="text-field-buttons">
@@ -313,6 +339,9 @@
             <h4>
               <i class="fa-solid fa-eye"></i>
               미리보기
+              <div class="refresh-preview">
+                <i class="fa-solid fa-arrows-rotate"></i>
+              </div>
             </h4>
             <div id="image_preview_container" class="image-preview"></div>
           </div>

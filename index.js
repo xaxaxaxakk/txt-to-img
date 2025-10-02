@@ -37,6 +37,7 @@ const defaultSettings = {
   currentPreset: null,
   footerText: "",
   footerColor: "#000000",
+  autoPreview: true,
 };
 
 function saveSettings() {
@@ -81,6 +82,7 @@ async function initSettings() {
     currentPreset,
     footerText,
     footerColor,
+    autoPreview,
   } = extension_settings[extensionName];
 
   $("#tti_font_family").val(fontFamily);
@@ -111,6 +113,7 @@ async function initSettings() {
   $("#overlay_color").val(overlayColor);
   $("#footer_text").val(footerText);
   $("#footer_color").val(footerColor);
+  $("#preview_toggle").prop("checked", autoPreview);
 
   await loadFonts();
   await loadBG();
@@ -153,6 +156,7 @@ function getPresetSettings() {
   settings.backgroundColor = $("#background_color").val();
   settings.footerText = $("#footer_text").val();
   settings.footerColor = $("#footer_color").val();
+  settings.autoPreview = $("#preview_toggle").prop("checked");
   return settings;
 }
 function createPreset() {
@@ -261,6 +265,7 @@ function deletePreset() {
     );
     $("#footer_text").val("");
     $("#footer_color").val(defaultSettings.footerColor);
+    $("#preview_toggle").prop("checked", defaultSettings.autoPreview);
   }
   saveSettings();
   updatePresetSelector();
@@ -274,7 +279,7 @@ function selectPreset() {
       oriFontFamily = preset.fontFamily;
     }
   }
-  
+
   if (presetName === "nonePreset") {
     extension_settings[extensionName] = {
       ...defaultSettings,
@@ -326,6 +331,7 @@ function selectPreset() {
     );
     $("#footer_text").val("");
     $("#footer_color").val(defaultSettings.footerColor);
+    $("#preview_toggle").prop("checked", defaultSettings.autoPreview);
 
     refreshPreview();
   } else if (presetName) {
@@ -464,6 +470,9 @@ function applyPreset(presetName) {
       case "footerColor":
         $("#footer_color").val(value);
         break;
+      case "autoPreview":
+        $("#preview_toggle").prop("checked", value);
+        break;
     }
   }
   saveSettings();
@@ -552,6 +561,89 @@ function presetBackupSys() {
     $("#presetBackupSys").click();
   });
 }
+
+// 봇카드
+function loadBotCard(dataType) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".png,.json";
+
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      const botData = file.name.endsWith(".json")
+        ? await dataFromJSON(file)
+        : await dataFromPNG(file);
+      if (botData) botDataClass(botData, dataType);
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  input.click();
+}
+async function dataFromJSON(file) {
+  const text = await file.text();
+  return JSON.parse(text);
+}
+async function dataFromPNG(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const dataView = new DataView(arrayBuffer);
+  let offset = 8;
+
+  while (offset < arrayBuffer.byteLength) {
+    const chunkLength = dataView.getUint32(offset);
+    offset += 4;
+    const chunkType = String.fromCharCode(
+      dataView.getUint8(offset),
+      dataView.getUint8(offset + 1),
+      dataView.getUint8(offset + 2),
+      dataView.getUint8(offset + 3)
+    );
+    offset += 4;
+
+    if (chunkType === "tEXt") {
+      let textData = "";
+      for (let i = 0; i < chunkLength; i++) {
+        textData += String.fromCharCode(dataView.getUint8(offset + i));
+      }
+      const [keyword, text] = textData.split("\0");
+      if (keyword.toLowerCase() === "chara") {
+        try {
+          const binary = atob(text.trim());
+          const uint8Array = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) {
+            uint8Array[i] = binary.charCodeAt(i);
+          }
+          const decoded = new TextDecoder("utf-8").decode(uint8Array);
+          return JSON.parse(decoded);
+        } catch (error) {
+          return null;
+        }
+      }
+    }
+    offset += chunkLength;
+    offset += 4;
+  }
+  return null;
+}
+function botDataClass(data, dataType) {
+  const charData = data.data || data;
+  const content =
+    (dataType === "description"
+      ? charData.description
+      : dataType === "greeting"
+      ? charData.first_mes
+      : dataType === "scenario"
+      ? charData.scenario
+      : JSON.stringify(charData, null, 2)
+    )?.trim() || "";
+
+  $("#text_to_image").val(content);
+}
+
 
 // 폰트 패밀리
 function fontFamily(event) {
@@ -642,7 +734,7 @@ function addLocalFont() {
 }
 function deleteLocalFont() {
   if (!currentCustomFont) return;
-  
+
   if (document.fonts && currentCustomFont) {
     const fonts = Array.from(document.fonts);
     const customFontFamily = fonts.find(font => font.family === currentCustomFont);
@@ -654,13 +746,13 @@ function deleteLocalFont() {
   extension_settings[extensionName].fontFamily = oriFontFamily || extension_settings[extensionName].fontFamily || 'Pretendard-Regular';
 
   $("#tti_font_family").val(extension_settings[extensionName].fontFamily).prop("disabled", false);
-  
+
   currentCustomFont = null;
   oriFontFamily = null;
-  
+
   $("#upload-local-font").text("로컬 폰트 등록");
   $("#delete-local-font").prop("disabled", true);
-  
+
   saveSettings();
   refreshPreview();
 }
@@ -859,10 +951,11 @@ function replaceWords() {
 
   const originalTemp = wordGroup.map((_, index) => `_temp_${index}_`);
   
+
   for (let i = 0; i < wordGroup.length; i++) {
     const {original} = wordGroup[i];
     const temp = originalTemp[i];
-    
+
     const containsKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(original);
     if (containsKorean) {
       text = findKoreanWord(text, original, temp);
@@ -870,19 +963,19 @@ function replaceWords() {
       text = replaceString(text, original, temp);
     }
   }
-  
+
   for (let i = 0; i < wordGroup.length; i++) {
     const {replacement} = wordGroup[i];
     const temp = originalTemp[i];
     const replacementText = replacement || "";
-  
+
     const regex = new RegExp(`${temp}([은는이가를과와이랑랑으로로아야]*)`, "g");
-  
+
     text = text.replace(regex, (_, particle) => {
       let newParticle = particle;
-  
+
       const hasEndConsonant = hasConsonantLetter(replacementText);
-  
+
       if (particle === "는" && hasEndConsonant) newParticle = "은";
       else if (particle === "은" && !hasEndConsonant) newParticle = "는";
       else if (particle === "가" && hasEndConsonant) newParticle = "이";
@@ -897,7 +990,7 @@ function replaceWords() {
       else if (particle === "이랑" && !hasEndConsonant) newParticle = "랑";
       else if (particle === "로" && hasEndConsonant) newParticle = "으로";
       else if (particle === "으로" && !hasEndConsonant) newParticle = "로";
-  
+
       return replacementText + newParticle;
     });
   }
@@ -971,7 +1064,7 @@ function findKoreanWord(text, originalWord, replacementWord) {
           else if (particle === "랑" && hasEndConsonant) particle = "이랑";
           else if (particle === "이랑" && !hasEndConsonant) particle = "랑";
           else if (particle === "로" && hasEndConsonant) particle = "으로";
-          else if (particle === "으로" && !hasEndConsonant) particle = "로";          
+          else if (particle === "으로" && !hasEndConsonant) particle = "로";
         }
 
         result += replacementWord + particle;
@@ -1087,12 +1180,31 @@ function footerColor(event) {
 }
 
 // 미리보기
+function autoPreview(event) {
+  extension_settings[extensionName].autoPreview = event.target.checked;
+  saveSettings();
+  if (event.target.checked) {
+    refreshPreview();
+  }
+  else {
+    $(".refresh-preview").addClass("shown");
+  }
+}
 function refreshPreview() {
+  $(".refresh-preview").removeClass("shown");
+
+  if (!extension_settings[extensionName].autoPreview) {
+    $(".refresh-preview").addClass("shown");
+    $("#image_preview_container").empty();
+    $("#image_preview_box h4 .dl_all").remove();
+    return;
+  }
+
   const text = $("#text_to_image").val() || "";
   const lineBreak = extension_settings[extensionName].lineBreak || "byWord";
-  
+
   const chunks = wrappingTexts(text, lineBreak === "byWord" ? "word" : "char");
-  
+
   const $container = $("#image_preview_container").empty();
 
   chunks.forEach((chunk, i) => {
@@ -1115,6 +1227,38 @@ function refreshPreview() {
     }
   } else {
     $dlAllBtn.remove();
+  }
+}
+function manualRefresh() {
+  if (!extension_settings[extensionName].autoPreview) {
+    const text = $("#text_to_image").val() || "";
+    const lineBreak = extension_settings[extensionName].lineBreak || "byWord";
+
+    const chunks = wrappingTexts(text, lineBreak === "byWord" ? "word" : "char");
+
+    const $container = $("#image_preview_container").empty();
+
+    chunks.forEach((chunk, i) => {
+      $container.append(generateTextImage(chunk, i));
+    });
+
+    const imageCount = chunks.length;
+    const $previewTitle = $("#image_preview_box h4");
+    const $dlAllBtn = $previewTitle.find(".dl_all");
+
+    if (imageCount >= 2) {
+      if ($dlAllBtn.length === 0) {
+        const $newDlAllBtn = $(
+          '<div class="dl_all"><i class="fa-solid fa-circle-down"></i> 전체 다운로드</div>'
+        );
+        $previewTitle.append($newDlAllBtn);
+        $newDlAllBtn.on("click", () => {
+          autoDownload("#image_preview_container .download-btn", 500);
+        });
+      }
+    } else {
+      $dlAllBtn.remove();
+    }
   }
 }
 
@@ -1687,7 +1831,7 @@ async function zipDL(DLbuttons) {
 }
 function loadScript(src) {
   return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
+    const script = document.createElement("script");
     script.src = src;
     script.onload = resolve;
     script.onerror = reject;
@@ -1707,7 +1851,6 @@ function saveImage(dataUrl, filename) {
   link.download = `${dateString} (${index}).png`;
   link.click();
 }
-
 
 jQuery(async () => {
   await initSettings();
@@ -1748,6 +1891,8 @@ jQuery(async () => {
   $("#footer_color").on("change", footerColor);
   $("#upload-local-font").on("click", addLocalFont);
   $("#delete-local-font").on("click", deleteLocalFont);
+  $("#preview_toggle").on("change", autoPreview);
+  $(".refresh-preview").on("click", manualRefresh);
 
   let deletedText = "";
   $("#clear_text_btn").on("click", () => {
@@ -1771,5 +1916,10 @@ jQuery(async () => {
 
   $("#how_to_use").on("click", () => {
     $(".how_to_use_box").slideToggle();
+  });
+
+  $(`.bot-data[data-type]`).on("click", function () {
+    const dataType = $(this).data("type");
+    loadBotCard(dataType);
   });
 });
