@@ -950,7 +950,6 @@ function replaceWords() {
   }
 
   const originalTemp = wordGroup.map((_, index) => `_temp_${index}_`);
-  
 
   for (let i = 0; i < wordGroup.length; i++) {
     const {original} = wordGroup[i];
