@@ -23,6 +23,8 @@ body {
   cursor: pointer !important;
   transition: border-color 0.3s;
   backdrop-filter: blur(10px);
+  font-size: 14px !important;
+  font-weight: bold;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   &:hover {
     border-color: #007bff;
@@ -182,8 +184,8 @@ h5 {
   flex: 1;
   justify-content: center;
   align-items: center;
-  width: 35px;
-  height: 35px;
+  width: 30px;
+  height: 30px;
   border: none;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.7);
@@ -192,16 +194,37 @@ h5 {
   font-size: 12px !important;
   transition: all 0.3s;
 
-  &:hover {
+  &:not(.botImporter):not(.botSaver:disabled):hover,
+  &.active {
     background: #a29bfe;
     color: white;
   }
+}
+.bot-datas .botImporter {
+  background: #a29bfe;
+  color: #fff;
+
+  &::before {
+    content: "\f07c";  
+    font-family: "Font Awesome 7 Free";
+    font-weight: bold;
+  }
+}
+.bot-datas .botImporter.remover {
+  background: rgba(255, 105, 97, 0.7);
+  &::before {
+    content: "\f2ed";
+  }
+}
+.bot-datas .botSaver:disabled {
+  background: rgba(0, 0, 0, 0.07) !important;
+  cursor: default !important;
 }
 
 /* 텍스트 입력 박스 */
 #text_to_image {
   width: 100%;
-  min-height: 250px;
+  min-height: 230px;
   margin-bottom: 10px;
   padding: 12px;
   border: none;
@@ -220,7 +243,7 @@ h5 {
   height: 35px;
 }
 #clear_text_btn {
-  width: calc(100% - 45px);
+  width: 110px;
   height: 35px;
   padding: 12px;
   border: none;

@@ -563,6 +563,10 @@ function presetBackupSys() {
 }
 
 // 봇카드
+const cardDataTab = {};
+let oriCard = null;
+let oriCardType = null;
+
 function loadBotCard(dataType) {
   const input = document.createElement("input");
   input.type = "file";
@@ -572,23 +576,25 @@ function loadBotCard(dataType) {
     const file = e.target.files[0];
     if (!file) return;
 
+    oriCard = file;
+    oriCardType = file.name.endsWith(".json") ? "json" : "png";
+
     try {
       const botData = file.name.endsWith(".json")
-        ? await dataFromJSON(file)
-        : await dataFromPNG(file);
+        ? await MDFromJSON(file)
+        : await MDFromPNG(file);
       if (botData) botDataClass(botData, dataType);
     } catch (error) {
-      console.error("Error:", error);
     }
   };
 
   input.click();
 }
-async function dataFromJSON(file) {
+async function MDFromJSON(file) {
   const text = await file.text();
   return JSON.parse(text);
 }
-async function dataFromPNG(file) {
+async function MDFromPNG(file) {
   const arrayBuffer = await file.arrayBuffer();
   const dataView = new DataView(arrayBuffer);
   let offset = 8;
@@ -609,8 +615,8 @@ async function dataFromPNG(file) {
       for (let i = 0; i < chunkLength; i++) {
         textData += String.fromCharCode(dataView.getUint8(offset + i));
       }
-      const [keyword, text] = textData.split("\0");
-      if (keyword.toLowerCase() === "chara") {
+      const [key, text] = textData.split("\0");
+      if (key.toLowerCase() === "chara" || key.toLowerCase() === "ccv3") {
         try {
           const binary = atob(text.trim());
           const uint8Array = new Uint8Array(binary.length);
@@ -620,30 +626,241 @@ async function dataFromPNG(file) {
           const decoded = new TextDecoder("utf-8").decode(uint8Array);
           return JSON.parse(decoded);
         } catch (error) {
-          return null;
         }
       }
     }
+    if (chunkType === "iTXt") {
+      try {
+        let textData = "";
+        for (let i = 0; i < chunkLength; i++) {
+          textData += String.fromCharCode(dataView.getUint8(offset + i));
+        }
+        const parts = textData.split("\0");
+        const key = parts[0];
+        if (key.toLowerCase() === "chara" || key.toLowerCase() === "ccv3") {
+          const compressionFlag = parts[1] ? parts[1].charCodeAt(0) : 0;
+          const text = parts[parts.length - 1];
+          
+          if (compressionFlag === 0) {
+            const binary = atob(text.trim());
+            const uint8Array = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+              uint8Array[i] = binary.charCodeAt(i);
+            }
+            const decoded = new TextDecoder("utf-8").decode(uint8Array);
+            return JSON.parse(decoded);
+          }
+        }
+      } catch (error) {
+      }
+    }
+
     offset += chunkLength;
     offset += 4;
   }
   return null;
 }
-function botDataClass(data, dataType) {
-  const charData = data.data || data;
-  const content =
-    (dataType === "description"
-      ? charData.description
-      : dataType === "greeting"
-      ? charData.first_mes
-      : dataType === "scenario"
-      ? charData.scenario
-      : JSON.stringify(charData, null, 2)
-    )?.trim() || "";
-
-  $("#text_to_image").val(content);
+function botDataClass(data) {
+  const oriCardData = data.data || data;
+  
+  cardDataTab.description = (oriCardData.description || "").trim();
+  cardDataTab.greeting = (oriCardData.first_mes || "").trim();
+  cardDataTab.scenario = (oriCardData.scenario || "").trim();
+  cardDataTab.json = JSON.stringify(oriCardData, null, 2);
+  cardDataTab.oriData = oriCardData;
+  cardDataTab.fullData = data;
+  
+  $(".bot-data[data-type]").removeClass("active");
+  $(`.bot-data[data-type="description"]`).addClass("active");
+  const activeTab = $(".bot-data[data-type].active").data("type") || "description";
+  $("#text_to_image").val(cardDataTab[activeTab] || "");
+  
+  $(".bot-data.botImporter").addClass("remover");
+  $(".bot-data.botSaver").prop("disabled", false);  
 }
+async function botCardSaver() {
+  if (!oriCard || !cardDataTab.oriData) {
+    return;
+  }
+  const currentTab = $(".bot-data[data-type].active").data("type");
+  if (currentTab) {
+    cardDataTab[currentTab] = $("#text_to_image").val();
+  }
+  const modifiedData = JSON.parse(JSON.stringify(cardDataTab.oriData));
+  modifiedData.description = cardDataTab.description;
+  modifiedData.first_mes = cardDataTab.greeting;
+  modifiedData.scenario = cardDataTab.scenario;
 
+  let latestData;
+  if (cardDataTab.fullData && cardDataTab.fullData.data) {
+    latestData = JSON.parse(JSON.stringify(cardDataTab.fullData));
+    latestData.data = modifiedData;
+    if (latestData.description !== undefined) latestData.description = modifiedData.description;
+    if (latestData.first_mes !== undefined) latestData.first_mes = modifiedData.first_mes;
+    if (latestData.scenario !== undefined) latestData.scenario = modifiedData.scenario;
+  } else {
+    latestData = modifiedData;
+  }
+  if (oriCardType === "json") {
+    cardToJSON(latestData, oriCard.name);
+  } else {
+    await cardToPNG(latestData, oriCard);
+  }
+}
+function cardToJSON(data, filename) {
+  const jsonStr = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+async function cardToPNG(oriCardData, oriCard) {
+  try {
+    const arrayBuffer = await oriCard.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+
+    const jsonStr = JSON.stringify(oriCardData);
+    const utf8Bytes = new TextEncoder().encode(jsonStr);
+    let binary = '';
+    for (let i = 0; i < utf8Bytes.length; i++) {
+      binary += String.fromCharCode(utf8Bytes[i]);
+    }
+    const encoded = btoa(binary);
+    const newChunks = [];
+    newChunks.push(textChunk("chara", encoded));
+    newChunks.push(textChunk("ccv3", encoded));
+    newChunks.push(ITxtChunk("chara", encoded));
+    const finalPNG = replaceChunks(uint8Array, newChunks);
+    const blob = new Blob([finalPNG], { type: "image/png" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = oriCard.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+  }
+}
+function textChunk(key, encoded) {
+  const textContent = key + "\0" + encoded;
+  const textBytes = [];
+  for (let i = 0; i < textContent.length; i++) {
+    textBytes.push(textContent.charCodeAt(i));
+  }
+  const chunkType = [0x74, 0x45, 0x58, 0x74];
+  const chunkDataForCRC = [...chunkType, ...textBytes];
+  const crc = crc32(new Uint8Array(chunkDataForCRC));
+  
+  const chunkLength = textBytes.length;
+  const chunk = new Uint8Array(12 + chunkLength);
+  const view = new DataView(chunk.buffer);
+  view.setUint32(0, chunkLength, false);
+  chunk.set(chunkType, 4);
+  chunk.set(textBytes, 8);
+  view.setUint32(8 + chunkLength, crc, false);
+  
+  return chunk;
+}
+function ITxtChunk(key, encoded) {
+  const textContent = key + "\0\0\0\0\0" + encoded;
+  const textBytes = [];
+  for (let i = 0; i < textContent.length; i++) {
+    textBytes.push(textContent.charCodeAt(i));
+  }
+  const chunkType = [0x69, 0x54, 0x58, 0x74];
+  const chunkDataForCRC = [...chunkType, ...textBytes];
+  const crc = crc32(new Uint8Array(chunkDataForCRC));
+  const chunkLength = textBytes.length;
+  const chunk = new Uint8Array(12 + chunkLength);
+  const view = new DataView(chunk.buffer);
+  view.setUint32(0, chunkLength, false);
+  chunk.set(chunkType, 4);
+  chunk.set(textBytes, 8);
+  view.setUint32(8 + chunkLength, crc, false);
+  
+  return chunk;
+}
+function replaceChunks(uint8Array, newChunks) {
+  const chunks = [];
+  let offset = 0;
+  const replacedWords = new Set();
+  chunks.push(uint8Array.slice(0, 8));
+  offset = 8;
+  const view = new DataView(uint8Array.buffer, uint8Array.byteOffset);
+  while (offset < uint8Array.length) {
+    if (offset + 8 > uint8Array.length) break;
+    const length = view.getUint32(offset, false);
+    const type = String.fromCharCode(
+      uint8Array[offset + 4],
+      uint8Array[offset + 5],
+      uint8Array[offset + 6],
+      uint8Array[offset + 7]
+    );
+    const chunkTotalSize = 12 + length;
+    if (offset + chunkTotalSize > uint8Array.length) break;
+    let isChunk = false;
+    if (type === "tEXt" || type === "iTXt" || type === "zTXt") {
+      let key = "";
+      let i = 0;
+      while (offset + 8 + i < uint8Array.length && uint8Array[offset + 8 + i] !== 0) {
+        key += String.fromCharCode(uint8Array[offset + 8 + i]);
+        i++;
+      }
+      key = key.toLowerCase();
+      
+      if (key === "chara" || key === "ccv3") {
+        isChunk = true;
+      }
+    }
+    if (isChunk) {
+    } else {
+      chunks.push(uint8Array.slice(offset, offset + chunkTotalSize));
+    }
+    offset += chunkTotalSize;
+  }
+  let iendIndex = -1;
+  for (let i = chunks.length - 1; i >= 0; i--) {
+    const chunk = chunks[i];
+    if (chunk.length >= 8) {
+      const type = String.fromCharCode(chunk[4], chunk[5], chunk[6], chunk[7]);
+      if (type === "IEND") {
+        iendIndex = i;
+        break;
+      }
+    }
+  }
+  if (iendIndex !== -1) {
+    for (const newChunk of newChunks) {
+      chunks.splice(iendIndex, 0, newChunk);
+      iendIndex++;
+    }
+  } else {
+    chunks.push(...newChunks);
+  }
+  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const result = new Uint8Array(totalLength);
+  let position = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, position);
+    position += chunk.length;
+  }
+  return result;
+}
+function crc32(data) {
+  let crc = 0xFFFFFFFF;
+  for (let i = 0; i < data.length; i++) {
+    crc = crc ^ data[i];
+    for (let j = 0; j < 8; j++) {
+      crc = (crc >>> 1) ^ (0xEDB88320 & -(crc & 1));
+    }
+  }
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
 
 // 폰트 패밀리
 function fontFamily(event) {
@@ -718,8 +935,7 @@ function addLocalFont() {
         
         refreshPreview();
       }).catch(function(error) {
-        console.error('폰트 로드 실패:', error);
-        alert('폰트 파일을 로드할 수 없습니다. 파일이 손상되었거나 지원되지 않는 형식일 수 있습니다.');
+        alert('폰트 파일을 등록할 수 없습니다.');
       });
     };
     
@@ -1919,6 +2135,28 @@ jQuery(async () => {
 
   $(`.bot-data[data-type]`).on("click", function () {
     const dataType = $(this).data("type");
-    loadBotCard(dataType);
+    const currentTab = $(".bot-data[data-type].active").data("type");
+    if (currentTab) {
+      cardDataTab[currentTab] = $("#text_to_image").val();
+    }
+    $(".bot-data[data-type]").removeClass("active");
+    $(this).addClass("active");
+    $("#text_to_image").val(cardDataTab[dataType] || "");
+  });
+  $(".bot-data.botImporter").on("click", function () {
+    if ($(this).hasClass("remover")) {
+      oriCard = null;
+      oriCardType = null;
+      Object.keys(cardDataTab).forEach(key => delete cardDataTab[key]);
+      $("#text_to_image").val("");
+      $(".bot-data[data-type]").removeClass("active");
+      $(this).removeClass("remover");  
+      $(".bot-data.botSaver").prop("disabled", true);  
+    } else {
+      loadBotCard();
+    }
+  });
+  $(".bot-data.botSaver").on("click", function () {
+    botCardSaver();
   });
 });
