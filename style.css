@@ -168,6 +168,7 @@ h5 {
 .botCard {
   display: inline-flex;
   justify-content: space-between;
+  flex-wrap: wrap;
 }
 .botCard h4 {
   width: 100px;
@@ -179,6 +180,7 @@ h5 {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 10px;
+  margin-left: auto;
 }
 .bot-datas button {
   flex: 1;
