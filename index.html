@@ -2,13 +2,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>로그 발췌</title>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
     <link type="text/css" rel="stylesheet" href="./style.css" />
@@ -24,31 +20,30 @@
       <span>
         🔹 기본 사용법
         <span>1. 각종 옵션들을 설정한 다음, 미리보기 확인 후 다운로드</span>
-        <span>
-          2. 설정한 옵션을 계속 사용할 경우 프리셋에 등록하기 (프리셋은 문서 아이콘 버튼을 클릭해 파일로 저장하고 불러올 수 있습니다.)
-        </span>
+        <span>2. 설정한 옵션을 계속 사용할 경우 프리셋에 등록하기 (프리셋은 문서 아이콘 버튼을 클릭해 파일로 저장하고 불러올 수 있습니다.)</span>
       </span>
       <span>
         🔹 추가 기능 (250821 UPDATE)
+        <span>1. 마크다운 문법: *이탤릭*, **볼드**, ***볼드 이탤릭***, ~~취소선~~, __밑줄__ (마크다운 폰트색상 지원)</span>
         <span>
-          1. 마크다운 문법: *이탤릭*, **볼드**, ***볼드 이탤릭***, ~~취소선~~, __밑줄__ (마크다운 폰트색상 지원)
-        </span>
-        <span>
-          2. 로컬폰트: ttf/otf/woff/woff2 형식의 폰트 파일을 직접 업로드해서 적용할 수 있습니다. 로컬 폰트는 <b>삭제</b>버튼을 누르거나 <b>페이지를 새로고침하기 전까지</b>는 적용된 상태를 유지합니다.<br/> 이 폰트는 프리셋과 브라우저 캐시에 저장되지 않습니다.
+          2. 로컬폰트: ttf/otf/woff/woff2 형식의 폰트 파일을 직접 업로드해서 적용할 수 있습니다. 로컬 폰트는
+          <b>삭제</b>
+          버튼을 누르거나
+          <b>페이지를 새로고침하기 전까지</b>
+          는 적용된 상태를 유지합니다.
+          <br />
+          이 폰트는 프리셋과 브라우저 캐시에 저장되지 않습니다.
         </span>
       </span>
       <span>
         🔹 하이라이트
+        <span>기본 형식: =(#글씨색상코드|#배경색상코드) 문장=</span>
         <span>
-          기본 형식: =(#글씨색상코드|#배경색상코드) 문장=
-        </span>
-        <span>
-          색상코드는 #000000와 같은 6자리의 간단한 헥스코드만 가능합니다. (rgba, rgb 등은 지원하지 않습니다.)<br/>
+          색상코드는 #000000와 같은 6자리의 간단한 헥스코드만 가능합니다. (rgba, rgb 등은 지원하지 않습니다.)
+          <br />
           예시: =(#ffffff|#000000)문장테스트=
         </span>
-        <span>
-          (#ffffff)처럼 단독으로 적어서 글씨색만 변경할 수 있고, (|#ffffff)처럼 파이프를 앞에 추가해 배경색만 지정할 수도 있습니다.
-        </span>
+        <span>(#ffffff)처럼 단독으로 적어서 글씨색만 변경할 수 있고, (|#ffffff)처럼 파이프를 앞에 추가해 배경색만 지정할 수도 있습니다.</span>
       </span>
     </div>
     <div class="text-to-image-converter-settings">
@@ -114,11 +109,7 @@
               <i class="fa-solid fa-pen"></i>
               텍스트 입력
               <div class="preview-control">
-                <input
-                  type="checkbox"
-                  id="preview_toggle"
-                  name="preview_toggle"
-                  style="display: none" />
+                <input type="checkbox" id="preview_toggle" name="preview_toggle" style="display: none" />
                 <label for="preview_toggle">미리보기</label>
               </div>
             </h4>
@@ -140,52 +131,20 @@
               단어 치환
             </h4>
             <div class="flex-container">
-              <input
-                type="text"
-                id="original_word_1"
-                class="replacer_box"
-                placeholder="원래 단어" />
-              <input
-                type="text"
-                id="replacement_word_1"
-                class="replacer_box"
-                placeholder="바꿀 단어" />
+              <input type="text" id="original_word_1" class="replacer_box" placeholder="원래 단어" />
+              <input type="text" id="replacement_word_1" class="replacer_box" placeholder="바꿀 단어" />
             </div>
             <div class="flex-container">
-              <input
-                type="text"
-                id="original_word_2"
-                class="replacer_box"
-                placeholder="원래 단어" />
-              <input
-                type="text"
-                id="replacement_word_2"
-                class="replacer_box"
-                placeholder="바꿀 단어" />
+              <input type="text" id="original_word_2" class="replacer_box" placeholder="원래 단어" />
+              <input type="text" id="replacement_word_2" class="replacer_box" placeholder="바꿀 단어" />
             </div>
             <div class="flex-container">
-              <input
-                type="text"
-                id="original_word_3"
-                class="replacer_box"
-                placeholder="원래 단어" />
-              <input
-                type="text"
-                id="replacement_word_3"
-                class="replacer_box"
-                placeholder="바꿀 단어" />
+              <input type="text" id="original_word_3" class="replacer_box" placeholder="원래 단어" />
+              <input type="text" id="replacement_word_3" class="replacer_box" placeholder="바꿀 단어" />
             </div>
             <div class="flex-container">
-              <input
-                type="text"
-                id="original_word_4"
-                class="replacer_box"
-                placeholder="원래 단어" />
-              <input
-                type="text"
-                id="replacement_word_4"
-                class="replacer_box"
-                placeholder="바꿀 단어" />
+              <input type="text" id="original_word_4" class="replacer_box" placeholder="원래 단어" />
+              <input type="text" id="replacement_word_4" class="replacer_box" placeholder="바꿀 단어" />
             </div>
             <div class="replace-buttons">
               <button id="clear_replace" class="buttons clear">
@@ -269,10 +228,7 @@
                 <input type="color" id="tti_boldItalic_font_color" value="#000000" />
               </div>
               <div class="strikethrough-custom">
-                <input
-                  type="checkbox"
-                  id="use_strikethrough_color"
-                  name="use_strikethrough_color" />
+                <input type="checkbox" id="use_strikethrough_color" name="use_strikethrough_color" />
                 <label>취소선</label>
                 <input type="color" id="tti_strikethrough_font_color" value="#000000" />
               </div>
