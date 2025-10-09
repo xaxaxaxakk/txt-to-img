@@ -99,7 +99,7 @@ h4 {
   width: 100%;
   margin-bottom: 14px;
   color: #000 !important;
-  font-size: 17px !important;
+  font-size: 16px !important;
   gap: 8px;
 }
 h5 {
@@ -495,9 +495,16 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
   color: #fff;
 }
 
-/* 미리보기 제어 */
-.preview-control {
+/* 미리보기 제어 / 치환 옵션 토글 */
+h4:has(.replace-control) {
+  display: flex;
+  flex-wrap: wrap;
+}
+:where(.preview-control, .replace-control) {
   margin-left: auto;
+  display: inline-flex;
+  gap: 10px;
+  flex-wrap: wrap;
 
   & label {
     width: auto !important;
@@ -505,19 +512,19 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
     cursor: pointer;
   }
 }
-#preview_toggle + label {
+:where(#preview_toggle, #letter_control, #unit_control) + label {
   opacity: 0.5;
 }
-#preview_toggle + label::before {
+:where(#preview_toggle, #letter_control, #unit_control) + label::before {
   margin-right: 3px;
   font-family: "Font Awesome 7 Free";
   font-size: 12px;
   content: "\f204";
 }
-#preview_toggle:checked + label {
+:where(#preview_toggle, #letter_control, #unit_control):checked + label {
   opacity: 1;
 }
-#preview_toggle:checked + label::before {
+:where(#preview_toggle, #letter_control, #unit_control):checked + label::before {
   color: #a29bfe;
   font-family: "Font Awesome 7 Free";
   font-size: 12px;

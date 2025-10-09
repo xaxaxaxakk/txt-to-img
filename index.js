@@ -38,6 +38,8 @@ const defaultSettings = {
   footerText: "",
   footerColor: "#000000",
   autoPreview: true,
+  letterCase: false,
+  unitControl: false,
 };
 
 function saveSettings() {
@@ -83,6 +85,8 @@ async function initSettings() {
     footerText,
     footerColor,
     autoPreview,
+    letterCase,
+    unitControl,
   } = extension_settings[extensionName];
 
   $("#tti_font_family").val(fontFamily);
@@ -114,6 +118,8 @@ async function initSettings() {
   $("#footer_text").val(footerText);
   $("#footer_color").val(footerColor);
   $("#preview_toggle").prop("checked", autoPreview);
+  $("#letter_control").prop("checked", letterCase);
+  $("#unit_control").prop("checked", unitControl);
 
   await loadFonts();
   await loadBG();
@@ -157,6 +163,8 @@ function getPresetSettings() {
   settings.footerText = $("#footer_text").val();
   settings.footerColor = $("#footer_color").val();
   settings.autoPreview = $("#preview_toggle").prop("checked");
+  settings.letterCase = $("#letter_control").is(":checked");
+  settings.unitControl = $("#unit_control").is(":checked");
   return settings;
 }
 function createPreset() {
@@ -266,6 +274,8 @@ function deletePreset() {
     $("#footer_text").val("");
     $("#footer_color").val(defaultSettings.footerColor);
     $("#preview_toggle").prop("checked", defaultSettings.autoPreview);
+    $("#letter_control").prop("checked", defaultSettings.letterCase);
+    $("#unit_control").prop("checked", defaultSettings.unitControl);
   }
   saveSettings();
   updatePresetSelector();
@@ -332,6 +342,8 @@ function selectPreset() {
     $("#footer_text").val("");
     $("#footer_color").val(defaultSettings.footerColor);
     $("#preview_toggle").prop("checked", defaultSettings.autoPreview);
+    $("#letter_control").prop("checked", defaultSettings.letterCase);
+    $("#unit_control").prop("checked", defaultSettings.unitControl);
 
     refreshPreview();
   } else if (presetName) {
@@ -472,6 +484,12 @@ function applyPreset(presetName) {
         break;
       case "autoPreview":
         $("#preview_toggle").prop("checked", value);
+        break;
+      case "letterCase":
+        $("#letter_control").prop("checked", value);
+        break;
+      case "unitControl":
+        $("#unit_control").prop("checked", value);
         break;
     }
   }
@@ -1126,6 +1144,14 @@ function aspectRatio(event) {
 }
 
 // 단어 치환
+function letterCase(event) {
+  extension_settings[extensionName].letterCase = event.target.checked;
+  saveSettings();
+}
+function unitControl(event) {
+  extension_settings[extensionName].unitControl = event.target.checked;
+  saveSettings();
+}
 function setupWordReplacer() {
   let originalText = "";
   $("#apply_replacement").on("click", () => {
@@ -1141,6 +1167,8 @@ function setupWordReplacer() {
 }
 function replaceWords() {
   let text = $("#text_to_image").val();
+  letterCase = extension_settings[extensionName].letterCase;
+  unitControl = extension_settings[extensionName].unitControl;
 
   const wordGroup = [
     {
@@ -1168,14 +1196,17 @@ function replaceWords() {
   const originalTemp = wordGroup.map((_, index) => `_temp_${index}_`);
 
   for (let i = 0; i < wordGroup.length; i++) {
-    const {original} = wordGroup[i];
+    const { original, replacement } = wordGroup[i];
     const temp = originalTemp[i];
+    const oriMulWord = original.split('||').map(word => word.trim()).filter(word => word);
 
-    const containsKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(original);
-    if (containsKorean) {
-      text = findKoreanWord(text, original, temp);
-    } else {
-      text = replaceString(text, original, temp);
+    for (const origWord of oriMulWord) {
+      const containsKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(origWord);
+      if (containsKorean) {
+        text = findKoreanWord(text, origWord, temp, unitControl);
+      } else {
+        text = replaceString(text, origWord, temp, letterCase, unitControl);
+      }
     }
   }
 
@@ -1213,78 +1244,110 @@ function replaceWords() {
   $("#text_to_image").val(text);
   refreshPreview();
 }
-function replaceString(text, original, replacement) {
-  const parts = text.split(new RegExp(escapeRegExp(original), "i"));
-  if (parts.length === 1) return text;
-  let result = parts[0];
-  let searchStartPos = parts[0].length;
-
-  for (let i = 1; i < parts.length; i++) {
-    const matchedOriginal = text.substring(searchStartPos, searchStartPos + original.length);
-    result += replacement + parts[i];
-    searchStartPos += matchedOriginal.length + parts[i].length;
+function replaceString(text, original, replacement, letterCase, unitControl) {
+  const specialChar = /[\s\.,;:!?\(\)\[\]{}"'<>\/\\\-_=\+\*&\^%\$#@~`|]/;
+  let result = "";
+  
+  for (let i = 0; i < text.length; i++) {
+    if (
+      i <= text.length - original.length &&
+      (letterCase 
+        ? text.slice(i, i + original.length) === original
+        : text.slice(i, i + original.length).toLowerCase() === original.toLowerCase())
+    ) {
+      const isStartBoundary = i === 0 || specialChar.test(text[i - 1]);
+      const endPos = i + original.length;
+      const nextChar = text[endPos] || "";
+      const containSymbols = /[^\wa-zA-Z]/.test(original);
+      
+      if (unitControl) {
+        const isEndBoundary = endPos === text.length || specialChar.test(nextChar) || !/[a-zA-Z0-9]/.test(nextChar);
+        
+        if (containSymbols || (isStartBoundary && isEndBoundary)) {
+          result += replacement;
+          i = endPos - 1;
+          continue;
+        }
+      } else {
+        result += replacement;
+        i = endPos - 1;
+        continue;
+      }
+    }
+    
+    result += text[i];
   }
-
+  
   return result;
 }
-function findKoreanWord(text, originalWord, replacementWord) {
-  const originalLower = originalWord.toLowerCase();
+function findKoreanWord(text, originalWord, replacementWord, unitControl) {
   const verbEndingPattern = /^[자고며다요네죠게서써도구나군요까봐서라지거든만큼]/;
   const particlePattern = /^(?:[은|는|이|가|아|야|의|을|를|로|으로|과|와|께|에게|에서|한테|하고|랑|이랑|도|이도|만|까지|마저|조차|부터|밖에|야말로|서|처럼|보다|였])/;
 
-  const wordBoundary = /[\s\.,;:!?\(\)\[\]{}"'<>\/\\\-_=\+\*&\^%\$#@~`|]/;
+  const specialChar = /[\s\.,;:!?\(\)\[\]{}"'<>\/\\\-_=\+\*&\^%\$#@~`|]/;
   let result = "";
 
   for (let i = 0; i < text.length; i++) {
     if (
       i <= text.length - originalWord.length &&
-      text.slice(i, i + originalWord.length).toLowerCase() === originalLower
+      text.slice(i, i + originalWord.length) === originalWord
     ) {
-      const isStartBoundary = i === 0 || wordBoundary.test(text[i - 1]);
+      const isStartBoundary = i === 0 || specialChar.test(text[i - 1]);
 
       const endPos = i + originalWord.length;
       const nextChar = text[endPos] || "";
 
-      const isVerbEnding = verbEndingPattern.test(nextChar);
+      if (unitControl) {
+        const isEndBoundary =
+          endPos === text.length ||
+          specialChar.test(nextChar) ||
+          !/[가-힣0-9]/.test(nextChar);
 
-      const isEndBoundary =
-        endPos === text.length ||
-        wordBoundary.test(nextChar) ||
-        particlePattern.test(nextChar) ||
-        !/[가-힣a-zA-Z0-9]/.test(nextChar);
-
-      const containSymbols = /[^\w가-힣]/.test(originalWord);
-      const toReplace = containSymbols || (isStartBoundary && isEndBoundary && !isVerbEnding);
-
-      if (toReplace) {
-        let particle = "";
-        let nextPart = text.slice(endPos);
-
-        const particleMatch = nextPart.match(particlePattern);
-        if (particleMatch && nextPart.startsWith(particleMatch[0])) {
-          particle = particleMatch[0];
-
-          const hasEndConsonant = hasConsonantLetter(replacementWord);
-
-          if (particle === "가" && hasEndConsonant) particle = "이";
-          else if (particle === "이" && !hasEndConsonant) particle = "가";
-          else if (particle === "는" && hasEndConsonant) particle = "은";
-          else if (particle === "은" && !hasEndConsonant) particle = "는";
-          else if (particle === "를" && hasEndConsonant) particle = "을";
-          else if (particle === "을" && !hasEndConsonant) particle = "를";
-          else if (particle === "아" && !hasEndConsonant) particle = "야";
-          else if (particle === "야" && hasEndConsonant) particle = "아";
-          else if (particle === "와" && hasEndConsonant) particle = "과";
-          else if (particle === "과" && !hasEndConsonant) particle = "와";
-          else if (particle === "랑" && hasEndConsonant) particle = "이랑";
-          else if (particle === "이랑" && !hasEndConsonant) particle = "랑";
-          else if (particle === "로" && hasEndConsonant) particle = "으로";
-          else if (particle === "으로" && !hasEndConsonant) particle = "로";
+        if (isStartBoundary && isEndBoundary) {
+          result += replacementWord;
+          i = endPos - 1;
+          continue;
         }
+      } else {
+        const isVerbEnding = verbEndingPattern.test(nextChar);
+        const isEndBoundary =
+          endPos === text.length ||
+          specialChar.test(nextChar) ||
+          particlePattern.test(nextChar) ||
+          !/[가-힣0-9]/.test(nextChar);
 
-        result += replacementWord + particle;
-        i = endPos + particle.length - 1;
-        continue;
+        const containSymbols = /[^\w가-힣]/.test(originalWord);
+        const toReplace = containSymbols || (isStartBoundary && isEndBoundary && !isVerbEnding);
+
+        if (toReplace) {
+          let particle = "";
+          let nextPart = text.slice(endPos);
+
+          const particleMatch = nextPart.match(particlePattern);
+          if (particleMatch && nextPart.startsWith(particleMatch[0])) {
+            particle = particleMatch[0];
+            const hasEndConsonant = hasConsonantLetter(replacementWord);
+
+            if (particle === "가" && hasEndConsonant) particle = "이";
+            else if (particle === "이" && !hasEndConsonant) particle = "가";
+            else if (particle === "는" && hasEndConsonant) particle = "은";
+            else if (particle === "은" && !hasEndConsonant) particle = "는";
+            else if (particle === "를" && hasEndConsonant) particle = "을";
+            else if (particle === "을" && !hasEndConsonant) particle = "를";
+            else if (particle === "아" && !hasEndConsonant) particle = "야";
+            else if (particle === "야" && hasEndConsonant) particle = "아";
+            else if (particle === "와" && hasEndConsonant) particle = "과";
+            else if (particle === "과" && !hasEndConsonant) particle = "와";
+            else if (particle === "랑" && hasEndConsonant) particle = "이랑";
+            else if (particle === "이랑" && !hasEndConsonant) particle = "랑";
+            else if (particle === "로" && hasEndConsonant) particle = "으로";
+            else if (particle === "으로" && !hasEndConsonant) particle = "로";
+          }
+
+          result += replacementWord + particle;
+          i = endPos + particle.length - 1;
+          continue;
+        }
       }
     }
     result += text[i];
@@ -2108,6 +2171,8 @@ jQuery(async () => {
   $("#delete-local-font").on("click", deleteLocalFont);
   $("#preview_toggle").on("change", autoPreview);
   $(".refresh-preview").on("click", manualRefresh);
+  $("#letter_control").on("change", letterCase);
+  $("#unit_control").on("change", unitControl);
 
   let deletedText = "";
   $("#clear_text_btn").on("click", () => {
