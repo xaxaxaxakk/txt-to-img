@@ -88,10 +88,6 @@
     "value": "Ownglyph_Dailyokja-Rg"
   },
   {
-    "label": "국대떡볶이",
-    "value": "SDKukdetopokki"
-  },
-  {
     "label": "마포금빛나루",
     "value": "MapoGoldenPier"
   },
@@ -122,10 +118,6 @@
   {
     "label": "교보손글씨 2024 박서우",
     "value": "KyoboHandwriting2024psw"
-  },
-  {
-    "label": "단조",
-    "value": "Danjo-bold-Regular"
   },
   {
     "label": "이서윤",
@@ -174,5 +166,9 @@
   {
     "label": "갈무리14",
     "value": "Galmuri14"
+  },
+  {
+    "label": "부크크 명조",
+    "value": "BookkMyungjo-Bd"
   }
 ]
