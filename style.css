@@ -827,13 +827,6 @@ h4:has(.replace-control) {
   font-style: normal;
 }
 @font-face {
-  font-family: "SF_HambakSnow";
-  font-weight: normal;
-  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2106@1.1/SF_HambakSnow.woff")
-    format("woff");
-  font-style: normal;
-}
-@font-face {
   font-family: "LeeSeoyun";
   font-weight: normal;
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2202-2@1.0/LeeSeoyun.woff")
@@ -937,4 +930,21 @@ h4:has(.replace-control) {
   src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2403@1.0/Ownglyph_Dailyokja-Rg.woff2")
     format("woff2");
   font-style: normal;
+}
+@font-face {
+    font-family: 'Galmuri9';
+    src: url('https://cdn.jsdelivr.net/gh/quiple/galmuri@main/dist/Galmuri9.woff2') format('woff2');
+    font-weight: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Galmuri11';
+    src: url('https://cdn.jsdelivr.net/gh/quiple/galmuri@main/dist/Galmuri11.woff2') format('woff2');
+    font-weight: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Galmuri14';
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2506-1@1.0/Galmuri14.woff2") format('woff2');
+    font-weight: normal;
 }

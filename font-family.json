@@ -92,10 +92,6 @@
     "value": "SDKukdetopokki"
   },
   {
-    "label": "SF함박눈",
-    "value": "SF_HambakSnow"
-  },
-  {
     "label": "마포금빛나루",
     "value": "MapoGoldenPier"
   },
@@ -166,5 +162,17 @@
   {
     "label": "전남교육바른체",
     "value": "JNE-Bareun-TTF-Bold"
+  },
+  {
+    "label": "갈무리9",
+    "value": "Galmuri9"
+  },
+  {
+    "label": "갈무리11",
+    "value": "Galmuri11"
+  },
+  {
+    "label": "갈무리14",
+    "value": "Galmuri14"
   }
 ]
