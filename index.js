@@ -1043,16 +1043,34 @@ function addBGtoGallery(name, imageData) {
   bgElement.on("click", selectCanvasBG);
   bgElement.find(".delete-bg-btn").on("click", removeCustomBg);
 }
-
 function uploadImage(event) {
   const file = event.target.files[0];
   if (!file) return;
-  const ImageReader = new FileReader();
-  ImageReader.onload = (e) => {
-    const imageData = e.target.result;
+  const img = new Image();
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  img.onload = () => {
+    const max_size = 800;
+    let width = img.width;
+    let height = img.height;
+    if (width > height && width > max_size) {
+      height *= max_size / width;
+      width = max_size;
+    } else if (height > max_size) {
+      width *= max_size / height;
+      height = max_size;
+    }
+    canvas.width = width;
+    canvas.height = height;
+    ctx.drawImage(img, 0, 0, width, height);
+    const imageData = canvas.toDataURL('image/jpeg', 0.8);
     storeBackground(file.name, imageData);
     addBGtoGallery(file.name, imageData);
     $("#bg_image_upload").val("");
+  };
+  const ImageReader = new FileReader();
+  ImageReader.onload = (e) => {
+    img.src = e.target.result;
   };
   ImageReader.readAsDataURL(file);
 }
