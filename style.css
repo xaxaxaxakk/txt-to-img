@@ -383,17 +383,8 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
 
 /* 텍스트 스타일 설정 탭 */
 #custom-font-color {
-  display: flex;
   width: 100%;
   margin-top: 15px;
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: space-between;
-}
-#custom-font-color > div {
-  width: 48% !important;
-  justify-content: flex-start;
-  gap: 5px;
 }
 #tti_font_family:disabled {
   background: rgba(0, 0, 0, 0.07);
