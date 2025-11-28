@@ -2148,13 +2148,22 @@ function saveImage(dataUrl, filename) {
 }
 
 jQuery(async () => {
-  await initSettings();
+  try {
+    await initSettings();
 
-  presetUI();
-  presetBackupSys();
-  customBG();
-  setupWordReplacer();
-
+    presetUI();
+    presetBackupSys();
+    customBG();
+    setupWordReplacer();
+    bindingFunctions();
+    restoreButtons();
+    tabButtons();
+    botCardButtons();
+  } catch (error) {
+    console.error("에러", error);
+  }
+});
+function bindingFunctions() {
   $("#tti_font_family").on("change", fontFamily);
   $("#tti_font_size").on("change", fontSize);
   $("#tti_font_align").on("change", fontAlign);
@@ -2191,6 +2200,17 @@ jQuery(async () => {
   $("#letter_control").on("change", letterCase);
   $("#unit_control").on("change", unitControl);
 
+  $("#how_to_use").on("click", () => {
+    $(".how_to_use_box").slideToggle();
+  });
+  $("#create_preset").on("click", () => {
+    $("#preset_name").val("");
+  });
+  $("#clear_replace").on("click", () => {
+    $(".replacer_box").val("");
+  });
+}
+function restoreButtons() {
   let deletedText = "";
   $("#clear_text_btn").on("click", () => {
     deletedText = $("#text_to_image").val();
@@ -2204,17 +2224,36 @@ jQuery(async () => {
       deletedText = "";
     }
   });
-  $("#create_preset").on("click", () => {
-    $("#preset_name").val("");
-  });
-  $("#clear_replace").on("click", () => {
-    $(".replacer_box").val("");
-  });
+}
+function tabButtons() {
+  $(".tab-btn").click(function () {
+    $(".tab-btn").removeClass("active");
+    $(".tab-content").removeClass("active");
 
-  $("#how_to_use").on("click", () => {
-    $(".how_to_use_box").slideToggle();
+    $(this).addClass("active");
+    const tabId = $(this).data("tab");
+    $("#" + tabId).addClass("active");
   });
+  $(".tab-btn").first().click();
 
+  $("#custom-font-color > h4 > span").on("click", function () {
+    const CFC = $("#custom-font-color");
+    const lists = CFC.find(".font-color-lists");
+    const toggleButton = $(this);
+    lists.slideUp();
+
+    if (CFC.hasClass("hide")) {
+      lists.stop().slideDown(200);
+      CFC.removeClass("hide").addClass("opened");
+      toggleButton.text("닫기");
+    } else {
+      lists.stop().slideUp(200);
+      CFC.removeClass("opened").addClass("hide");
+      toggleButton.text("열기");
+    }
+  });
+}
+function botCardButtons() {
   $(`.bot-data[data-type]`).on("click", function () {
     const dataType = $(this).data("type");
     const currentTab = $(".bot-data[data-type].active").data("type");
@@ -2241,4 +2280,4 @@ jQuery(async () => {
   $(".bot-data.botSaver").on("click", function () {
     botCardSaver();
   });
-});
+}
