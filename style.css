@@ -20,11 +20,11 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.2);
+  font-size: 14px !important;
+  font-weight: bold;
   cursor: pointer !important;
   transition: border-color 0.3s;
   backdrop-filter: blur(10px);
-  font-size: 14px !important;
-  font-weight: bold;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   &:hover {
     border-color: #007bff;
@@ -179,8 +179,8 @@ h5 {
   display: flex;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 10px;
   margin-left: auto;
+  gap: 10px;
 }
 .bot-datas button {
   flex: 1;
@@ -192,8 +192,8 @@ h5 {
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.7);
   color: #2c3e50;
-  cursor: pointer;
   font-size: 12px !important;
+  cursor: pointer;
   transition: all 0.3s;
 
   &:not(.botImporter):not(.botSaver:disabled):hover,
@@ -207,9 +207,9 @@ h5 {
   color: #fff;
 
   &::before {
-    content: "\f07c";
     font-family: "Font Awesome 7 Free";
     font-weight: bold;
+    content: "\f07c";
   }
 }
 .bot-datas .botImporter.remover {
@@ -386,6 +386,28 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
   width: 100%;
   margin-top: 15px;
 }
+#custom-font-color > h4 {
+  margin-bottom: 0 !important;
+}
+#custom-font-color > h4 > span {
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background-color:#a29bfe;
+  color: #fff;
+  font-size: 12px !important;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+#custom-font-color.hide .font-color-lists {
+  display: none;
+}
+#custom-font-color.opened  > h4 > span {
+  background-color: #ff6f61;
+}
+.font-color-lists {
+  padding-top: 10px !important;
+}
 #tti_font_family:disabled {
   background: rgba(0, 0, 0, 0.07);
 }
@@ -501,10 +523,10 @@ h4:has(.replace-control) {
   flex-wrap: wrap;
 }
 :where(.preview-control, .replace-control) {
-  margin-left: auto;
   display: inline-flex;
-  gap: 10px;
   flex-wrap: wrap;
+  margin-left: auto;
+  gap: 10px;
 
   & label {
     width: auto !important;
@@ -544,8 +566,8 @@ h4:has(.replace-control) {
 
   &.shown {
     display: inline-flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
   }
   &:hover {
     background: rgba(255, 105, 97, 0.7);
@@ -868,30 +890,30 @@ h4:has(.replace-control) {
 }
 @font-face {
   font-family: "Galmuri9";
-  src: url("https://cdn.jsdelivr.net/gh/quiple/galmuri@main/dist/Galmuri9.woff2") format("woff2");
   font-weight: normal;
+  src: url("https://cdn.jsdelivr.net/gh/quiple/galmuri@main/dist/Galmuri9.woff2") format("woff2");
   font-display: swap;
 }
 @font-face {
   font-family: "Galmuri11";
-  src: url("https://cdn.jsdelivr.net/gh/quiple/galmuri@main/dist/Galmuri11.woff2") format("woff2");
   font-weight: normal;
+  src: url("https://cdn.jsdelivr.net/gh/quiple/galmuri@main/dist/Galmuri11.woff2") format("woff2");
   font-display: swap;
 }
 @font-face {
   font-family: "Galmuri14";
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2506-1@1.0/Galmuri14.woff2") format("woff2");
   font-weight: normal;
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2506-1@1.0/Galmuri14.woff2") format("woff2");
 }
 @font-face {
   font-family: "BookkMyungjo-Bd";
-  src: url("https://cdn.jsdelivr.net/gh/fontbee/font@main/Rixfont/BookkMyungjo-Bd.woff2") format("woff2");
   font-weight: 700;
+  src: url("https://cdn.jsdelivr.net/gh/fontbee/font@main/Rixfont/BookkMyungjo-Bd.woff2") format("woff2");
   font-style: normal;
 }
 @font-face {
   font-family: "MissedGyuwon";
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2510-1@1.0/Griun_Gyuwon-Rg.woff2") format("woff2");
   font-weight: normal;
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2510-1@1.0/Griun_Gyuwon-Rg.woff2") format("woff2");
   font-display: swap;
 }
