@@ -1150,6 +1150,8 @@ function getCanvasSize() {
       return {width: 700, height: 1100};
     case "longer":
       return {width: 700, height: 2000};
+    case "full":
+      return {width: 700, height: null};
     default:
       return {width: 700, height: 700};
   }
@@ -1643,7 +1645,9 @@ function wrappingTexts(text, mode = "word") {
   const maxWidth = width - 80;
   const fontSize = parseInt(extension_settings[extensionName].fontSize);
   const lineHeight = fontSize * 1.5;
-  const maxLines = Math.floor((height - 80 - lineHeight) / lineHeight);
+
+  const fullSize = extension_settings[extensionName].imageRatio === "full";
+  const maxLines = fullSize ? Infinity : Math.floor((height - 80 - lineHeight) / lineHeight);
 
   const pages = [];
   let currentPage = [];
@@ -1655,7 +1659,7 @@ function wrappingTexts(text, mode = "word") {
     const isBlank = lineText.trim() === "";
 
     if (isBlank) {
-      if (lineCount >= maxLines) {
+      if (!fullSize && lineCount >= maxLines) {
         pages.push(currentPage);
         currentPage = [];
         lineCount = 0;
@@ -1749,7 +1753,7 @@ function wrappingTexts(text, mode = "word") {
       wrapLine[wrapLine.length - 1].softBreak = false;
     }
 
-    if (lineCount + wrapLine.length > maxLines && currentPage.length > 0) {
+    if (!fullSize && lineCount + wrapLine.length > maxLines && currentPage.length > 0) {
       pages.push(currentPage);
       currentPage = [];
       lineCount = 0;
@@ -1789,24 +1793,26 @@ function isBlankLine(line, mode) {
 // 텍스트를 이미지로
 function generateTextImage(chunk, index) {
   const {width, height} = getCanvasSize();
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-
   const fontSize = parseInt(extension_settings[extensionName].fontSize);
   const lineHeight = fontSize * 1.5;
   const settings = extension_settings[extensionName];
+
+  const isFullSize = settings.imageRatio === "full";
+  const calcHeight = isFullSize
+    ? Math.max(700, chunk.length * lineHeight + 160)
+    : height;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = calcHeight;
+  const ctx = canvas.getContext("2d");
 
   const drawText = () => {
     const strokeWidth = parseFloat(settings.strokeWidth) || 0;
 
     const totalTextHeight = chunk.length * lineHeight;
     const footerHeight = 30;
-    let y = Math.max(
-      (height - totalTextHeight - footerHeight) / 2 + lineHeight, 
-      40 + lineHeight / 2
-    );
+    let y = Math.max((calcHeight - totalTextHeight - footerHeight) / 2 + lineHeight, 40 + lineHeight / 2);
     const setAlign = settings.fontAlign || "left";
 
     const lineBreak = extension_settings[extensionName].lineBreak || "byWord";
@@ -1819,135 +1825,130 @@ function generateTextImage(chunk, index) {
     }
 
     function renderSpan(span, x, y) {
-    setFont(span);
-    const metrics = ctx.measureText(span.text);
-    const textWidth = metrics.width;
-    const textHeight = fontSize;
+      setFont(span);
+      const metrics = ctx.measureText(span.text);
+      const textWidth = metrics.width;
+      const textHeight = fontSize;
 
-    let textColor = settings.fontColor || "#000000";
-    if (span.fontColor) {
-      textColor = span.fontColor;
-    } else {
-      if (span.strikethrough && settings.useStrikethroughColor) {
-        textColor = settings.strikethroughFontColor || textColor;
-      } else if (span.underline && settings.useUnderlineColor) {
-        textColor = settings.underlineFontColor || textColor;
-      } else if (span.bold && span.italic && settings.useBoldItalicColor) {
-        textColor = settings.boldItalicFontColor || textColor;
-      } else if (span.bold && !span.italic && settings.useBoldColor) {
-        textColor = settings.boldFontColor || textColor;
-      } else if (!span.bold && span.italic && settings.useItalicColor) {
-        textColor = settings.italicFontColor || textColor;
+      let textColor = settings.fontColor || "#000000";
+      if (span.fontColor) {
+        textColor = span.fontColor;
+      } else {
+        if (span.strikethrough && settings.useStrikethroughColor) {
+          textColor = settings.strikethroughFontColor || textColor;
+        } else if (span.underline && settings.useUnderlineColor) {
+          textColor = settings.underlineFontColor || textColor;
+        } else if (span.bold && span.italic && settings.useBoldItalicColor) {
+          textColor = settings.boldItalicFontColor || textColor;
+        } else if (span.bold && !span.italic && settings.useBoldColor) {
+          textColor = settings.boldFontColor || textColor;
+        } else if (!span.bold && span.italic && settings.useItalicColor) {
+          textColor = settings.italicFontColor || textColor;
+        }
       }
-    }
 
-    ctx.fillStyle = textColor;
-    if (strokeWidth > 0) {
-      ctx.strokeStyle = textColor;
-      ctx.lineWidth = strokeWidth;
-    }
-
-    if (span.bgColor) {
-      const paddingX = 2;
-      const paddingY = 2;
-      ctx.fillStyle = span.bgColor;
-      ctx.fillRect(
-        x - paddingX,
-        y - textHeight + paddingY,
-        textWidth + 2 * paddingX,
-        textHeight + 2 * paddingY
-      );
       ctx.fillStyle = textColor;
-    }
+      if (strokeWidth > 0) {
+        ctx.strokeStyle = textColor;
+        ctx.lineWidth = strokeWidth;
+      }
 
-    if (strokeWidth > 0) ctx.strokeText(span.text, x, y);
-    ctx.fillText(span.text, x, y);
+      if (span.bgColor) {
+        const paddingX = 2;
+        const paddingY = 2;
+        ctx.fillStyle = span.bgColor;
+        ctx.fillRect(x - paddingX, y - textHeight + paddingY, textWidth + 2 * paddingX, textHeight + 2 * paddingY);
+        ctx.fillStyle = textColor;
+      }
 
-    if (span.strikethrough) {
-      ctx.beginPath();
-      ctx.moveTo(x, y - textHeight / 3);
-      ctx.lineTo(x + textWidth, y - textHeight / 3);
-      ctx.strokeStyle = textColor;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
+      if (strokeWidth > 0) ctx.strokeText(span.text, x, y);
+      ctx.fillText(span.text, x, y);
 
-    if (span.underline) {
-      ctx.beginPath();
-      ctx.moveTo(x, y + 4);
-      ctx.lineTo(x + textWidth, y + 4);
-      ctx.strokeStyle = textColor;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
+      if (span.strikethrough) {
+        ctx.beginPath();
+        ctx.moveTo(x, y - textHeight / 3);
+        ctx.lineTo(x + textWidth, y - textHeight / 3);
+        ctx.strokeStyle = textColor;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
 
-    return textWidth;
+      if (span.underline) {
+        ctx.beginPath();
+        ctx.moveTo(x, y + 4);
+        ctx.lineTo(x + textWidth, y + 4);
+        ctx.strokeStyle = textColor;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      return textWidth;
     }
 
     if (lineBreak === "byWord") {
-        chunk.forEach((line) => {
-            let totalTextWidth = 0;
-            const measuredWidths = [];
+      chunk.forEach((line) => {
+        let totalTextWidth = 0;
+        const measuredWidths = [];
 
-            line.forEach((span) => {
-            setFont(span);
-            const width = ctx.measureText(span.text).width;
-            measuredWidths.push(width);
-            totalTextWidth += width;
-            });
-
-            let alignX = 40;
-            if (setAlign === "center") {
-            alignX = width / 2 - totalTextWidth / 2;
-            } else if (setAlign === "right") {
-            alignX = width - totalTextWidth - 40;
-            }
-
-            ctx.textAlign = "left";
-            let x = alignX;
-
-            line.forEach((span, i) => {
-            x += renderSpan(span, x, y);
-            });
-
-            y += lineHeight;
+        line.forEach((span) => {
+          setFont(span);
+          const width = ctx.measureText(span.text).width;
+          measuredWidths.push(width);
+          totalTextWidth += width;
         });
+
+        let alignX = 40;
+        if (setAlign === "center") {
+          alignX = width / 2 - totalTextWidth / 2;
+        } else if (setAlign === "right") {
+          alignX = width - totalTextWidth - 40;
+        }
+
+        ctx.textAlign = "left";
+        let x = alignX;
+
+        line.forEach((span, i) => {
+          x += renderSpan(span, x, y);
+        });
+
+        y += lineHeight;
+      });
     } else {
-        chunk.forEach((lineObj, index) => {
-            const line = lineObj.spans;
-            const isLastLine = index === chunk.length - 1;
-            const isBlankLine = line.every((span) => span.text.trim() === "");
-            const shouldJustify = setAlign === "left" && !isLastLine && lineObj.softBreak && !isBlankLine;
+      chunk.forEach((lineObj, index) => {
+        const line = lineObj.spans;
+        const isLastLine = index === chunk.length - 1;
+        const isBlankLine = line.every((span) => span.text.trim() === "");
+        const shouldJustify = setAlign === "left" && !isLastLine && lineObj.softBreak && !isBlankLine;
 
-            let totalTextWidth = 0;
-            const measuredWidths = [];
+        let totalTextWidth = 0;
+        const measuredWidths = [];
 
-            line.forEach((span) => {
-            setFont(span);
-            const width = ctx.measureText(span.text).width;
-            measuredWidths.push(width);
-            totalTextWidth += width;
-            });
-
-            let alignX = 40;
-            if (setAlign === "center") {
-            alignX = width / 2 - totalTextWidth / 2;
-            } else if (setAlign === "right") {
-            alignX = width - totalTextWidth - 40;
-            }
-
-            const gapCount = line.length - 1;
-            const spacing = (gapCount > 0 && shouldJustify) ? (maxLineWidth - totalTextWidth) / gapCount : 0;
-
-            let x = alignX;
-
-            line.forEach((span, i) => {
-            x += renderSpan(span, x, y);
-            if (i < line.length - 1) x += spacing;
-            });
-
-            y += lineHeight;
+        line.forEach((span) => {
+          setFont(span);
+          const width = ctx.measureText(span.text).width;
+          measuredWidths.push(width);
+          totalTextWidth += width;
         });
+
+        let alignX = 40;
+        if (setAlign === "center") {
+          alignX = width / 2 - totalTextWidth / 2;
+        } else if (setAlign === "right") {
+          alignX = width - totalTextWidth - 40;
+        }
+
+        const gapCount = line.length - 1;
+        const spacing = gapCount > 0 && shouldJustify ? (maxLineWidth - totalTextWidth) / gapCount : 0;
+
+        let x = alignX;
+
+        line.forEach((span, i) => {
+          x += renderSpan(span, x, y);
+          if (i < line.length - 1) x += spacing;
+        });
+
+        y += lineHeight;
+      });
     }
   };
 
@@ -1957,33 +1958,32 @@ function generateTextImage(chunk, index) {
       offsetX = 0,
       offsetY = 0;
     const imgRatio = img.width / img.height;
-    const canvasRatio = width / height;
+    const canvasRatio = width / calcHeight;
 
     if (imgRatio > canvasRatio) {
-      drawHeight = height;
-      drawWidth = img.width * (height / img.height);
+      drawHeight = calcHeight;
+      drawWidth = img.width * (calcHeight / img.height);
       offsetX = (width - drawWidth) / 2;
     } else {
       drawWidth = width;
       drawHeight = img.height * (width / img.width);
-      offsetY = (height - drawHeight) / 2;
+      offsetY = (calcHeight - drawHeight) / 2;
     }
     ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
 
     let filterEffects = [];
     if (settings.bgBlur > 0) filterEffects.push(`blur(${settings.bgBlur}px)`);
-    if (settings.bgBrightness !== undefined)
-      filterEffects.push(`brightness(${settings.bgBrightness}%)`);
+    if (settings.bgBrightness !== undefined) filterEffects.push(`brightness(${settings.bgBrightness}%)`);
     if (settings.bgHue !== undefined) filterEffects.push(`hue-rotate(${settings.bgHue}deg)`);
 
     if (filterEffects.length > 0) {
       ctx.filter = filterEffects.join(" ");
-      ctx.drawImage(canvas, 0, 0, width, height);
+      ctx.drawImage(canvas, 0, 0, width, calcHeight);
       ctx.filter = "none";
     }
 
     if (settings.bgGrayscale > 0) {
-      const imageData = ctx.getImageData(0, 0, width, height);
+      const imageData = ctx.getImageData(0, 0, width, calcHeight);
       const data = imageData.data;
       const grayscaleFactor = settings.bgGrayscale / 100;
       for (let i = 0; i < data.length; i += 4) {
@@ -1996,7 +1996,7 @@ function generateTextImage(chunk, index) {
     }
 
     if (settings.bgNoise > 0) {
-      const imageData = ctx.getImageData(0, 0, width, height);
+      const imageData = ctx.getImageData(0, 0, width, calcHeight);
       const data = imageData.data;
       const noiseLevel = settings.bgNoise / 100;
       for (let i = 0; i < data.length; i += 4) {
@@ -2014,7 +2014,7 @@ function generateTextImage(chunk, index) {
       ctx.fillStyle = `${settings.overlayColor}${Math.round(settings.overlayOpacity * 255)
         .toString(16)
         .padStart(2, "0")}`;
-      ctx.fillRect(20, 20, width - 40, height - 40);
+      ctx.fillRect(20, 20, width - 40, calcHeight - 40);
     }
   };
 
@@ -2025,7 +2025,7 @@ function generateTextImage(chunk, index) {
       ctx.font = "14px Pretendard-Regular";
       ctx.fillStyle = footerColor;
       ctx.textAlign = "right";
-      const footerY = height - 35;
+      const footerY = calcHeight - 35;
       ctx.fillText(footerText, width - 35, footerY);
     }
   };
@@ -2042,7 +2042,7 @@ function generateTextImage(chunk, index) {
   const bgColor = settings.backgroundColor;
   if (useBgColor) {
     ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, width, calcHeight);
     drawOverlay();
     drawText();
     drawFooter();
@@ -2064,7 +2064,7 @@ function generateTextImage(chunk, index) {
     };
     img.src = bgImage;
   } else {
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, width, calcHeight);
     drawOverlay();
     drawText();
     drawFooter();
@@ -2072,6 +2072,7 @@ function generateTextImage(chunk, index) {
   }
 
   if (settings.imageRatio === "rectangular") $img.addClass("rectangular");
+  if (isFullSize) $img.addClass("full");
   $preview.append($img, $downloadBtn);
   return $preview;
 }
