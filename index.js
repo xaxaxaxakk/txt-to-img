@@ -7,7 +7,9 @@ const extensionFolderPath = `https://xaxaxaxakk.github.io/${extensionName}`;
 const defaultSettings = {
   fontFamily: "Pretendard-Regular",
   fontWeight: "normal",
-  fontSize: "24px",
+  fontSize: 24,
+  fontSpacing: 0,
+  fontLineHeight: 1.5,
   fontAlign: "left",
   fontColor: "#000000",
   useItalicColor: false,
@@ -60,6 +62,8 @@ async function initSettings() {
   const {
     fontFamily,
     fontSize,
+    fontSpacing,
+    fontLineHeight,
     fontAlign,
     fontColor,
     useItalicColor,
@@ -97,6 +101,8 @@ async function initSettings() {
 
   $("#tti_font_family").val(fontFamily);
   $("#tti_font_size").val(fontSize);
+  $("#tti_letter_spacing").val(fontSpacing);
+  $("#tti_line_height").val(fontLineHeight);
   $("#tti_font_align").val(fontAlign);
   $("#tti_font_color").val(fontColor);
   $("#use_italic_color").prop("checked", useItalicColor);
@@ -246,6 +252,8 @@ function deletePreset() {
 
     $("#tti_font_family").val(defaultSettings.fontFamily);
     $("#tti_font_size").val(defaultSettings.fontSize);
+    $("#tti_letter_spacing").val(defaultSettings.fontSpacing);
+    $("#tti_line_height").val(defaultSettings.fontLineHeight);
     $("#tti_font_align").val(defaultSettings.fontAlign);
     $("#tti_font_color").val(defaultSettings.fontColor);
     $("#use_italic_color").prop("checked", defaultSettings.useItalicColor);
@@ -317,6 +325,8 @@ function selectPreset() {
     }
     $("#tti_font_family").val(defaultSettings.fontFamily);
     $("#tti_font_size").val(defaultSettings.fontSize);
+    $("#tti_letter_spacing").val(defaultSettings.fontSpacing);
+    $("#tti_line_height").val(defaultSettings.fontLineHeight);
     $("#tti_font_align").val(defaultSettings.fontAlign);
     $("#tti_font_color").val(defaultSettings.fontColor);
     $("#use_italic_color").prop("checked", defaultSettings.useItalicColor);
@@ -416,6 +426,12 @@ function applyPreset(presetName) {
         break;
       case "fontSize":
         $("#tti_font_size").val(value);
+        break;
+      case "fontSpacing":
+        $("#tti_letter_spacing").val(value);
+        break;
+      case "fontLineHeight":
+        $("#tti_line_height").val(value);
         break;
       case "fontAlign":
         $("#tti_font_align").val(value);
@@ -1444,6 +1460,16 @@ function fontSize(event) {
   saveSettings();
   refreshPreview();
 }
+function fontSpacing(event) {
+  extension_settings[extensionName].fontSpacing = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
+function fontLineHeight(event) {
+  extension_settings[extensionName].fontLineHeight = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
 function fontAlign(event) {
   extension_settings[extensionName].fontAlign = event.target.value;
   saveSettings();
@@ -1680,14 +1706,16 @@ function enableMarkdown(text) {
 
 // 텍스트 정리
 function wrappingTexts(text, mode = "word") {
+  const settings = extension_settings[extensionName];
+
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   const { width, height } = getCanvasSize();
   const maxWidth = width - 80;
-  const fontSize = parseInt(extension_settings[extensionName].fontSize);
-  const lineHeight = fontSize * 1.5;
+  const fontSize = settings.fontSize;
+  const lineHeight = fontSize * parseFloat(settings.fontLineHeight);
 
-  const fullSize = extension_settings[extensionName].imageRatio === "full";
+  const fullSize = settings.imageRatio === "full";
   const maxLines = fullSize ? Infinity : Math.floor((height - 80 - lineHeight) / lineHeight);
 
   const pages = [];
@@ -1731,9 +1759,10 @@ function wrappingTexts(text, mode = "word") {
       units.forEach((unit) => {
         if (mode === "char" && (unit === " " || unit === "\t") && currentLine.length === 0) return;
 
-        const fontWeight = span.bold ? "bold" : extension_settings[extensionName].fontWeight;
+        const fontWeight = span.bold ? "bold" : settings.fontWeight;
         const fontStyle = span.italic ? "italic" : "normal";
-        ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${extension_settings[extensionName].fontFamily}`;
+        ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${settings.fontFamily}`;        
+        ctx.letterSpacing = `${settings.fontSpacing}em`;
 
         const testText = currentLineText + unit;
         if (ctx.measureText(testText).width <= maxWidth) {
@@ -1833,11 +1862,11 @@ function isBlankLine(line, mode) {
 
 // 텍스트를 이미지로
 function generateTextImage(chunk, index) {
-  const {width, height} = getCanvasSize();
-  const fontSize = parseInt(extension_settings[extensionName].fontSize);
-  const lineHeight = fontSize * 1.5;
+  const {width, height} = getCanvasSize();  
   const settings = extension_settings[extensionName];
 
+  const fontSize = settings.fontSize;
+  const lineHeight = fontSize * parseFloat(settings.fontLineHeight);
   const bgImage = settings.selectedBackgroundImage;
   const useBgColor = settings.useBackgroundColor;
   const bgColor = settings.backgroundColor;
@@ -1862,7 +1891,7 @@ function generateTextImage(chunk, index) {
     let y = Math.max((calcHeight - totalTextHeight - footerHeight) / 2 + lineHeight, 40 + lineHeight / 2);
     const setAlign = settings.fontAlign || "left";
 
-    const lineBreak = extension_settings[extensionName].lineBreak || "byWord";
+    const lineBreak = settings.lineBreak || "byWord";
     const maxLineWidth = width - 80;
 
     function setFont(span) {
@@ -1873,6 +1902,7 @@ function generateTextImage(chunk, index) {
 
     function renderSpan(span, x, y) {
       setFont(span);
+      ctx.letterSpacing = `${settings.fontSpacing}em`;
       const metrics = ctx.measureText(span.text);
       const textWidth = metrics.width;
       const textHeight = fontSize;
@@ -1940,6 +1970,7 @@ function generateTextImage(chunk, index) {
         line.forEach((span) => {
           setFont(span);
           const width = ctx.measureText(span.text).width;
+          ctx.letterSpacing = `${settings.fontSpacing}em`;
           measuredWidths.push(width);
           totalTextWidth += width;
         });
@@ -1973,6 +2004,10 @@ function generateTextImage(chunk, index) {
         line.forEach((span) => {
           setFont(span);
           const width = ctx.measureText(span.text).width;
+          const letterSpacing = `${settings.fontSpacing}em`;
+          if (letterSpacing !== "normal") {
+            ctx.letterSpacing = letterSpacing;
+          }
           measuredWidths.push(width);
           totalTextWidth += width;
         });
@@ -2283,6 +2318,8 @@ jQuery(async () => {
 function bindingFunctions() {
   $("#tti_font_family").on("change", fontFamily);
   $("#tti_font_size").on("change", fontSize);
+  $("#tti_letter_spacing").on("change", fontSpacing);
+  $("#tti_line_height").on("change", fontLineHeight);
   $("#tti_font_align").on("change", fontAlign);
   $("#tti_font_color").on("change", fontColor);
   $("#use_italic_color").on("change", useItalicColor);
