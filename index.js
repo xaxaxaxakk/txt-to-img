@@ -1900,7 +1900,7 @@ function generateTextImage(chunk, index) {
       ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${settings.fontFamily}`;
     }
 
-    function renderSpan(span, x, y) {
+    function renderSpan(span, x, y, drawMode = "both") {
       setFont(span);
       ctx.letterSpacing = `${settings.fontSpacing}em`;
       const metrics = ctx.measureText(span.text);
@@ -1924,39 +1924,41 @@ function generateTextImage(chunk, index) {
         }
       }
 
-      ctx.fillStyle = textColor;
-      if (strokeWidth > 0) {
-        ctx.strokeStyle = textColor;
-        ctx.lineWidth = strokeWidth;
-      }
-
-      if (span.bgColor) {
+      if ((drawMode === "both" || drawMode === "background") && span.bgColor) {
         const paddingX = 2;
         const paddingY = 2;
         ctx.fillStyle = span.bgColor;
-        ctx.fillRect(x - paddingX, y - textHeight + paddingY, textWidth + 2 * paddingX, textHeight + 2 * paddingY);
+        const bgHeight = fontSize;
+        const bgY = y - fontSize + paddingY;
+        ctx.fillRect(x - paddingX, bgY, textWidth + 2 * paddingX, bgHeight);
+      }
+
+      if (drawMode === "both" || drawMode === "text") {
         ctx.fillStyle = textColor;
-      }
+        if (strokeWidth > 0) {
+          ctx.strokeStyle = textColor;
+          ctx.lineWidth = strokeWidth;
+          ctx.strokeText(span.text, x, y);
+        }
+        ctx.fillText(span.text, x, y);
 
-      if (strokeWidth > 0) ctx.strokeText(span.text, x, y);
-      ctx.fillText(span.text, x, y);
+        if (span.strikethrough) {
+          ctx.beginPath();
+          ctx.moveTo(x, y - textHeight / 3);
+          ctx.lineTo(x + textWidth, y - textHeight / 3);
+          ctx.strokeStyle = textColor;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
 
-      if (span.strikethrough) {
-        ctx.beginPath();
-        ctx.moveTo(x, y - textHeight / 3);
-        ctx.lineTo(x + textWidth, y - textHeight / 3);
-        ctx.strokeStyle = textColor;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-
-      if (span.underline) {
-        ctx.beginPath();
-        ctx.moveTo(x, y + 4);
-        ctx.lineTo(x + textWidth, y + 4);
-        ctx.strokeStyle = textColor;
-        ctx.lineWidth = 1;
-        ctx.stroke();
+        if (span.underline) {
+          ctx.beginPath();
+          ctx.moveTo(x, y + 4);
+          ctx.lineTo(x + textWidth, y + 4);
+          ctx.strokeStyle = textColor;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
       }
 
       return textWidth;
@@ -1984,9 +1986,14 @@ function generateTextImage(chunk, index) {
 
         ctx.textAlign = "left";
         let x = alignX;
-
+        line.forEach((span) => {
+          renderSpan(span, x, y, "background");
+          x += measuredWidths[line.indexOf(span)];
+        });
+        
+        x = alignX;
         line.forEach((span, i) => {
-          x += renderSpan(span, x, y);
+          x += renderSpan(span, x, y, "text");
         });
 
         y += lineHeight;
@@ -2023,9 +2030,15 @@ function generateTextImage(chunk, index) {
         const spacing = gapCount > 0 && shouldJustify ? (maxLineWidth - totalTextWidth) / gapCount : 0;
 
         let x = alignX;
-
         line.forEach((span, i) => {
-          x += renderSpan(span, x, y);
+          renderSpan(span, x, y, "background");
+          x += measuredWidths[i];
+          if (i < line.length - 1) x += spacing;
+        });
+
+        x = alignX;
+        line.forEach((span, i) => {
+          x += renderSpan(span, x, y, "text");
           if (i < line.length - 1) x += spacing;
         });
 
