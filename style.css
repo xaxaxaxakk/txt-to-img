@@ -438,7 +438,8 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
 }
 
 /* 배경이미지 탭 */
-#background_color {
+#background_color,
+#second_background_color {
   width: calc(100% - 50px) !important;
 }
 .background-gallery {
