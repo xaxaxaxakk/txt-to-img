@@ -2081,6 +2081,7 @@ function generateTextImage(chunk, index) {
     if (useSecondBgColor) {
       const gradient = ctx.createLinearGradient(0, 0, width, calcHeight);
       gradient.addColorStop(0, bgColor);
+      gradient.addColorStop(0.4, bgColor);
       gradient.addColorStop(1, secondBgColor);
       ctx.fillStyle = gradient;
     } else {
