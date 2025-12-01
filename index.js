@@ -28,6 +28,7 @@ const defaultSettings = {
   useSecondBackgroundColor: false,
   secondBackgroundColor: "#ffffff",
   imageRatio: "square",
+  imageFillMode: "cover",
   bgBlur: 0,
   bgBrightness: 100,
   bgHue: 0,
@@ -74,6 +75,7 @@ async function initSettings() {
     strokeWidth,
     lineBreak,
     imageRatio,
+    imageFillMode,
     useBackgroundColor,
     backgroundColor,
     useSecondBackgroundColor,
@@ -110,6 +112,7 @@ async function initSettings() {
   $("#tti_stroke_width").val(strokeWidth);
   $("#tti_line_break").val(lineBreak);
   $("#tti_ratio").val(imageRatio);
+  $("#tti_fill_mode").val(imageFillMode);
   $("#use_background_color").prop("checked", useBackgroundColor);
   $("#background_color").val(backgroundColor);
   $("#use_second_background_color").prop("checked", useSecondBackgroundColor);
@@ -258,6 +261,7 @@ function deletePreset() {
     $("#tti_stroke_width").val(defaultSettings.strokeWidth);
     $("#tti_line_break").val(defaultSettings.lineBreak);
     $("#tti_ratio").val(defaultSettings.imageRatio);
+    $("#tti_fill_mode").val(defaultSettings.imageFillMode);
     $("#bg_blur").val(defaultSettings.bgBlur);
     $("#bg_brightness").val(defaultSettings.bgBrightness);
     $("#bg_hue").val(defaultSettings.bgHue);
@@ -328,6 +332,7 @@ function selectPreset() {
     $("#tti_stroke_width").val(defaultSettings.strokeWidth);
     $("#tti_line_break").val(defaultSettings.lineBreak);
     $("#tti_ratio").val(defaultSettings.imageRatio);
+    $("#tti_fill_mode").val(defaultSettings.imageFillMode);
     $("#bg_blur").val(defaultSettings.bgBlur);
     $("#bg_brightness").val(defaultSettings.bgBrightness);
     $("#bg_hue").val(defaultSettings.bgHue);
@@ -456,6 +461,9 @@ function applyPreset(presetName) {
         break;
       case "imageRatio":
         $("#tti_ratio").val(value);
+        break;
+      case "imageFillMode":
+        $("#tti_fill_mode").val(value);
         break;
       case "bgBlur":
         $("#bg_blur").val(value);
@@ -1189,6 +1197,11 @@ function aspectRatio(event) {
   saveSettings();
   refreshPreview();
 }
+function bgFillMode(event) {
+  extension_settings[extensionName].imageFillMode = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
 
 // 단어 치환
 function letterCase(event) {
@@ -1825,6 +1838,12 @@ function generateTextImage(chunk, index) {
   const lineHeight = fontSize * 1.5;
   const settings = extension_settings[extensionName];
 
+  const bgImage = settings.selectedBackgroundImage;
+  const useBgColor = settings.useBackgroundColor;
+  const bgColor = settings.backgroundColor;
+  const useSecondBgColor = settings.useSecondBackgroundColor;
+  const secondBgColor = settings.secondBackgroundColor;
+
   const isFullSize = settings.imageRatio === "full";
   const calcHeight = isFullSize
     ? Math.max(700, chunk.length * lineHeight + 160)
@@ -1981,29 +2000,86 @@ function generateTextImage(chunk, index) {
   };
 
   const textWallpaper = (img) => {
-    if (isFullSize) {
-      const pattern = ctx.createPattern(img, 'repeat');
-      ctx.fillStyle = pattern;
-      ctx.fillRect(0, 0, width, calcHeight);
-    } else {
-      let drawWidth,
-        drawHeight,
-        offsetX = 0,
-        offsetY = 0;
-      const imgRatio = img.width / img.height;
-      const canvasRatio = width / calcHeight;
+    const fillMode = settings.imageFillMode || "cover";
 
-      if (imgRatio > canvasRatio) {
-        drawHeight = calcHeight;
-        drawWidth = img.width * (calcHeight / img.height);
-        offsetX = (width - drawWidth) / 2;
+    const drawBackground = () => {
+      if (!useBgColor) return;
+      
+      if (useSecondBgColor) {
+        const gradient = ctx.createLinearGradient(0, 0, width, calcHeight);
+        gradient.addColorStop(0, bgColor);
+        gradient.addColorStop(0.4, bgColor);
+        gradient.addColorStop(1, secondBgColor);
+        ctx.fillStyle = gradient;
       } else {
-        drawWidth = width;
-        drawHeight = img.height * (width / img.width);
-        offsetY = (calcHeight - drawHeight) / 2;
+        ctx.fillStyle = bgColor;
       }
+      ctx.fillRect(0, 0, width, calcHeight);
+    };
+
+    if (fillMode === "pattern") {
+      if (useBgColor) {
+        drawBackground();
+      } else {
+        const scale = width / img.width;
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = width;
+        tempCanvas.height = img.height * scale;
+        const tempCtx = tempCanvas.getContext("2d");
+        tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
+        
+        ctx.fillStyle = ctx.createPattern(tempCanvas, "repeat");
+        ctx.fillRect(0, 0, width, calcHeight);
+      }
+    } else if (fillMode === "mix-top" || fillMode === "mix-bottom") {
+      drawBackground();
+      
+      const scale = width / img.width;
+      const drawWidth = width;
+      const drawHeight = img.height * scale;
+      const offsetY = fillMode === "mix-top" ? 0 : calcHeight - drawHeight;
+      
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = width;
+      tempCanvas.height = calcHeight;
+      const tempCtx = tempCanvas.getContext("2d");
+      tempCtx.drawImage(img, 0, offsetY, drawWidth, drawHeight);
+      
+      const gradientHeight = Math.min(drawHeight * 0.4, calcHeight * 0.3);
+      const gradient = tempCtx.createLinearGradient(
+        0, 
+        fillMode === "mix-top" ? offsetY + drawHeight - gradientHeight : offsetY + gradientHeight,
+        0, 
+        fillMode === "mix-top" ? offsetY + drawHeight : offsetY
+      );
+      gradient.addColorStop(0, 'rgba(0,0,0,1)');
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      
+      tempCtx.globalCompositeOperation = 'destination-in';
+      tempCtx.fillStyle = gradient;
+      tempCtx.fillRect(0, 0, width, calcHeight);
+      
+      ctx.drawImage(tempCanvas, 0, 0);
+    } else {
+      if (useBgColor) {
+        drawBackground();
+      } else {
+        const imgRatio = img.width / img.height;
+        const canvasRatio = width / calcHeight;
+        let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
+
+        if (imgRatio > canvasRatio) {
+          drawHeight = calcHeight;
+          drawWidth = img.width * (calcHeight / img.height);
+          offsetX = (width - drawWidth) / 2;
+        } else {
+          drawWidth = width;
+          drawHeight = img.height * (width / img.width);
+          offsetY = (calcHeight - drawHeight) / 2;
+        }
         ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
       }
+    }
 
     let filterEffects = [];
     if (settings.bgBlur > 0) filterEffects.push(`blur(${settings.bgBlur}px)`);
@@ -2072,12 +2148,7 @@ function generateTextImage(chunk, index) {
     .text("Download")
     .on("click", () => saveImage(canvas.toDataURL("image/png"), `${index + 1}.png`));
 
-  const bgImage = settings.selectedBackgroundImage;
-  const useBgColor = settings.useBackgroundColor;
-  const bgColor = settings.backgroundColor;
-  const useSecondBgColor = settings.useSecondBackgroundColor;
-  const secondBgColor = settings.secondBackgroundColor;
-  if (useBgColor) {
+  if (useBgColor && !bgImage) {
     if (useSecondBgColor) {
       const gradient = ctx.createLinearGradient(0, 0, width, calcHeight);
       gradient.addColorStop(0, bgColor);
@@ -2227,6 +2298,7 @@ function bindingFunctions() {
   $("#tti_stroke_width").on("change", strokeWidth);
   $("#tti_line_break").on("change", lineBreak);
   $("#tti_ratio").on("change", aspectRatio);
+  $("#tti_fill_mode").on("change", bgFillMode);
   $("#text_to_image").on("change", refreshPreview);
   $("#use_background_color").on("change", useBackgroundColor);
   $("#background_color").on("change", backgroundColor);
