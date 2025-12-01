@@ -1953,27 +1953,34 @@ function generateTextImage(chunk, index) {
   };
 
   const textWallpaper = (img) => {
-    let drawWidth,
-      drawHeight,
-      offsetX = 0,
-      offsetY = 0;
-    const imgRatio = img.width / img.height;
-    const canvasRatio = width / calcHeight;
-
-    if (imgRatio > canvasRatio) {
-      drawHeight = calcHeight;
-      drawWidth = img.width * (calcHeight / img.height);
-      offsetX = (width - drawWidth) / 2;
+    if (isFullSize) {
+      const pattern = ctx.createPattern(img, 'repeat');
+      ctx.fillStyle = pattern;
+      ctx.fillRect(0, 0, width, calcHeight);
     } else {
-      drawWidth = width;
-      drawHeight = img.height * (width / img.width);
-      offsetY = (calcHeight - drawHeight) / 2;
-    }
-    ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+      let drawWidth,
+        drawHeight,
+        offsetX = 0,
+        offsetY = 0;
+      const imgRatio = img.width / img.height;
+      const canvasRatio = width / calcHeight;
+
+      if (imgRatio > canvasRatio) {
+        drawHeight = calcHeight;
+        drawWidth = img.width * (calcHeight / img.height);
+        offsetX = (width - drawWidth) / 2;
+      } else {
+        drawWidth = width;
+        drawHeight = img.height * (width / img.width);
+        offsetY = (calcHeight - drawHeight) / 2;
+      }
+        ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+      }
 
     let filterEffects = [];
     if (settings.bgBlur > 0) filterEffects.push(`blur(${settings.bgBlur}px)`);
-    if (settings.bgBrightness !== undefined) filterEffects.push(`brightness(${settings.bgBrightness}%)`);
+    if (settings.bgBrightness !== undefined)
+      filterEffects.push(`brightness(${settings.bgBrightness}%)`);
     if (settings.bgHue !== undefined) filterEffects.push(`hue-rotate(${settings.bgHue}deg)`);
 
     if (filterEffects.length > 0) {
