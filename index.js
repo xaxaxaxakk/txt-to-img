@@ -736,7 +736,8 @@ function botDataClass(data) {
   $("#text_to_image").val(cardDataTab[activeTab] || "");
   
   $(".bot-data.botImporter").addClass("remover");
-  $(".bot-data.botSaver").prop("disabled", false);  
+  $(".bot-data:not(.botImporter)").prop("disabled", false);  
+  refreshPreview();
 }
 async function botCardSaver() {
   if (!oriCard || !cardDataTab.oriData) {
@@ -2433,6 +2434,7 @@ function botCardButtons() {
     $(".bot-data[data-type]").removeClass("active");
     $(this).addClass("active");
     $("#text_to_image").val(cardDataTab[dataType] || "");
+    refreshPreview();
   });
   $(".bot-data.botImporter").on("click", function () {
     if ($(this).hasClass("remover")) {
@@ -2441,10 +2443,12 @@ function botCardButtons() {
       Object.keys(cardDataTab).forEach(key => delete cardDataTab[key]);
       $("#text_to_image").val("");
       $(".bot-data[data-type]").removeClass("active");
-      $(this).removeClass("remover");  
-      $(".bot-data.botSaver").prop("disabled", true);  
+      $(this).removeClass("remover");
+      $(".bot-data:not(.botImporter)").prop("disabled", true);  
+      refreshPreview();
     } else {
       loadBotCard();
+      refreshPreview();
     }
   });
   $(".bot-data.botSaver").on("click", function () {

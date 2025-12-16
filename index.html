@@ -95,13 +95,13 @@
             </h4>
             <div class="bot-datas">
               <button class="bot-data botImporter"></button>
-              <button class="bot-data" data-type="description">
+              <button class="bot-data" data-type="description" disabled>
                 <i class="fa-solid fa-address-card"></i>
               </button>
-              <button class="bot-data" data-type="greeting">
+              <button class="bot-data" data-type="greeting" disabled>
                 <i class="fa-solid fa-message"></i>
               </button>
-              <button class="bot-data" data-type="scenario">
+              <button class="bot-data" data-type="scenario" disabled>
                 <i class="fa-solid fa-video"></i>
               </button>
               <button class="bot-data botSaver" disabled>
@@ -284,33 +284,33 @@
 
           <div id="image-style" class="tab-content flex-container">
             <h4>이미지 스타일 설정</h4>
-            <label>비율</label>
+            <label for="tti_ratio">비율</label>
             <select id="tti_ratio">
               <option value="square">정사각형</option>
               <option value="rectangular">직사각형</option>
               <option value="longer">더 길게</option>
               <option value="full">전체 (한장)</option>
             </select>
-            <label>타입</label>
+            <label for="tti_fill_mode">타입</label>
             <select id="tti_fill_mode">
               <option value="cover">채우기</option>
               <option value="pattern">반복</option>              
               <option value="mix-top">혼합(상단)</option>
               <option value="mix-bottom">혼합(하단)</option>
             </select>
-            <label>블러</label>
+            <label for="bg_blur">블러</label>
             <input type="range" id="bg_blur" min="0" max="10" step="0.1" />
-            <label>밝기</label>
+            <label for="bg_brightness">밝기</label>
             <input type="range" id="bg_brightness" min="40" max="180" step="5" />
-            <label>흑백</label>
+            <label for="bg_grayscale">흑백</label>
             <input type="range" id="bg_grayscale" min="0" max="100" step="1" />
-            <label>색조</label>
+            <label for="bg_hue">색조</label>
             <input type="range" id="bg_hue" min="0" max="360" step="3" />
-            <label>노이즈</label>
+            <label for="bg_noise">노이즈</label>
             <input type="range" id="bg_noise" min="0" max="100" step="1" />
-            <label>오버레이</label>
+            <label for="overlay_opacity">오버레이</label>
             <input type="range" id="overlay_opacity" min="0" max="1" step="0.01" />
-            <label>오버레이색</label>
+            <label for="overlay_color">오버레이색</label>
             <input type="color" id="overlay_color" />
           </div>
 
