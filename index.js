@@ -515,7 +515,7 @@ function applyPreset(presetName) {
       case "useSecondBackgroundColor":
         $("#use_second_background_color").prop("checked", value);
         break;
-      case "SecondBackgroundColor":
+      case "secondBackgroundColor":
         $("#second_background_color").val(value);
         break;
       case "footerText":
@@ -585,25 +585,23 @@ function importPreset(event) {
   }
   const fileReader = new FileReader();
   fileReader.onload = function (e) {
-    try {
-      const presetData = JSON.parse(e.target.result);
-      let importName = presetData.name;
-      const presets = extension_settings[extensionName].presets;
-      if (presets[importName]) {
-        let counter = 1;
-        let newName = `${importName}_${counter}`;
-        while (presets[newName]) {
-          counter++;
-          newName = `${importName}_${counter}`;
-        }
-        importName = newName;
+    const presetData = JSON.parse(e.target.result);
+    let importName = presetData.name;
+    const presets = extension_settings[extensionName].presets;
+    if (presets[importName]) {
+      let counter = 1;
+      let newName = `${importName}_${counter}`;
+      while (presets[newName]) {
+        counter++;
+        newName = `${importName}_${counter}`;
       }
-      presets[importName] = presetData.settings;
-      extension_settings[extensionName].currentPreset = importName;
-      saveSettings();
-      updatePresetSelector(importName);
-      applyPreset(importName);
-    } catch (error) {}
+      importName = newName;
+    }
+    presets[importName] = presetData.settings;
+    extension_settings[extensionName].currentPreset = importName;
+    saveSettings();
+    updatePresetSelector(importName);
+    applyPreset(importName);
     event.target.value = "";
   };
   fileReader.readAsText(file);
@@ -639,13 +637,10 @@ function loadBotCard(dataType) {
     oriCard = file;
     oriCardType = file.name.endsWith(".json") ? "json" : "png";
 
-    try {
-      const botData = file.name.endsWith(".json")
-        ? await MDFromJSON(file)
-        : await MDFromPNG(file);
-      if (botData) botDataClass(botData, dataType);
-    } catch (error) {
-    }
+    const botData = file.name.endsWith(".json")
+      ? await MDFromJSON(file)
+      : await MDFromPNG(file);
+    if (botData) botDataClass(botData, dataType);
   };
 
   input.click();
@@ -677,7 +672,27 @@ async function MDFromPNG(file) {
       }
       const [key, text] = textData.split("\0");
       if (key.toLowerCase() === "chara" || key.toLowerCase() === "ccv3") {
-        try {
+        const binary = atob(text.trim());
+        const uint8Array = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          uint8Array[i] = binary.charCodeAt(i);
+        }
+        const decoded = new TextDecoder("utf-8").decode(uint8Array);
+        return JSON.parse(decoded);
+      }
+    }
+    if (chunkType === "iTXt") {
+      let textData = "";
+      for (let i = 0; i < chunkLength; i++) {
+        textData += String.fromCharCode(dataView.getUint8(offset + i));
+      }
+      const parts = textData.split("\0");
+      const key = parts[0];
+      if (key.toLowerCase() === "chara" || key.toLowerCase() === "ccv3") {
+        const compressionFlag = parts[1] ? parts[1].charCodeAt(0) : 0;
+        const text = parts[parts.length - 1];
+        
+        if (compressionFlag === 0) {
           const binary = atob(text.trim());
           const uint8Array = new Uint8Array(binary.length);
           for (let i = 0; i < binary.length; i++) {
@@ -685,33 +700,7 @@ async function MDFromPNG(file) {
           }
           const decoded = new TextDecoder("utf-8").decode(uint8Array);
           return JSON.parse(decoded);
-        } catch (error) {
         }
-      }
-    }
-    if (chunkType === "iTXt") {
-      try {
-        let textData = "";
-        for (let i = 0; i < chunkLength; i++) {
-          textData += String.fromCharCode(dataView.getUint8(offset + i));
-        }
-        const parts = textData.split("\0");
-        const key = parts[0];
-        if (key.toLowerCase() === "chara" || key.toLowerCase() === "ccv3") {
-          const compressionFlag = parts[1] ? parts[1].charCodeAt(0) : 0;
-          const text = parts[parts.length - 1];
-          
-          if (compressionFlag === 0) {
-            const binary = atob(text.trim());
-            const uint8Array = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) {
-              uint8Array[i] = binary.charCodeAt(i);
-            }
-            const decoded = new TextDecoder("utf-8").decode(uint8Array);
-            return JSON.parse(decoded);
-          }
-        }
-      } catch (error) {
       }
     }
 
@@ -779,33 +768,30 @@ function cardToJSON(data, filename) {
   URL.revokeObjectURL(url);
 }
 async function cardToPNG(oriCardData, oriCard) {
-  try {
-    const arrayBuffer = await oriCard.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
+  const arrayBuffer = await oriCard.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
 
-    const jsonStr = JSON.stringify(oriCardData);
-    const utf8Bytes = new TextEncoder().encode(jsonStr);
-    let binary = '';
-    for (let i = 0; i < utf8Bytes.length; i++) {
-      binary += String.fromCharCode(utf8Bytes[i]);
-    }
-    const encoded = btoa(binary);
-    const newChunks = [];
-    newChunks.push(textChunk("chara", encoded));
-    newChunks.push(textChunk("ccv3", encoded));
-    newChunks.push(ITxtChunk("chara", encoded));
-    const finalPNG = replaceChunks(uint8Array, newChunks);
-    const blob = new Blob([finalPNG], { type: "image/png" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = oriCard.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch (error) {
+  const jsonStr = JSON.stringify(oriCardData);
+  const utf8Bytes = new TextEncoder().encode(jsonStr);
+  let binary = '';
+  for (let i = 0; i < utf8Bytes.length; i++) {
+    binary += String.fromCharCode(utf8Bytes[i]);
   }
+  const encoded = btoa(binary);
+  const newChunks = [];
+  newChunks.push(textChunk("chara", encoded));
+  newChunks.push(textChunk("ccv3", encoded));
+  newChunks.push(ITxtChunk("chara", encoded));
+  const finalPNG = replaceChunks(uint8Array, newChunks);
+  const blob = new Blob([finalPNG], { type: "image/png" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = oriCard.name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 function textChunk(key, encoded) {
   const textContent = key + "\0" + encoded;
@@ -932,22 +918,20 @@ function fontFamily(event) {
 
 // 폰트 로드
 async function loadFonts() {
-  try {
-    const response = await fetch(`${extensionFolderPath}/font-family.json`);
-    const fonts = await response.json();
-    fonts.sort((a, b) => a.label.localeCompare(b.label));
-    const select = $("#tti_font_family").empty();
+  const fontFamilyName = await fetch(`${extensionFolderPath}/font-family.json`);
+  const fonts = await fontFamilyName.json();
+  fonts.sort((a, b) => a.label.localeCompare(b.label));
+  const select = $("#tti_font_family").empty();
 
-    const fontPromises = fonts.map(font => document.fonts.load(`1em ${font.value}`));
-    await Promise.all(fontPromises);
-    
-    fonts.forEach(font => {
-      select.append(`<option value="${font.value}">${font.label}</option>`);
-    });
+  const fontPromises = fonts.map(font => document.fonts.load(`1em ${font.value}`));
+  await Promise.all(fontPromises);
+  
+  fonts.forEach(font => {
+    select.append(`<option value="${font.value}">${font.label}</option>`);
+  });
 
-    select.val(extension_settings[extensionName].fontFamily);
-    refreshPreview();
-  } catch (error) {}
+  select.val(extension_settings[extensionName].fontFamily);
+  refreshPreview();
 }
 
 // 로컬 폰트 로드
@@ -1035,21 +1019,19 @@ function deleteLocalFont() {
 
 // 배경이미지 로드
 async function loadBG() {
-  try {
-    const response = await fetch(`${extensionFolderPath}/backgrounds-list.json`);
-    const backgrounds = await response.json();
-    const gallery = $("#background_image_gallery").empty();
-    backgrounds.forEach((bg) => {
-      const bgPath = `${extensionFolderPath}/default-backgrounds/${bg}`;
-      const isSelected = extension_settings[extensionName].selectedBackgroundImage === bgPath;
-      gallery.append(`
-        <div class="bg-image-item ${isSelected ? "selected" : ""}" data-path="${bgPath}">
-          <img src="${bgPath}" alt="${bg}" />
-        </div>
-      `);
-    });
-    $(".bg-image-item").on("click", selectCanvasBG);
-  } catch (error) {}
+  const bgListFile = await fetch(`${extensionFolderPath}/backgrounds-list.json`);
+  const backgrounds = await bgListFile.json();
+  const gallery = $("#background_image_gallery").empty();
+  backgrounds.forEach((bg) => {
+    const bgPath = `${extensionFolderPath}/default-backgrounds/${bg}`;
+    const isSelected = extension_settings[extensionName].selectedBackgroundImage === bgPath;
+    gallery.append(`
+      <div class="bg-image-item ${isSelected ? "selected" : ""}" data-path="${bgPath}">
+        <img src="${bgPath}" alt="${bg}" />
+      </div>
+    `);
+  });
+  $(".bg-image-item").on("click", selectCanvasBG);
 }
 function storeBackground(name, imageData) {
   const customBackgrounds = JSON.parse(localStorage.getItem("textToImageCustomBgs") || "{}");
@@ -2314,20 +2296,15 @@ function saveImage(dataUrl, filename) {
 }
 
 jQuery(async () => {
-  try {
-    await initSettings();
-
-    presetUI();
-    presetBackupSys();
-    customBG();
-    setupWordReplacer();
-    bindingFunctions();
-    restoreButtons();
-    tabButtons();
-    botCardButtons();
-  } catch (error) {
-    console.error("에러", error);
-  }
+  await initSettings();
+  presetUI();
+  presetBackupSys();
+  customBG();
+  setupWordReplacer();
+  bindingFunctions();
+  restoreButtons();
+  tabButtons();
+  botCardButtons();
 });
 function bindingFunctions() {
   $("#tti_font_family").on("change", fontFamily);
