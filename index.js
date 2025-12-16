@@ -1052,7 +1052,41 @@ function loadCustomBG() {
 }
 function customBG() {
   $("#bg_image_upload").on("change", uploadImage);
+  $("#bg_url_btn").on("click", uploadImageFromURL);
   loadCustomBG();
+}
+function uploadImageFromURL() {
+  const url = $("#bg_image_url").val().trim();
+  if (!url) return;
+  
+  const img = new Image();
+  const proxy = "https://cors-anywhere.herokuapp.com/";
+  img.crossOrigin = "anonymous";
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  img.onload = () => {
+    const max_size = 800;
+    let width = img.width;
+    let height = img.height;
+    if (width > height && width > max_size) {
+      height *= max_size / width;
+      width = max_size;
+    } else if (height > max_size) {
+      width *= max_size / height;
+      height = max_size;
+    }
+    canvas.width = width;
+    canvas.height = height;
+    ctx.drawImage(img, 0, 0, width, height);
+    const imageData = canvas.toDataURL('image/jpeg', 0.8);
+    
+    const fileName = url.split('/').pop().split('?')[0] || 'url-image-' + Date.now();
+    storeBackground(fileName, imageData);
+    addBGtoGallery(fileName, imageData);
+    $("#bg_image_url").val("");
+  };  
+  img.src = proxy + url;
 }
 function addBGtoGallery(name, imageData) {
   const isSelected = extension_settings[extensionName].selectedBackgroundImage === imageData;

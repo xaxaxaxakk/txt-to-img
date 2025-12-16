@@ -517,6 +517,13 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
   background: #a29bfe;
   color: #fff;
 }
+#bg_image_url {
+  width: calc(100% - 50px);
+}
+#bg_url_btn {
+  width: 40px !important;
+  height: 40px !important;
+}
 
 /* 미리보기 제어 / 치환 옵션 토글 */
 h4:has(.replace-control) {
