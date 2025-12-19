@@ -728,10 +728,6 @@ h4:has(.replace-control) {
     margin: 10px auto !important;
     padding: 10px !important;
   }
-  .tab-btn {
-    flex: unset !important;
-    width: 48%;
-  }
   .preset-control:has(#preset_selector) {
     justify-content: flex-end;
     flex-wrap: wrap;
