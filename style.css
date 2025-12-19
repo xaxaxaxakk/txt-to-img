@@ -376,7 +376,7 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
     width: 80px !important;
   }
 
-  & input[type="color"] {
+  & input[type="color"]:not([class*="tag-"]) {
     width: calc(100% - 110px) !important;
   }
 }
@@ -523,6 +523,93 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
 #bg_url_btn {
   width: 40px !important;
   height: 40px !important;
+}
+
+/* 하이라이터 */
+#custom-highlighter .highlighter-lists {
+  width: 100%;
+  display: flex;
+  flex-flow: column;
+  gap: 20px;
+
+  & .tag-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  & .delete-tag-btn {
+    height: 28px !important;
+    width: 28px !important;
+    font-size: 12px !important;
+  }
+  
+  & .add-tag-btn {
+    width: 100px !important;
+    align-self: center;
+  }
+}
+.highlighter-lists .tag-item-left {
+  display: flex;
+  flex-direction: column;
+  width: calc(100% - 40px) !important;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.4);
+  gap: 10px 0;
+
+  & *[class*="container"] {
+    display: flex;
+    justify-content: flex-start !important;
+    width: auto !important;
+  }
+  & > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+
+    &:last-child {
+      flex-wrap: wrap;
+    }
+  }
+
+  & input,
+  & select {
+    height: 30px !important;
+    padding: 5px 10px !important;
+    margin: 0 !important;
+    text-align: center !important;
+    border-radius: 10px !important;
+    border: 1px solid #eee !important;
+  }
+  & input[type="checkbox"] {
+    margin-right: 5px !important;
+  }
+  & .tag-font-size {
+    width: 30% !important;
+    min-width: 60px !important;
+  }
+  & .tag-name {
+    width: 120px !important;
+    border: 2px solid #a29bfe !important;
+  }
+  & .bg-color-container,
+  & .font-color-container {
+    flex: 1;
+    & input[type="color"] {
+      width: 100% !important;
+      min-width: 50px !important;
+      padding: 2px !important;
+    }
+  }
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 /* 미리보기 제어 / 치환 옵션 토글 */

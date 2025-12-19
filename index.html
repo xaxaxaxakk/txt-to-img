@@ -41,16 +41,6 @@
         <span>4. 봇카드: 봇카드(png/json) 파일을 불러와 디스크립션/그리팅/시나리오를 볼 수 있고, 수정 후 추출(저장)할 수 있습니다.</span>
         <span>5. 배경이미지의 타입, 글자의 자간과 행간 옵션 추가: 배경 타입 중 <b>혼합</b>모드는 배경색과 이미지를 동시에 적용할 수 있습니다.</span>
       </span>
-      <span>
-        🔹 하이라이트
-        <span>기본 형식: =(#글씨색상코드|#배경색상코드) 문장=</span>
-        <span>
-          색상코드는 #000000와 같은 6자리의 간단한 헥스코드만 가능합니다. (rgba, rgb 등은 지원하지 않습니다.)
-          <br />
-          예시: =(#ffffff|#000000)문장테스트=
-        </span>
-        <span>(#ffffff)처럼 단독으로 적어서 글씨색만 변경할 수 있고, (|#ffffff)처럼 파이프를 앞에 추가해 배경색만 지정할 수도 있습니다.</span>
-      </span>
     </div>
     <div class="text-to-image-converter-settings">
       <div class="inline-drawer">
@@ -172,9 +162,10 @@
           </div>
 
           <div class="tab-container">
-            <button class="tab-btn" data-tab="text-style">글꾸 설정</button>
-            <button class="tab-btn" data-tab="background">배경 선택</button>
-            <button class="tab-btn" data-tab="image-style">배경 편집</button>
+            <button class="tab-btn" data-tab="text-style">글꾸</button>
+            <button class="tab-btn" data-tab="custom-highlighter">태그</button>
+            <button class="tab-btn" data-tab="background">배경</button>
+            <button class="tab-btn" data-tab="image-style">포토샵</button>
             <button class="tab-btn" data-tab="footer">바닥글</button>
           </div>
 
@@ -221,10 +212,7 @@
             </select>
 
             <div id="custom-font-color" class="flex-container hide">
-              <h4>
-                스타일 개별 색상
-                <span>열기</span>
-              </h4>
+              <h4>마크다운 색상 설정<span>열기</span></h4>
               <div class="font-color-lists">
                 <div class="italic-custom">
                   <input type="checkbox" id="use_italic_color" name="use_italic_color" />
@@ -255,8 +243,27 @@
             </div>
           </div>
 
+          <div id="custom-highlighter" class="tab-content flex-container">
+            <h4>하이라이터 태그</h4>
+            <div class="highlighter-lists"></div>
+          </div>
+
           <div id="background" class="tab-content flex-container">
             <h4>배경 종류 선택</h4>
+            <label for="tti_ratio">비율</label>
+            <select id="tti_ratio">
+              <option value="square">정사각형</option>
+              <option value="rectangular">직사각형</option>
+              <option value="longer">더 길게</option>
+              <option value="full">전체 (한장)</option>
+            </select>
+            <label for="tti_fill_mode">타입</label>
+            <select id="tti_fill_mode">
+              <option value="cover">채우기</option>
+              <option value="pattern">반복</option>              
+              <option value="mix-top">혼합(이미지 상단)</option>
+              <option value="mix-bottom">혼합(이미지 하단)</option>
+            </select>
             <h5>배경 색상</h5>
             <div class="bgColor">
               <input type="checkbox" id="use_background_color" name="use_background_color" />
@@ -285,21 +292,7 @@
           </div>
 
           <div id="image-style" class="tab-content flex-container">
-            <h4>이미지 스타일 설정</h4>
-            <label for="tti_ratio">비율</label>
-            <select id="tti_ratio">
-              <option value="square">정사각형</option>
-              <option value="rectangular">직사각형</option>
-              <option value="longer">더 길게</option>
-              <option value="full">전체 (한장)</option>
-            </select>
-            <label for="tti_fill_mode">타입</label>
-            <select id="tti_fill_mode">
-              <option value="cover">채우기</option>
-              <option value="pattern">반복</option>              
-              <option value="mix-top">혼합(상단)</option>
-              <option value="mix-bottom">혼합(하단)</option>
-            </select>
+            <h4>배경 이미지 편집</h4>            
             <label for="bg_blur">블러</label>
             <input type="range" id="bg_blur" min="0" max="10" step="0.1" />
             <label for="bg_brightness">밝기</label>

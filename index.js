@@ -45,6 +45,7 @@ const defaultSettings = {
   autoPreview: true,
   letterCase: false,
   unitControl: false,
+  setHighlighterTags: [],
 };
 
 function saveSettings() {
@@ -138,6 +139,7 @@ async function initSettings() {
 
   await loadFonts();
   await loadBG();
+  highlighterTags();
 
   if (currentPreset && extension_settings[extensionName].presets[currentPreset]) {
     applyPreset(currentPreset);
@@ -182,6 +184,17 @@ function getPresetSettings() {
   settings.autoPreview = $("#preview_toggle").prop("checked");
   settings.letterCase = $("#letter_control").is(":checked");
   settings.unitControl = $("#unit_control").is(":checked");
+  
+  const currentAddedTags = [];
+  $("#custom-highlighter .tag-item").each(function() {
+    const index = $(this).data("index");
+    if (extension_settings[extensionName].setHighlighterTags && 
+        extension_settings[extensionName].setHighlighterTags[index]) {
+      currentAddedTags.push({...extension_settings[extensionName].setHighlighterTags[index]});
+    }
+  });
+  settings.setHighlighterTags = currentAddedTags;
+  
   return settings;
 }
 function createPreset() {
@@ -298,6 +311,9 @@ function deletePreset() {
     $("#preview_toggle").prop("checked", defaultSettings.autoPreview);
     $("#letter_control").prop("checked", defaultSettings.letterCase);
     $("#unit_control").prop("checked", defaultSettings.unitControl);
+    extension_settings[extensionName].setHighlighterTags = [];
+
+    highlighterTags();
   }
   saveSettings();
   updatePresetSelector();
@@ -372,6 +388,9 @@ function selectPreset() {
     $("#letter_control").prop("checked", defaultSettings.letterCase);
     $("#unit_control").prop("checked", defaultSettings.unitControl);
 
+    extension_settings[extensionName].setHighlighterTags = [];
+    highlighterTags();
+
     refreshPreview();
   } else if (presetName) {
     extension_settings[extensionName].currentPreset = presetName;
@@ -407,6 +426,7 @@ function applyPreset(presetName) {
         "replacementWord3",
         "originalWord4",
         "replacementWord4",
+        "setHighlighterTags",
       ].includes(key)
     ) {
       continue;
@@ -535,6 +555,14 @@ function applyPreset(presetName) {
         break;
     }
   }
+
+  if (preset.setHighlighterTags) {
+    extension_settings[extensionName].setHighlighterTags = JSON.parse(JSON.stringify(preset.setHighlighterTags));
+  } else {
+    extension_settings[extensionName].setHighlighterTags = [];
+  }
+
+  highlighterTags();
   saveSettings();
   refreshPreview();
 }
@@ -773,7 +801,7 @@ async function cardToPNG(oriCardData, oriCard) {
 
   const jsonStr = JSON.stringify(oriCardData);
   const utf8Bytes = new TextEncoder().encode(jsonStr);
-  let binary = '';
+  let binary = "";
   for (let i = 0; i < utf8Bytes.length; i++) {
     binary += String.fromCharCode(utf8Bytes[i]);
   }
@@ -1643,6 +1671,86 @@ function manualRefresh() {
   }
 }
 
+// 하이라이터 태그
+function highlighterTags() {
+  const highlightContainer = $("#custom-highlighter .highlighter-lists");
+  highlightContainer.empty();
+  const highlightTags = extension_settings[extensionName].setHighlighterTags || [];
+  highlightTags.forEach((tag, index) => {
+    const highlightTagItem = $(`
+      <div class="tag-item" data-index="${index}">
+        <div class="tag-item-left">
+          <input type="text" class="tag-name" placeholder="태그이름" value="${tag.name}" />
+          <div>            
+            <select class="tag-font-family">
+              <option value="useGlobal" ${(!tag.fontFamily || tag.fontFamily === "useGlobal") ? "selected" : ""}>전역 폰트 사용</option>
+            </select>
+            <input type="number" class="tag-font-size" value="${tag.fontSize}" min="12" max="50" />
+          </div>
+          <div>
+            <div class="font-color-container">
+              <input type="checkbox" class="use-tag-font-color" ${tag.useTagFontColor ? 'checked' : ""} />
+              <input type="color" class="tag-font-color" value="${tag.fontColor}" ${!tag.useTagFontColor ? 'disabled' : ""} />
+            </div>
+            <div class="bg-color-container">
+              <input type="checkbox" class="use-tag-bg-color" ${tag.useTagBgColor ? 'checked' : ""} />
+              <input type="color" class="tag-bg-color" value="${tag.bgColor}" ${!tag.useTagBgColor ? 'disabled' : ""} />       
+            </div>
+          </div>
+          </div>
+        <button class="delete-tag-btn buttons clear"><i class="fa-solid fa-eraser"></i></button>
+      </div>
+    `);
+    
+    highlighterFonts(highlightTagItem.find('.tag-font-family'), tag.fontFamily);
+    
+    highlightContainer.append(highlightTagItem);
+  });
+  const addBtn = $('<button class="add-tag-btn buttons">추가</button>');
+  highlightContainer.append(addBtn);
+}
+async function highlighterFonts(fontOption, selectedFont) {
+  const fontFamilyName = await fetch(`${extensionFolderPath}/font-family.json`);
+  const fonts = await fontFamilyName.json();
+  fonts.sort((a, b) => a.label.localeCompare(b.label));
+  
+  fontOption.empty();
+  fontOption.append(`<option value="useGlobal">전역 폰트 사용</option>`);  
+  fonts.forEach(font => {
+    fontOption.append(`<option value="${font.value}">${font.label}</option>`);
+  });
+  if (selectedFont) {
+    fontOption.val(selectedFont);
+  }
+}
+function addHighlightTag() {
+  if (!extension_settings[extensionName].setHighlighterTags) {
+    extension_settings[extensionName].setHighlighterTags = [];
+  }
+  extension_settings[extensionName].setHighlighterTags.push({
+    name: "",
+    fontFamily: "useGlobal",
+    fontColor: "#000000",
+    bgColor: "#ffffff",
+    fontSize: 24,
+    useTagFontColor: false,
+    useTagBgColor: false,
+  });
+  highlighterTags();
+  saveSettings();
+}
+function deleteHighlightTag(index) {
+  extension_settings[extensionName].setHighlighterTags.splice(index, 1);
+  highlighterTags();
+  saveSettings();
+  refreshPreview();
+}
+function updateHighlightTag(index, field, value) {
+  extension_settings[extensionName].setHighlighterTags[index][field] = value;
+  saveSettings();
+  refreshPreview();
+}
+
 // 마크다운
 function enableMarkdown(text) {
   const spans = [];
@@ -1651,65 +1759,80 @@ function enableMarkdown(text) {
   let italic = false;
   let strikethrough = false;
   let underline = false;
-  let fontColor = null;
-  let bgColor = null;
   let i = 0;
-  let colorHighlight = false;
+
+  const setHighlighterTags = extension_settings[extensionName].setHighlighterTags || [];
+  const tagMap = {};
+  setHighlighterTags.forEach(tag => {
+    if (tag.name) tagMap[tag.name.toLowerCase()] = tag;
+  });
 
   while (i < text.length) {
+    if (text[i] === '<') {
+      let tagMatch = text.slice(i).match(/^<(\w+)>/);
+      if (tagMatch && tagMap[tagMatch[1].toLowerCase()]) {
+        const tagName = tagMatch[1].toLowerCase();
+        const tagSet = tagMap[tagName];
+        const closeTag = `</${tagName}>`;
+        const closeIndex = text.indexOf(closeTag, i + tagMatch[0].length);
+        
+        if (closeIndex !== -1) {
+          if (currentText) {
+            spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null});
+            currentText = "";
+          }
+          const tagContent = text.slice(i + tagMatch[0].length, closeIndex);
+          const innerContents = enableMarkdown(tagContent);
+          
+          innerContents.forEach(innerContent => {
+            if (innerContent.fontFamily || innerContent.fontSize) {
+              spans.push(innerContent);
+            } else {
+              spans.push({
+                text: innerContent.text,
+                bold: innerContent.bold,
+                italic: innerContent.italic,
+                strikethrough: innerContent.strikethrough,
+                underline: innerContent.underline,
+                fontColor: tagSet.useTagFontColor ? tagSet.fontColor : (innerContent.fontColor || null),
+                bgColor: tagSet.useTagBgColor ? tagSet.bgColor : (innerContent.bgColor || null),
+                fontFamily: tagSet.fontFamily || null,
+                fontSize: tagSet.fontSize,
+              });
+            }
+          });
+          
+          i = closeIndex + closeTag.length;
+          continue;
+        }
+      }
+    }
+    
     if (text.slice(i, i + 3) === "***") {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
       bold = !bold;
       italic = !italic;
       currentText = "";
       i += 3;
     } else if (text.slice(i, i + 2) === "**") {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
       bold = !bold;
       currentText = "";
       i += 2;
     } else if (text.slice(i, i + 2) === "__") {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
       underline = !underline;
       currentText = "";
       i += 2;
     } else if (text.slice(i, i + 2) === "~~") {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
       strikethrough = !strikethrough;
       currentText = "";
       i += 2;
     } else if (text[i] === "*" && (i + 1 >= text.length || text[i + 1] !== "*")) {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
+      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
       italic = !italic;
       currentText = "";
-      i++;
-    } else if (text.slice(i, i + 2) === "=(" && i + 2 < text.length) {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
-      currentText = "";
-      colorHighlight = true;
-
-      i += 2;
-      let colorPick = "";
-      while (i < text.length && text[i] !== ")") {
-        colorPick += text[i];
-        i++;
-      }
-      if (i < text.length) i++;
-
-      const colorMatch = colorPick.match(/^(#[0-9a-fA-F]{6})?(?:\|(#[0-9a-fA-F]{6})?)?$/);
-      if (colorMatch) {
-        fontColor = colorMatch[1] || null;
-        bgColor = colorMatch[2] || null;
-      } else {
-        currentText += "=(" + colorPick + ")";
-        colorHighlight = false;
-      }
-    } else if (text[i] === "=" && colorHighlight) {
-      if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
-      fontColor = null;
-      bgColor = null;
-      currentText = "";
-      colorHighlight = false;
       i++;
     } else {
       currentText += text[i];
@@ -1717,7 +1840,7 @@ function enableMarkdown(text) {
     }
   }
 
-  if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor, bgColor});
+  if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
   return spans;
 }
 
@@ -1778,12 +1901,29 @@ function wrappingTexts(text, mode = "word") {
 
         const fontWeight = span.bold ? "bold" : settings.fontWeight;
         const fontStyle = span.italic ? "italic" : "normal";
-        ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${settings.fontFamily}`;        
+        const fontFamily = (span.fontFamily && span.fontFamily !== "useGlobal") 
+          ? span.fontFamily 
+          : settings.fontFamily;
+        const setFontSize = span.fontSize || fontSize;
+        ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${fontFamily}`;
         ctx.letterSpacing = `${settings.fontSpacing}em`;
 
-        const testText = currentLineText + unit;
-        if (ctx.measureText(testText).width <= maxWidth) {
-          currentLineText = testText;
+        let currentLineWidth = 0;
+        currentLine.forEach(item => {
+          const itemFontWeight = item.bold ? "bold" : settings.fontWeight;
+          const itemFontStyle = item.italic ? "italic" : "normal";
+          const itemFontFamily = item.fontFamily || settings.fontFamily;
+          const itemFontSize = item.fontSize || fontSize;
+          ctx.font = `${itemFontStyle} ${itemFontWeight} ${itemFontSize}px ${itemFontFamily}`;
+          ctx.letterSpacing = `${settings.fontSpacing}em`;
+          currentLineWidth += ctx.measureText(item.text).width;
+        });
+        
+        ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${fontFamily}`;
+        ctx.letterSpacing = `${settings.fontSpacing}em`;
+        const unitWidth = ctx.measureText(unit).width;
+        
+        if (currentLineWidth + unitWidth <= maxWidth) {
           currentLine.push({
             text: unit,
             bold: span.bold,
@@ -1792,6 +1932,8 @@ function wrappingTexts(text, mode = "word") {
             underline: span.underline,
             fontColor: span.fontColor,
             bgColor: span.bgColor,
+            fontFamily: span.fontFamily,
+            fontSize: span.fontSize,
           });
         } else {
           if (currentLine.length) {
@@ -1813,8 +1955,9 @@ function wrappingTexts(text, mode = "word") {
             underline: span.underline,
             fontColor: span.fontColor,
             bgColor: span.bgColor,
+            fontFamily: span.fontFamily,
+            fontSize: span.fontSize,
           }];
-          currentLineText = unit.trimStart();
         }
       });
     });
@@ -1914,7 +2057,11 @@ function generateTextImage(chunk, index) {
     function setFont(span) {
       const fontWeight = span.bold ? "bold" : settings.fontWeight;
       const fontStyle = span.italic ? "italic" : "normal";
-      ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${settings.fontFamily}`;
+      const fontFamily = (span.fontFamily && span.fontFamily !== "useGlobal") 
+        ? span.fontFamily 
+        : settings.fontFamily;
+      const setFontSize = span.fontSize || fontSize;
+      ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${fontFamily}`;
     }
 
     function renderSpan(span, x, y, drawMode = "both") {
@@ -1922,7 +2069,8 @@ function generateTextImage(chunk, index) {
       ctx.letterSpacing = `${settings.fontSpacing}em`;
       const metrics = ctx.measureText(span.text);
       const textWidth = metrics.width;
-      const textHeight = fontSize;
+      const setFontSize = span.fontSize || fontSize;
+      const textHeight = setFontSize;
 
       let textColor = settings.fontColor || "#000000";
       if (span.fontColor) {
@@ -2339,6 +2487,7 @@ jQuery(async () => {
   restoreButtons();
   tabButtons();
   botCardButtons();
+  highlighterOption();
 });
 function bindingFunctions() {
   $("#tti_font_family").on("change", fontFamily);
@@ -2464,5 +2613,50 @@ function botCardButtons() {
   });
   $(".bot-data.botSaver").on("click", function () {
     botCardSaver();
+  });
+}
+function highlighterOption() {
+  $(document).on("click", ".add-tag-btn", addHighlightTag);
+  $(document).on("click", ".delete-tag-btn", function() {
+    const index = $(this).closest(".tag-item").data("index");
+    deleteHighlightTag(index);
+  });
+
+  $(document).on("input", ".tag-name", function() {
+    const index = $(this).closest(".tag-item").data("index");
+    updateHighlightTag(index, "name", $(this).val());
+  });
+
+  $(document).on("change", ".tag-font-family", function() {
+    const index = $(this).closest(".tag-item").data("index");
+    updateHighlightTag(index, "fontFamily", $(this).val());
+    refreshPreview();
+  });
+
+  $(document).on("change", ".use-tag-font-color", function() {
+    const index = $(this).closest(".tag-item").data("index");
+    const checked = $(this).prop("checked");
+    updateHighlightTag(index, "useTagFontColor", checked);
+    $(this).siblings(".tag-font-color").prop("disabled", !checked);
+  });
+  $(document).on("change", ".tag-font-color", function() {
+    const index = $(this).closest(".tag-item").data("index");
+    updateHighlightTag(index, "fontColor", $(this).val());
+  });
+
+  $(document).on("change", ".use-tag-bg-color", function() {
+    const index = $(this).closest(".tag-item").data("index");
+    const checked = $(this).prop("checked");
+    updateHighlightTag(index, "useTagBgColor", checked);
+    $(this).siblings(".tag-bg-color").prop("disabled", !checked);
+  });
+  $(document).on("change", ".tag-bg-color", function() {
+    const index = $(this).closest(".tag-item").data("index");
+    updateHighlightTag(index, "bgColor", $(this).val());
+  });
+
+  $(document).on("input", ".tag-font-size", function() {
+    const index = $(this).closest(".tag-item").data("index");
+    updateHighlightTag(index, "fontSize", parseInt($(this).val()));
   });
 }
