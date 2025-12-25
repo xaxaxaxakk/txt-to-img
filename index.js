@@ -1314,7 +1314,7 @@ function replaceWords() {
     return;
   }
 
-  const originalTemp = wordGroup.map((_, index) => `_temp_${index}_`);
+  const originalTemp = wordGroup.map((_, index) => `__REPLACE_${Date.now()}_${index}__`);
 
   for (let i = 0; i < wordGroup.length; i++) {
     const { original, replacement } = wordGroup[i];
@@ -1336,11 +1336,14 @@ function replaceWords() {
     const temp = originalTemp[i];
     const replacementText = replacement || "";
 
-    const regex = new RegExp(`${temp}([은는이가를과와이랑랑으로로아야]*)`, "g");
+    const regex = new RegExp(`${escapeRegExp(temp)}(은|는|이|가|을|를|과|와|이랑|랑|으로|로|아|야)?`, "g");
 
-    text = text.replace(regex, (_, particle) => {
+    text = text.replace(regex, (match, particle) => {
+      if (!particle) {
+        return replacementText;
+      }
+      
       let newParticle = particle;
-
       const hasEndConsonant = hasConsonantLetter(replacementText);
 
       if (particle === "는" && hasEndConsonant) newParticle = "은";
@@ -1414,7 +1417,6 @@ function findKoreanWord(text, originalWord, replacementWord, unitControl) {
       text.slice(i, i + originalWord.length) === originalWord
     ) {
       const isStartBoundary = i === 0 || specialChar.test(text[i - 1]);
-
       const endPos = i + originalWord.length;
       const nextChar = text[endPos] || "";
 
@@ -1441,32 +1443,8 @@ function findKoreanWord(text, originalWord, replacementWord, unitControl) {
         const toReplace = containSymbols || (isStartBoundary && isEndBoundary && !isVerbEnding);
 
         if (toReplace) {
-          let particle = "";
-          let nextPart = text.slice(endPos);
-
-          const particleMatch = nextPart.match(particlePattern);
-          if (particleMatch && nextPart.startsWith(particleMatch[0])) {
-            particle = particleMatch[0];
-            const hasEndConsonant = hasConsonantLetter(replacementWord);
-
-            if (particle === "가" && hasEndConsonant) particle = "이";
-            else if (particle === "이" && !hasEndConsonant) particle = "가";
-            else if (particle === "는" && hasEndConsonant) particle = "은";
-            else if (particle === "은" && !hasEndConsonant) particle = "는";
-            else if (particle === "를" && hasEndConsonant) particle = "을";
-            else if (particle === "을" && !hasEndConsonant) particle = "를";
-            else if (particle === "아" && !hasEndConsonant) particle = "야";
-            else if (particle === "야" && hasEndConsonant) particle = "아";
-            else if (particle === "와" && hasEndConsonant) particle = "과";
-            else if (particle === "과" && !hasEndConsonant) particle = "와";
-            else if (particle === "랑" && hasEndConsonant) particle = "이랑";
-            else if (particle === "이랑" && !hasEndConsonant) particle = "랑";
-            else if (particle === "로" && hasEndConsonant) particle = "으로";
-            else if (particle === "으로" && !hasEndConsonant) particle = "로";
-          }
-
-          result += replacementWord + particle;
-          i = endPos + particle.length - 1;
+          result += replacementWord;
+          i = endPos - 1;
           continue;
         }
       }
@@ -1477,11 +1455,18 @@ function findKoreanWord(text, originalWord, replacementWord, unitControl) {
 }
 function hasConsonantLetter(word) {
   if (!word || word.length === 0) return false;
-
   const lastChar = word.charAt(word.length - 1);
   if (/[가-힣]/.test(lastChar)) {
     const charCode = lastChar.charCodeAt(0) - 44032;
     return charCode % 28 !== 0;
+  }
+  const hasJong = /[0136-8０１３６-８L-NRＬ-ＮＲㄱ-ㅎ\uFFA1-\uFFBE\u3165-\u3186\u1100-\u115E\u11A8-\u11FF]/;
+  if (hasJong.test(lastChar)) {
+    return true;
+  }
+  const noJong = /[2459２４５９A-KO-QS-ZＡ-ＫＯ-ＱＳ-Ｚㅏ-ㅣ\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC\u3187-\u318E\u1161-\u11A7]/;
+  if (noJong.test(lastChar)) {
+    return false;
   }
   return false;
 }
