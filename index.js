@@ -1294,19 +1294,19 @@ function replaceWords() {
   const wordGroup = [
     {
       original: $("#original_word_1").val().trim(),
-      replacement: $("#replacement_word_1").val().trim(),
+      replacement: $("#replacement_word_1").val(),
     },
     {
       original: $("#original_word_2").val().trim(),
-      replacement: $("#replacement_word_2").val().trim(),
+      replacement: $("#replacement_word_2").val(),
     },
     {
       original: $("#original_word_3").val().trim(),
-      replacement: $("#replacement_word_3").val().trim(),
+      replacement: $("#replacement_word_3").val(),
     },
     {
       original: $("#original_word_4").val().trim(),
-      replacement: $("#replacement_word_4").val().trim(),
+      replacement: $("#replacement_word_4").val(),
     },
   ].filter(group => group.original);
 
@@ -1334,7 +1334,7 @@ function replaceWords() {
   for (let i = 0; i < wordGroup.length; i++) {
     const {replacement} = wordGroup[i];
     const temp = originalTemp[i];
-    const replacementText = replacement || "";
+    const replacementText = replacement !== undefined ? replacement : "";
 
     const regex = new RegExp(`${escapeRegExp(temp)}(은|는|이|가|을|를|과|와|이랑|랑|으로|로|아|야)?`, "g");
 
