@@ -1416,11 +1416,11 @@ function findKoreanWord(text, originalWord, replacementWord, unitControl) {
       i <= text.length - originalWord.length &&
       text.slice(i, i + originalWord.length) === originalWord
     ) {
-      const isStartBoundary = i === 0 || specialChar.test(text[i - 1]);
       const endPos = i + originalWord.length;
-      const nextChar = text[endPos] || "";
 
       if (unitControl) {
+        const isStartBoundary = i === 0 || specialChar.test(text[i - 1]);
+        const nextChar = text[endPos] || "";
         const isEndBoundary =
           endPos === text.length ||
           specialChar.test(nextChar) ||
@@ -1432,21 +1432,9 @@ function findKoreanWord(text, originalWord, replacementWord, unitControl) {
           continue;
         }
       } else {
-        const isVerbEnding = verbEndingPattern.test(nextChar);
-        const isEndBoundary =
-          endPos === text.length ||
-          specialChar.test(nextChar) ||
-          particlePattern.test(nextChar) ||
-          !/[가-힣0-9]/.test(nextChar);
-
-        const containSymbols = /[^\w가-힣]/.test(originalWord);
-        const toReplace = containSymbols || (isStartBoundary && isEndBoundary && !isVerbEnding);
-
-        if (toReplace) {
-          result += replacementWord;
-          i = endPos - 1;
-          continue;
-        }
+        result += replacementWord;
+        i = endPos - 1;
+        continue;
       }
     }
     result += text[i];
