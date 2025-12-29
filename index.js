@@ -1448,11 +1448,11 @@ function hasConsonantLetter(word) {
     const charCode = lastChar.charCodeAt(0) - 44032;
     return charCode % 28 !== 0;
   }
-  const hasJong = /[0136-8０１３６-８L-NRＬ-ＮＲㄱ-ㅎ\uFFA1-\uFFBE\u3165-\u3186\u1100-\u115E\u11A8-\u11FF]/;
+  const hasJong = /[0136-8０１３６-８L-NRl-nrＬ-ＮＲㄱ-ㅎ\uFFA1-\uFFBE\u3165-\u3186\u1100-\u115E\u11A8-\u11FF]/;
   if (hasJong.test(lastChar)) {
     return true;
   }
-  const noJong = /[2459２４５９A-KO-QS-ZＡ-ＫＯ-ＱＳ-Ｚㅏ-ㅣ\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC\u3187-\u318E\u1161-\u11A7]/;
+  const noJong = /[2459２４５９A-KO-QS-Za-ko-qs-zＡ-ＫＯ-ＱＳ-Ｚㅏ-ㅣ\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC\u3187-\u318E\u1161-\u11A7]/;
   if (noJong.test(lastChar)) {
     return false;
   }
