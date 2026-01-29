@@ -393,7 +393,7 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
   margin-left: auto;
   padding: 3px 8px;
   border-radius: 10px;
-  background-color:#a29bfe;
+  background-color: #a29bfe;
   color: #fff;
   font-size: 12px !important;
   cursor: pointer;
@@ -402,7 +402,7 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
 #custom-font-color.hide .font-color-lists {
   display: none;
 }
-#custom-font-color.opened  > h4 > span {
+#custom-font-color.opened > h4 > span {
   background-color: #ff6f61;
 }
 .font-color-lists {
@@ -537,13 +537,13 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
     justify-content: space-between;
     align-items: center;
   }
-  
+
   & .delete-tag-btn {
     height: 28px !important;
     width: 28px !important;
     font-size: 12px !important;
   }
-  
+
   & .add-tag-btn {
     width: 100px !important;
     align-self: center;
@@ -795,7 +795,11 @@ h4:has(.replace-control) {
 @font-face {
   font-family: "MaruBuriSemiBold";
   src: url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.eot);
-  src: url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.eot?#iefix) format("embedded-opentype"), url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff2) format("woff2"), url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff) format("woff"), url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.ttf) format("truetype");
+  src:
+    url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.eot?#iefix) format("embedded-opentype"),
+    url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff2) format("woff2"),
+    url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff) format("woff"),
+    url(https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.ttf) format("truetype");
 }
 @font-face {
   font-family: "SunBatang-Light";
@@ -832,14 +836,21 @@ h4:has(.replace-control) {
   font-weight: 400;
   font-style: normal;
   src: url(//cdn.jsdelivr.net/font-iropke-batang/1.2/IropkeBatangM.eot);
-  src: url(//cdn.jsdelivr.net/font-iropke-batang/1.2/IropkeBatangM.eot?#iefix) format("embedded-opentype"), url(//cdn.jsdelivr.net/font-iropke-batang/1.2/IropkeBatangM.woff) format("woff"), url(//cdn.jsdelivr.net/font-iropke-batang/1.2/IropkeBatangM.ttf) format("truetype");
+  src:
+    url(//cdn.jsdelivr.net/font-iropke-batang/1.2/IropkeBatangM.eot?#iefix) format("embedded-opentype"),
+    url(//cdn.jsdelivr.net/font-iropke-batang/1.2/IropkeBatangM.woff) format("woff"),
+    url(//cdn.jsdelivr.net/font-iropke-batang/1.2/IropkeBatangM.ttf) format("truetype");
 }
 @font-face {
   font-family: "Jeju Myeongjo";
   font-weight: 400;
   font-style: normal;
   src: url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.eot);
-  src: url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.eot?#iefix) format("embedded-opentype"), url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.woff2) format("woff2"), url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.woff) format("woff"), url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.ttf) format("truetype");
+  src:
+    url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.eot?#iefix) format("embedded-opentype"),
+    url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.woff2) format("woff2"),
+    url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.woff) format("woff"),
+    url(//fonts.gstatic.com/ea/jejumyeongjo/v3/JejuMyeongjo-Regular.ttf) format("truetype");
 }
 @font-face {
   font-family: "Father_loveletter";
@@ -1006,5 +1017,35 @@ h4:has(.replace-control) {
   font-family: "MissedGyuwon";
   font-weight: normal;
   src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2510-1@1.0/Griun_Gyuwon-Rg.woff2") format("woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Umdot";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-4@1.1/Umdot12.woff2") format("woff2");
+  font-weight: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "BelovedMyoeunttobak";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-1@1.0/Griun_Myoeunddobak-Rg.woff2") format("woff2");
+  font-weight: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "NostalgicMongtori";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-1@1.0/Griun_Mongtori-Rg.woff2") format("woff2");
+  font-weight: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "NostalgicGellyRoll";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-1@1.0/Griun_Gellyroll-Rg.woff2") format("woff2");
+  font-weight: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SchoolSafetyCertificate";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2510-1@1.0/HakgyoansimSangjangR.woff2") format("woff2");
+  font-weight: normal;
   font-display: swap;
 }
