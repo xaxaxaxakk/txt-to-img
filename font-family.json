@@ -194,5 +194,21 @@
   {
     "label": "학교안심 상장",
     "value": "SchoolSafetyCertificate"
+  },
+  {
+    "label": "경복궁 수문장 본문체",
+    "value": "GyeongbokgungSumunjangBodyText"
+  },
+  {
+    "label": "G마켓 산스 L",
+    "value": "GMarketSans-L"
+  },
+  {
+    "label": "G마켓 산스 M",
+    "value": "GMarketSans-M"
+  },
+  {
+    "label": "G마켓 산스 B",
+    "value": "GMarketSans-B"
   }
 ]
