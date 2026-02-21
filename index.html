@@ -107,6 +107,8 @@
               <div class="preview-control">
                 <input type="checkbox" id="preview_toggle" name="preview_toggle" style="display: none" />
                 <label for="preview_toggle">미리보기</label>
+                <input type="checkbox" id="html_toggle" name="html_toggle" style="display: none" />
+                <label for="html_toggle">HTML</label>
               </div>
             </h4>
             <textarea id="text_to_image" placeholder="여기에 텍스트를 입력하세요"></textarea>
@@ -171,10 +173,10 @@
 
           <div id="text-style" class="tab-content flex-container">
             <h4>텍스트 스타일 설정</h4>
-            <label for="tti_font_family">글꼴</label>
-            <select id="tti_font_family"></select>
+            <label for="tti_font_family" data-html-hide="font">글꼴</label>
+            <select id="tti_font_family" data-html-hide="font"></select>
 
-            <div class="custom-font-uploader">
+            <div class="custom-font-uploader" data-html-hide="font">
               <button id="upload-local-font" type="button" class="buttons">로컬 폰트 등록</button>
               <button id="delete-local-font" type="button" class="buttons" disabled>삭제</button>
             </div>
@@ -186,8 +188,10 @@
               <option value="1.5">볼드</option>
             </select>
 
-            <label for="tti_font_size">사이즈</label>
-            <input type="range" id="tti_font_size" min="20" max="44" step="1" />
+            <label for="tti_font_size_image" data-html-hide="font_size_image">사이즈</label>
+            <input type="range" id="tti_font_size_image" min="20" max="44" step="1" data-html-hide="font_size_image" />
+            <label for="tti_font_size_html" data-html-only="font_size_html">사이즈</label>
+            <input type="range" id="tti_font_size_html" min="10" max="20" step="1" data-html-only="font_size_html" />
 
             <label for="tti_letter_spacing">자간</label>
             <input type="range" id="tti_letter_spacing" min="-0.2" max="0.3" step="0.02" />
@@ -205,8 +209,8 @@
             <label for="tti_font_color">색상</label>
             <input type="color" id="tti_font_color" value="#000000" />
 
-            <label for="tti_line_break">줄바꿈</label>
-            <select id="tti_line_break">
+            <label for="tti_line_break" data-html-hide="line_break">줄바꿈</label>
+            <select id="tti_line_break" data-html-hide="line_break">
               <option value="byWord">단어 기준</option>
               <option value="byChar">글자 기준</option>
             </select>
@@ -250,15 +254,15 @@
 
           <div id="background" class="tab-content flex-container">
             <h4>배경 종류 선택</h4>
-            <label for="tti_ratio">비율</label>
-            <select id="tti_ratio">
+            <label for="tti_ratio" data-html-hide="ratio">비율</label>
+            <select id="tti_ratio" data-html-hide="ratio">
               <option value="square">정사각형</option>
               <option value="rectangular">직사각형</option>
               <option value="longer">더 길게</option>
               <option value="full">전체 (한장)</option>
             </select>
-            <label for="tti_fill_mode">타입</label>
-            <select id="tti_fill_mode">
+            <label for="tti_fill_mode" data-html-hide="fill_mode">타입</label>
+            <select id="tti_fill_mode" data-html-hide="fill_mode">
               <option value="cover">채우기</option>
               <option value="pattern">반복</option>              
               <option value="mix-top">혼합(이미지 상단)</option>
@@ -283,10 +287,10 @@
               커스텀 이미지
             </h5>
             <div class="custom-bg-upload">
-              <label for="bg_image_upload" class="upload-btn">이미지 업로드</label>
-              <input type="file" id="bg_image_upload" accept="image/*" style="display: none" />
-              <input type="text" id="bg_image_url" placeholder="이미지 URL" />
-              <button id="bg_url_btn" class="upload-btn buttons">등록</button>
+              <label for="bg_image_upload" class="upload-btn" data-html-hide="upload_file">이미지 업로드</label>
+              <input type="file" id="bg_image_upload" accept="image/*" style="display: none" data-html-hide="upload_file" />
+              <input type="text" id="bg_image_url" placeholder="이미지 URL" data-html-only="bg_url" />
+              <button id="bg_url_btn" class="upload-btn buttons" data-html-only="bg_url">등록</button>
             </div>
             <div id="custom_background_gallery" class="background-gallery"></div>
           </div>
@@ -301,8 +305,8 @@
             <input type="range" id="bg_grayscale" min="0" max="100" step="1" />
             <label for="bg_hue">색조</label>
             <input type="range" id="bg_hue" min="0" max="360" step="3" />
-            <label for="bg_noise">노이즈</label>
-            <input type="range" id="bg_noise" min="0" max="100" step="1" />
+            <label for="bg_noise" data-html-hide="bg_noise">노이즈</label>
+            <input type="range" id="bg_noise" min="0" max="100" step="1" data-html-hide="bg_noise" />
             <label for="overlay_opacity">오버레이</label>
             <input type="range" id="overlay_opacity" min="0" max="1" step="0.01" />
             <label for="overlay_color">오버레이색</label>

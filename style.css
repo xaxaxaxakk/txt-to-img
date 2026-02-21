@@ -78,6 +78,13 @@ body {
   padding: 6px 10px;
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 20px;
+
+  & .html-mode-hidden {
+    display: none !important;
+  }
+  & .html-mode-only {
+    display: none !important;
+  }
   background: rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(10px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
@@ -629,19 +636,19 @@ h4:has(.replace-control) {
     cursor: pointer;
   }
 }
-:where(#preview_toggle, #letter_control, #unit_control) + label {
+:where(#preview_toggle, #html_toggle, #letter_control, #unit_control) + label {
   opacity: 0.5;
 }
-:where(#preview_toggle, #letter_control, #unit_control) + label::before {
+:where(#preview_toggle, #html_toggle, #letter_control, #unit_control) + label::before {
   margin-right: 3px;
   font-family: "Font Awesome 7 Free";
   font-size: 12px;
   content: "\f204";
 }
-:where(#preview_toggle, #letter_control, #unit_control):checked + label {
+:where(#preview_toggle, #html_toggle, #letter_control, #unit_control):checked + label {
   opacity: 1;
 }
-:where(#preview_toggle, #letter_control, #unit_control):checked + label::before {
+:where(#preview_toggle, #html_toggle, #letter_control, #unit_control):checked + label::before {
   color: #a29bfe;
   font-family: "Font Awesome 7 Free";
   font-size: 12px;
@@ -669,6 +676,23 @@ h4:has(.replace-control) {
     color: #fff;
   }
 }
+.range-value-tooltip {
+  position: absolute;
+  transform: translateX(-50%);
+  padding: 4px 7px;
+  border-radius: 7px;
+  background: rgba(44, 62, 80, 0.9);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 99999;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.range-value-tooltip.shown {
+  opacity: 1;
+}
 
 /* 미리보기 */
 .dl_all {
@@ -690,6 +714,7 @@ h4:has(.replace-control) {
   display: flex;
   flex-wrap: wrap;
   gap: 15px;
+  width: 100%;
   &:empty {
     display: none;
   }
@@ -698,6 +723,7 @@ h4:has(.replace-control) {
   margin: 0 !important;
 }
 .image-preview-item {
+  width: 100%;
   padding: 10px;
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 15px;

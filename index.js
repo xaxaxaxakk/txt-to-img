@@ -8,6 +8,8 @@ const defaultSettings = {
   fontFamily: "Pretendard-Regular",
   fontWeight: "normal",
   fontSize: 24,
+  fontSizeImage: 24,
+  fontSizeHtml: 14,
   fontSpacing: 0,
   fontLineHeight: 1.5,
   fontAlign: "left",
@@ -25,6 +27,7 @@ const defaultSettings = {
   strokeWidth: "0",
   lineBreak: "byWord",
   selectedBackgroundImage: `${extensionFolderPath}/default-backgrounds/bg40.png`,
+  selectedBackgroundImageHtml: `${extensionFolderPath}/default-backgrounds/bg40.png`,
   useBackgroundColor: false,
   backgroundColor: "#ffffff",
   useSecondBackgroundColor: false,
@@ -43,26 +46,141 @@ const defaultSettings = {
   footerText: "",
   footerColor: "#000000",
   autoPreview: true,
+  htmlMode: false,
   letterCase: false,
   unitControl: false,
   setHighlighterTags: [],
 };
+let defaultBackgroundUrlMap = new Map();
+let defaultBackgroundBasenameMap = new Map();
+const HTML_FONT_FACE = "Ridibatang";
+const CUSTOM_BG_STORAGE_IMAGE_KEY = "textToImageCustomBgsImage";
+const CUSTOM_BG_STORAGE_HTML_KEY = "textToImageCustomBgsHTML";
 
 function saveSettings() {
   localStorage.setItem(extensionName, JSON.stringify(extension_settings[extensionName]));
 }
-async function initSettings() {
-  const savedSettings = JSON.parse(localStorage.getItem(extensionName));
 
+function isHtmlModeEnabled() {
+  return !!extension_settings[extensionName]?.htmlMode;
+}
+function ensureFontSizeSettings() {
+  const settings = extension_settings[extensionName];
+  const legacyFontSize = parseInt(settings.fontSize, 10);
+  const imageSize = parseInt(settings.fontSizeImage, 10);
+  const htmlSize = parseInt(settings.fontSizeHtml, 10);
+
+  settings.fontSizeImage = Number.isFinite(imageSize)
+    ? imageSize
+    : (Number.isFinite(legacyFontSize) ? legacyFontSize : defaultSettings.fontSizeImage);
+  settings.fontSizeHtml = Number.isFinite(htmlSize)
+    ? htmlSize
+    : defaultSettings.fontSizeHtml;
+  settings.fontSize = isHtmlModeEnabled() ? settings.fontSizeHtml : settings.fontSizeImage;
+}
+function getActiveFontSize(settings = extension_settings[extensionName]) {
+  return isHtmlModeEnabled()
+    ? (parseInt(settings.fontSizeHtml, 10) || defaultSettings.fontSizeHtml)
+    : (parseInt(settings.fontSizeImage, 10) || defaultSettings.fontSizeImage);
+}
+function getCustomBackgroundStorageKey() {
+  return isHtmlModeEnabled() ? CUSTOM_BG_STORAGE_HTML_KEY : CUSTOM_BG_STORAGE_IMAGE_KEY;
+}
+function getSelectedBackgroundForCurrentMode() {
+  const settings = extension_settings[extensionName];
+  if (isHtmlModeEnabled()) {
+    return settings.selectedBackgroundImageHtml || settings.selectedBackgroundImage;
+  }
+  return settings.selectedBackgroundImage;
+}
+function setSelectedBackgroundForCurrentMode(path) {
+  if (isHtmlModeEnabled()) {
+    extension_settings[extensionName].selectedBackgroundImageHtml = path;
+  } else {
+    extension_settings[extensionName].selectedBackgroundImage = path;
+  }
+}
+function syncSelectedBackgroundUI() {
+  const selectedPath = getSelectedBackgroundForCurrentMode();
+  $(".bg-image-item").removeClass("selected");
+  if (selectedPath) {
+    $(`.bg-image-item[data-path="${selectedPath}"]`).addClass("selected");
+  }
+}
+let rangeValueTooltip = null;
+function ensureRangeValueTooltip() {
+  if (rangeValueTooltip && document.body.contains(rangeValueTooltip)) {
+    return rangeValueTooltip;
+  }
+  rangeValueTooltip = document.createElement("div");
+  rangeValueTooltip.className = "range-value-tooltip";
+  document.body.appendChild(rangeValueTooltip);
+  return rangeValueTooltip;
+}
+function formatRangeValue(value, step) {
+  const stepValue = parseFloat(step || "1");
+  if (!Number.isFinite(stepValue) || stepValue >= 1) {
+    return String(parseInt(value, 10));
+  }
+  const fixed = stepValue.toString().split(".")[1]?.length || 2;
+  return Number(value).toFixed(fixed).replace(/0+$/, "").replace(/\.$/, "");
+}
+function showRangeTooltip(input) {
+  const tooltip = ensureRangeValueTooltip();
+  const min = parseFloat(input.min || "0");
+  const max = parseFloat(input.max || "100");
+  const value = parseFloat(input.value || "0");
+  const percentage = max > min ? (value - min) / (max - min) : 0;
+  const rect = input.getBoundingClientRect();
+  const x = rect.left + (rect.width * percentage) + window.scrollX;
+  const y = rect.top + window.scrollY - 30;
+
+  tooltip.textContent = formatRangeValue(input.value, input.step);
+  tooltip.style.left = `${x}px`;
+  tooltip.style.top = `${y}px`;
+  tooltip.classList.add("shown");
+}
+function hideRangeTooltip() {
+  if (!rangeValueTooltip) return;
+  rangeValueTooltip.classList.remove("shown");
+}
+function setupRangeValueTooltips() {
+  const selector = [
+    "#tti_font_size_image",
+    "#tti_font_size_html",
+    "#tti_letter_spacing",
+    "#tti_line_height",
+    "#bg_blur",
+    "#bg_brightness",
+    "#bg_hue",
+    "#bg_grayscale",
+    "#bg_noise",
+    "#overlay_opacity",
+  ].join(", ");
+  $(document).on("input", selector, function () {
+    showRangeTooltip(this);
+  });
+  $(document).on("pointerdown focus mouseenter", selector, function () {
+    showRangeTooltip(this);
+  });
+  $(document).on("pointerup blur mouseleave", selector, function () {
+    hideRangeTooltip();
+  });
+}
+
+
+async function initSettings() {
+  const savedSettings = JSON.parse(localStorage.getItem(extensionName) || "{}");
   extension_settings[extensionName] = {
     ...defaultSettings,
-    ...(savedSettings || {}),
+    ...savedSettings,
     ...extension_settings[extensionName],
   };
-
+  ensureFontSizeSettings();
   const {
     fontFamily,
-    fontSize,
+    fontSizeImage,
+    fontSizeHtml,
     fontSpacing,
     fontLineHeight,
     fontAlign,
@@ -96,12 +214,14 @@ async function initSettings() {
     footerText,
     footerColor,
     autoPreview,
+    htmlMode,
     letterCase,
     unitControl,
   } = extension_settings[extensionName];
 
   $("#tti_font_family").val(fontFamily);
-  $("#tti_font_size").val(fontSize);
+  $("#tti_font_size_image").val(fontSizeImage);
+  $("#tti_font_size_html").val(fontSizeHtml);
   $("#tti_letter_spacing").val(fontSpacing);
   $("#tti_line_height").val(fontLineHeight);
   $("#tti_font_align").val(fontAlign);
@@ -134,12 +254,15 @@ async function initSettings() {
   $("#footer_text").val(footerText);
   $("#footer_color").val(footerColor);
   $("#preview_toggle").prop("checked", autoPreview);
+  $("#html_toggle").prop("checked", htmlMode);
   $("#letter_control").prop("checked", letterCase);
   $("#unit_control").prop("checked", unitControl);
 
   await loadFonts();
   await loadBG();
+  await loadBackgroundURLMap();
   highlighterTags();
+  applyHtmlModeUIState();
 
   if (currentPreset && extension_settings[extensionName].presets[currentPreset]) {
     applyPreset(currentPreset);
@@ -162,11 +285,16 @@ function getPresetSettings() {
   const settings = {...extension_settings[extensionName]};
   delete settings.presets;
   delete settings.currentPreset;
+  const imageFontSize = parseInt($("#tti_font_size_image").val(), 10);
+  const htmlFontSize = parseInt($("#tti_font_size_html").val(), 10);
+  settings.fontSizeImage = Number.isFinite(imageFontSize) ? imageFontSize : (settings.fontSizeImage || defaultSettings.fontSizeImage);
+  settings.fontSizeHtml = Number.isFinite(htmlFontSize) ? htmlFontSize : (settings.fontSizeHtml || defaultSettings.fontSizeHtml);
+  settings.fontSize = settings.htmlMode ? settings.fontSizeHtml : settings.fontSizeImage;
 
   if (currentCustomFont && oriFontFamily) {
     settings.fontFamily = oriFontFamily;
   }
-
+  
   settings.originalWord1 = $("#original_word_1").val();
   settings.replacementWord1 = $("#replacement_word_1").val();
   settings.originalWord2 = $("#original_word_2").val();
@@ -182,9 +310,10 @@ function getPresetSettings() {
   settings.footerText = $("#footer_text").val();
   settings.footerColor = $("#footer_color").val();
   settings.autoPreview = $("#preview_toggle").prop("checked");
+  settings.htmlMode = $("#html_toggle").prop("checked");
+  settings.fontSize = settings.htmlMode ? settings.fontSizeHtml : settings.fontSizeImage;
   settings.letterCase = $("#letter_control").is(":checked");
   settings.unitControl = $("#unit_control").is(":checked");
-  
   const currentAddedTags = [];
   $("#custom-highlighter .tag-item").each(function() {
     const index = $(this).data("index");
@@ -210,6 +339,7 @@ function createPreset() {
     if (!confirmOverwrite) return;
   }
   const currentSettings = getPresetSettings();
+  currentSettings.htmlMode = $("#html_toggle").prop("checked");
   presets[presetName] = currentSettings;
   extension_settings[extensionName].presets = presets;
   extension_settings[extensionName].currentPreset = presetName;
@@ -219,6 +349,7 @@ function createPreset() {
 function savePreset() {
   const presetName = $("#preset_selector").val();
   const currentSettings = getPresetSettings();
+  currentSettings.htmlMode = $("#html_toggle").prop("checked");
   extension_settings[extensionName].presets[presetName] = currentSettings;
   saveSettings();
 }
@@ -264,7 +395,8 @@ function deletePreset() {
     };
 
     $("#tti_font_family").val(defaultSettings.fontFamily);
-    $("#tti_font_size").val(defaultSettings.fontSize);
+    $("#tti_font_size_image").val(defaultSettings.fontSizeImage);
+    $("#tti_font_size_html").val(defaultSettings.fontSizeHtml);
     $("#tti_letter_spacing").val(defaultSettings.fontSpacing);
     $("#tti_line_height").val(defaultSettings.fontLineHeight);
     $("#tti_font_align").val(defaultSettings.fontAlign);
@@ -302,18 +434,17 @@ function deletePreset() {
     $("#background_color").val(defaultSettings.backgroundColor);
     $("#use_second_background_color").prop("checked", defaultSettings.useSecondBackgroundColor);
     $("#second_background_color").val(defaultSettings.secondBackgroundColor);
-    $(".bg-image-item").removeClass("selected");
-    $(`.bg-image-item[data-path="${defaultSettings.selectedBackgroundImage}"]`).addClass(
-      "selected"
-    );
+    syncSelectedBackgroundUI();
     $("#footer_text").val("");
     $("#footer_color").val(defaultSettings.footerColor);
     $("#preview_toggle").prop("checked", defaultSettings.autoPreview);
+    $("#html_toggle").prop("checked", defaultSettings.htmlMode);
     $("#letter_control").prop("checked", defaultSettings.letterCase);
     $("#unit_control").prop("checked", defaultSettings.unitControl);
     extension_settings[extensionName].setHighlighterTags = [];
 
     highlighterTags();
+    applyHtmlModeUIState();
   }
   saveSettings();
   updatePresetSelector();
@@ -340,7 +471,8 @@ function selectPreset() {
       oriFontFamily = defaultSettings.fontFamily;
     }
     $("#tti_font_family").val(defaultSettings.fontFamily);
-    $("#tti_font_size").val(defaultSettings.fontSize);
+    $("#tti_font_size_image").val(defaultSettings.fontSizeImage);
+    $("#tti_font_size_html").val(defaultSettings.fontSizeHtml);
     $("#tti_letter_spacing").val(defaultSettings.fontSpacing);
     $("#tti_line_height").val(defaultSettings.fontLineHeight);
     $("#tti_font_align").val(defaultSettings.fontAlign);
@@ -378,18 +510,17 @@ function selectPreset() {
     $("#background_color").val(defaultSettings.backgroundColor);
     $("#use_second_background_color").prop("checked", defaultSettings.useSecondBackgroundColor);
     $("#second_background_color").val(defaultSettings.secondBackgroundColor);
-    $(".bg-image-item").removeClass("selected");
-    $(`.bg-image-item[data-path="${defaultSettings.selectedBackgroundImage}"]`).addClass(
-      "selected"
-    );
+    syncSelectedBackgroundUI();
     $("#footer_text").val("");
     $("#footer_color").val(defaultSettings.footerColor);
     $("#preview_toggle").prop("checked", defaultSettings.autoPreview);
+    $("#html_toggle").prop("checked", defaultSettings.htmlMode);
     $("#letter_control").prop("checked", defaultSettings.letterCase);
     $("#unit_control").prop("checked", defaultSettings.unitControl);
 
     extension_settings[extensionName].setHighlighterTags = [];
     highlighterTags();
+    applyHtmlModeUIState();
 
     refreshPreview();
   } else if (presetName) {
@@ -403,14 +534,19 @@ function selectPreset() {
 function applyPreset(presetName) {
   const presets = extension_settings[extensionName].presets;
   const preset = presets[presetName];
+  if (!preset) return;
+  const presetHtmlMode = !!preset.htmlMode;
 
-  const wordGroup = [
+  extension_settings[extensionName].htmlMode = presetHtmlMode;
+  $("#html_toggle").prop("checked", presetHtmlMode);
+
+  const wordPairs = [
     {original: "originalWord1", replacement: "replacementWord1", id: "1"},
     {original: "originalWord2", replacement: "replacementWord2", id: "2"},
     {original: "originalWord3", replacement: "replacementWord3", id: "3"},
     {original: "originalWord4", replacement: "replacementWord4", id: "4"},
   ];
-  wordGroup.forEach(({original, replacement, id}) => {
+  wordPairs.forEach(({original, replacement, id}) => {
     if (preset[original] !== undefined) $("#original_word_" + id).val(preset[original]);
     if (preset[replacement] !== undefined) $("#replacement_word_" + id).val(preset[replacement]);
   });
@@ -427,6 +563,9 @@ function applyPreset(presetName) {
         "originalWord4",
         "replacementWord4",
         "setHighlighterTags",
+        "fontSize",
+        "fontSizeImage",
+        "fontSizeHtml",
       ].includes(key)
     ) {
       continue;
@@ -437,15 +576,11 @@ function applyPreset(presetName) {
       $("#tti_font_family").val(value);
       continue;
     }
-
     extension_settings[extensionName][key] = value;
 
     switch (key) {
       case "fontFamily":
         $("#tti_font_family").val(value);
-        break;
-      case "fontSize":
-        $("#tti_font_size").val(value);
         break;
       case "fontSpacing":
         $("#tti_letter_spacing").val(value);
@@ -523,8 +658,10 @@ function applyPreset(presetName) {
         $("#overlay_color").val(value);
         break;
       case "selectedBackgroundImage":
-        $(".bg-image-item").removeClass("selected");
-        $(`.bg-image-item[data-path="${value}"]`).addClass("selected");
+        syncSelectedBackgroundUI();
+        break;
+      case "selectedBackgroundImageHtml":
+        syncSelectedBackgroundUI();
         break;
       case "useBackgroundColor":
         $("#use_background_color").prop("checked", value);
@@ -547,6 +684,9 @@ function applyPreset(presetName) {
       case "autoPreview":
         $("#preview_toggle").prop("checked", value);
         break;
+      case "htmlMode":
+        $("#html_toggle").prop("checked", value);
+        break;
       case "letterCase":
         $("#letter_control").prop("checked", value);
         break;
@@ -555,6 +695,20 @@ function applyPreset(presetName) {
         break;
     }
   }
+  const presetImageFontSize = parseInt(preset.fontSizeImage, 10);
+  const presetHtmlFontSize = parseInt(preset.fontSizeHtml, 10);
+  const legacyPresetFontSize = parseInt(preset.fontSize, 10);
+  extension_settings[extensionName].fontSizeImage = Number.isFinite(presetImageFontSize)
+    ? presetImageFontSize
+    : (Number.isFinite(legacyPresetFontSize) ? legacyPresetFontSize : defaultSettings.fontSizeImage);
+  extension_settings[extensionName].fontSizeHtml = Number.isFinite(presetHtmlFontSize)
+    ? presetHtmlFontSize
+    : defaultSettings.fontSizeHtml;
+  extension_settings[extensionName].fontSize = isHtmlModeEnabled()
+    ? extension_settings[extensionName].fontSizeHtml
+    : extension_settings[extensionName].fontSizeImage;
+  $("#tti_font_size_image").val(extension_settings[extensionName].fontSizeImage);
+  $("#tti_font_size_html").val(extension_settings[extensionName].fontSizeHtml);
 
   if (preset.setHighlighterTags) {
     extension_settings[extensionName].setHighlighterTags = JSON.parse(JSON.stringify(preset.setHighlighterTags));
@@ -563,6 +717,9 @@ function applyPreset(presetName) {
   }
 
   highlighterTags();
+  applyHtmlModeUIState();
+  loadCustomBG();
+  syncSelectedBackgroundUI();
   saveSettings();
   refreshPreview();
 }
@@ -753,8 +910,8 @@ function botDataClass(data) {
   $("#text_to_image").val(cardDataTab[activeTab] || "");
   
   $(".bot-data.botImporter").addClass("remover");
-  $(".bot-data:not(.botImporter)").prop("disabled", false);  
-  refreshPreview();
+  $(".bot-data:not(.botImporter)").prop("disabled", false);
+  refreshPreview();  
 }
 async function botCardSaver() {
   if (!oriCard || !cardDataTab.oriData) {
@@ -863,7 +1020,6 @@ function ITxtChunk(key, encoded) {
 function replaceChunks(uint8Array, newChunks) {
   const chunks = [];
   let offset = 0;
-  const replacedWords = new Set();
   chunks.push(uint8Array.slice(0, 8));
   offset = 8;
   const view = new DataView(uint8Array.buffer, uint8Array.byteOffset);
@@ -946,8 +1102,8 @@ function fontFamily(event) {
 
 // 폰트 로드
 async function loadFonts() {
-  const fontFamilyName = await fetch(`${extensionFolderPath}/font-family.json`);
-  const fonts = await fontFamilyName.json();
+  const response = await fetch(`${extensionFolderPath}/font-family.json`);
+  const fonts = await response.json();
   fonts.sort((a, b) => a.label.localeCompare(b.label));
   const select = $("#tti_font_family").empty();
 
@@ -965,8 +1121,9 @@ async function loadFonts() {
 // 로컬 폰트 로드
 let currentCustomFont = null;
 let oriFontFamily = null;
-
 function addLocalFont() {
+  if (isHtmlModeEnabled()) return;
+
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = '.ttf,.otf,.woff,.woff2';
@@ -1005,8 +1162,10 @@ function addLocalFont() {
         $("#upload-local-font").text("로컬 폰트 변경");
         $("#delete-local-font").prop("disabled", false);
         
+        applyHtmlModeUIState();
         refreshPreview();
       }).catch(function(error) {
+        console.error('폰트 로드 실패:', error);
         alert('폰트 파일을 등록할 수 없습니다.');
       });
     };
@@ -1022,7 +1181,7 @@ function addLocalFont() {
 }
 function deleteLocalFont() {
   if (!currentCustomFont) return;
-
+  
   if (document.fonts && currentCustomFont) {
     const fonts = Array.from(document.fonts);
     const customFontFamily = fonts.find(font => font.family === currentCustomFont);
@@ -1034,49 +1193,116 @@ function deleteLocalFont() {
   extension_settings[extensionName].fontFamily = oriFontFamily || extension_settings[extensionName].fontFamily || 'Pretendard-Regular';
 
   $("#tti_font_family").val(extension_settings[extensionName].fontFamily).prop("disabled", false);
-
+  
   currentCustomFont = null;
   oriFontFamily = null;
-
+  
   $("#upload-local-font").text("로컬 폰트 등록");
   $("#delete-local-font").prop("disabled", true);
-
+  
+  applyHtmlModeUIState();
   saveSettings();
   refreshPreview();
 }
+function applyHtmlModeUIState() {
+  const htmlMode = isHtmlModeEnabled();
+
+  $("[data-html-hide]").toggleClass("html-mode-hidden", htmlMode);
+  $("[data-html-only]").toggleClass("html-mode-only", !htmlMode);
+
+  $("#tti_font_family").prop("disabled", htmlMode || !!currentCustomFont);
+  $("#upload-local-font").prop("disabled", htmlMode);
+  $("#delete-local-font").prop("disabled", htmlMode || !currentCustomFont);
+  $("#tti_ratio").prop("disabled", htmlMode);
+  $("#tti_fill_mode").prop("disabled", htmlMode);
+  $("#bg_image_upload").prop("disabled", htmlMode);
+  $("#bg_noise").prop("disabled", htmlMode);
+  $("#bg_image_url").prop("disabled", !htmlMode);
+  $("#bg_url_btn").prop("disabled", !htmlMode);
+  $(".tag-font-family").prop("disabled", htmlMode);
+}
 
 // 배경이미지 로드
+async function loadBackgroundURLMap() {
+  try {
+    const response = await fetch(`${extensionFolderPath}/backgrounds-list-url.json`);
+    if (!response.ok) return;
+    const backgroundURLs = await response.json();
+
+    defaultBackgroundUrlMap = new Map();
+    defaultBackgroundBasenameMap = new Map();
+
+    backgroundURLs.forEach((url) => {
+      if (!url || typeof url !== "string") return;
+      const fileName = getBackgroundFilename(url);
+      if (!fileName) return;
+
+      defaultBackgroundUrlMap.set(fileName, url);
+      const baseName = fileName.replace(/\.[^/.]+$/, "");
+      if (!defaultBackgroundBasenameMap.has(baseName)) {
+        defaultBackgroundBasenameMap.set(baseName, url);
+      }
+    });
+  } catch (error) {
+    console.warn("[text-to-image-converter] backgrounds-list-url.json load failed", error);
+  }
+}
+function getBackgroundFilename(pathLike) {
+  if (!pathLike || typeof pathLike !== "string") return "";
+  const filePart = pathLike.split("/").pop() || "";
+  return decodeURIComponent(filePart.split("?")[0].trim()).toLowerCase();
+}
+function resolveBackgroundURLForHTML(backgroundValue) {
+  if (!backgroundValue || typeof backgroundValue !== "string") return "";
+  if (/^(https?:|data:|blob:)/i.test(backgroundValue)) {
+    return backgroundValue;
+  }
+
+  const fileName = getBackgroundFilename(backgroundValue);
+  if (!fileName) return backgroundValue;
+  if (defaultBackgroundUrlMap.has(fileName)) {
+    return defaultBackgroundUrlMap.get(fileName);
+  }
+
+  const baseName = fileName.replace(/\.[^/.]+$/, "");
+  if (defaultBackgroundBasenameMap.has(baseName)) {
+    return defaultBackgroundBasenameMap.get(baseName);
+  }
+  return backgroundValue;
+}
 async function loadBG() {
-  const bgListFile = await fetch(`${extensionFolderPath}/backgrounds-list.json`);
-  const backgrounds = await bgListFile.json();
+  const response = await fetch(`${extensionFolderPath}/backgrounds-list.json`);
+  const backgrounds = await response.json();
   const gallery = $("#background_image_gallery").empty();
-  backgrounds.forEach((bg) => {
+  const selectedBackground = getSelectedBackgroundForCurrentMode();
+  const galleryHtml = backgrounds.map((bg) => {
     const bgPath = `${extensionFolderPath}/default-backgrounds/${bg}`;
-    const isSelected = extension_settings[extensionName].selectedBackgroundImage === bgPath;
-    gallery.append(`
+    const isSelected = selectedBackground === bgPath;
+    return `
       <div class="bg-image-item ${isSelected ? "selected" : ""}" data-path="${bgPath}">
-        <img src="${bgPath}" alt="${bg}" />
+        <img src="${bgPath}" alt="${bg}" loading="lazy" decoding="async" />
       </div>
-    `);
-  });
+    `;
+  }).join("");
+  gallery.html(galleryHtml);
   $(".bg-image-item").on("click", selectCanvasBG);
 }
-function storeBackground(name, imageData) {
-  const customBackgrounds = JSON.parse(localStorage.getItem("textToImageCustomBgs") || "{}");
+function storeBackground(name, imageData, storageKey = getCustomBackgroundStorageKey()) {
+  const customBackgrounds = JSON.parse(localStorage.getItem(storageKey) || "{}");
   customBackgrounds[name] = imageData;
-  localStorage.setItem("textToImageCustomBgs", JSON.stringify(customBackgrounds));
+  localStorage.setItem(storageKey, JSON.stringify(customBackgrounds));
 }
-function deleteBackground(name) {
-  const customBackgrounds = JSON.parse(localStorage.getItem("textToImageCustomBgs") || "{}");
+function deleteBackground(name, storageKey = getCustomBackgroundStorageKey()) {
+  const customBackgrounds = JSON.parse(localStorage.getItem(storageKey) || "{}");
   delete customBackgrounds[name];
-  localStorage.setItem("textToImageCustomBgs", JSON.stringify(customBackgrounds));
+  localStorage.setItem(storageKey, JSON.stringify(customBackgrounds));
 }
 
 // 커스텀 배경이미지 로드
-function loadCustomBG() {
-  const customBackgrounds = JSON.parse(localStorage.getItem("textToImageCustomBgs") || "{}");
+function loadCustomBG(storageKey = getCustomBackgroundStorageKey()) {
+  const customBackgrounds = JSON.parse(localStorage.getItem(storageKey) || "{}");
   const gallery = $("#custom_background_gallery").empty();
-  Object.entries(customBackgrounds).forEach(([name, imageData]) => addBGtoGallery(name, imageData));
+  Object.entries(customBackgrounds).forEach(([name, imageData]) => addBGtoGallery(name, imageData, storageKey));
 }
 function customBG() {
   $("#bg_image_upload").on("change", uploadImage);
@@ -1084,45 +1310,25 @@ function customBG() {
   loadCustomBG();
 }
 function uploadImageFromURL() {
+  if (!isHtmlModeEnabled()) return;
+
   const url = $("#bg_image_url").val().trim();
   if (!url) return;
-  
-  const img = new Image();
-  const proxy = "https://cors-anywhere.herokuapp.com/";
-  img.crossOrigin = "anonymous";
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  
-  img.onload = () => {
-    const max_size = 800;
-    let width = img.width;
-    let height = img.height;
-    if (width > height && width > max_size) {
-      height *= max_size / width;
-      width = max_size;
-    } else if (height > max_size) {
-      width *= max_size / height;
-      height = max_size;
-    }
-    canvas.width = width;
-    canvas.height = height;
-    ctx.drawImage(img, 0, 0, width, height);
-    const imageData = canvas.toDataURL('image/jpeg', 0.8);
-    
-    const fileName = url.split('/').pop().split('?')[0] || 'url-image-' + Date.now();
-    storeBackground(fileName, imageData);
-    addBGtoGallery(fileName, imageData);
-    $("#bg_image_url").val("");
-  };  
-  img.src = proxy + url;
+
+  const fileName = url.split('/').pop().split('?')[0] || 'url-image-' + Date.now();
+  const storageKey = getCustomBackgroundStorageKey();
+
+  storeBackground(fileName, url, storageKey);
+  addBGtoGallery(fileName, url, storageKey);
+  $("#bg_image_url").val("");
 }
-function addBGtoGallery(name, imageData) {
-  const isSelected = extension_settings[extensionName].selectedBackgroundImage === imageData;
+function addBGtoGallery(name, imageData, storageKey = getCustomBackgroundStorageKey()) {
+  const isSelected = getSelectedBackgroundForCurrentMode() === imageData;
   const bgElement = $(`
     <div class="bg-image-item ${
       isSelected ? "selected" : ""
-    }" data-path="${imageData}" data-name="${name}">
-      <img src="${imageData}" alt="${name}" />
+    }" data-path="${imageData}" data-name="${name}" data-storage-key="${storageKey}">
+      <img src="${imageData}" alt="${name}" loading="lazy" decoding="async" />
       <div class="delete-bg-btn">×</div>
     </div>
   `);
@@ -1130,9 +1336,13 @@ function addBGtoGallery(name, imageData) {
   bgElement.on("click", selectCanvasBG);
   bgElement.find(".delete-bg-btn").on("click", removeCustomBg);
 }
+
 function uploadImage(event) {
+  if (isHtmlModeEnabled()) return;
+
   const file = event.target.files[0];
   if (!file) return;
+  const storageKey = getCustomBackgroundStorageKey();
   const img = new Image();
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -1151,8 +1361,8 @@ function uploadImage(event) {
     canvas.height = height;
     ctx.drawImage(img, 0, 0, width, height);
     const imageData = canvas.toDataURL('image/jpeg', 0.8);
-    storeBackground(file.name, imageData);
-    addBGtoGallery(file.name, imageData);
+    storeBackground(file.name, imageData, storageKey);
+    addBGtoGallery(file.name, imageData, storageKey);
     $("#bg_image_upload").val("");
   };
   const ImageReader = new FileReader();
@@ -1164,10 +1374,10 @@ function uploadImage(event) {
 function removeCustomBg(event) {
   event.stopPropagation();
   const bgItem = $(this).closest(".bg-image-item");
-  deleteBackground(bgItem.data("name"));
+  deleteBackground(bgItem.data("name"), bgItem.data("storage-key"));
   bgItem.remove();
   if (bgItem.hasClass("selected")) {
-    extension_settings[extensionName].selectedBackgroundImage = null;
+    setSelectedBackgroundForCurrentMode(null);
     saveSettings();
     refreshPreview();
   }
@@ -1234,7 +1444,7 @@ function selectCanvasBG(event) {
   const path = $(this).data("path");
   $(".bg-image-item").removeClass("selected");
   $(this).addClass("selected");
-  extension_settings[extensionName].selectedBackgroundImage = path;
+  setSelectedBackgroundForCurrentMode(path);
   saveSettings();
   refreshPreview();
 }
@@ -1405,9 +1615,6 @@ function replaceString(text, original, replacement, letterCase, unitControl) {
   return result;
 }
 function findKoreanWord(text, originalWord, replacementWord, unitControl) {
-  const verbEndingPattern = /^[자고며다요네죠게서써도구나군요까봐서라지거든만큼]/;
-  const particlePattern = /^(?:[은|는|이|가|아|야|의|을|를|로|으로|과|와|께|에게|에서|한테|하고|랑|이랑|도|이도|만|까지|마저|조차|부터|밖에|야말로|서|처럼|보다|였])/;
-
   const specialChar = /[\s\.,;:!?\(\)\[\]{}"'<>\/\\\-_=\+\*&\^%\$#@~`|]/;
   let result = "";
 
@@ -1473,8 +1680,21 @@ function lineBreak(event) {
   saveSettings();
   refreshPreview();
 }
-function fontSize(event) {
-  extension_settings[extensionName].fontSize = event.target.value;
+function fontSizeImage(event) {
+  const value = parseInt(event.target.value, 10) || defaultSettings.fontSizeImage;
+  extension_settings[extensionName].fontSizeImage = value;
+  if (!isHtmlModeEnabled()) {
+    extension_settings[extensionName].fontSize = value;
+  }
+  saveSettings();
+  refreshPreview();
+}
+function fontSizeHtml(event) {
+  const value = parseInt(event.target.value, 10) || defaultSettings.fontSizeHtml;
+  extension_settings[extensionName].fontSizeHtml = value;
+  if (isHtmlModeEnabled()) {
+    extension_settings[extensionName].fontSize = value;
+  }
   saveSettings();
   refreshPreview();
 }
@@ -1572,6 +1792,53 @@ function autoPreview(event) {
     $(".refresh-preview").addClass("shown");
   }
 }
+function htmlMode(event) {
+  extension_settings[extensionName].htmlMode = event.target.checked;
+  extension_settings[extensionName].fontSize = getActiveFontSize();
+  saveSettings();
+  applyHtmlModeUIState();
+  loadCustomBG();
+  syncSelectedBackgroundUI();
+  refreshPreview();
+}
+function getPreviewChunks() {
+  const text = $("#text_to_image").val() || "";
+  if (isHtmlModeEnabled()) {
+    return [text];
+  }
+
+  const lineBreak = extension_settings[extensionName].lineBreak || "byWord";
+  return wrappingTexts(text, lineBreak === "byWord" ? "word" : "char");
+}
+function updatePreviewDownloadAllButton(itemCount) {
+  const $previewTitle = $("#image_preview_box h4");
+  const $dlAllBtn = $previewTitle.find(".dl_all");
+
+  if (itemCount >= 2 && !isHtmlModeEnabled()) {
+    if ($dlAllBtn.length === 0) {
+      const $newDlAllBtn = $(
+        '<div class="dl_all"><i class="fa-solid fa-circle-down"></i> 전체 다운로드</div>'
+      );
+      $previewTitle.append($newDlAllBtn);
+      $newDlAllBtn.on("click", () => {
+        autoDownload("#image_preview_container .download-btn", 500);
+      });
+    }
+    return;
+  }
+
+  $dlAllBtn.remove();
+}
+function renderPreviewContent() {
+  const chunks = getPreviewChunks();
+  const $container = $("#image_preview_container").empty();
+
+  chunks.forEach((chunk, i) => {
+    $container.append(isHtmlModeEnabled() ? generateHTMLPreview(chunk, i) : generateTextImage(chunk, i));
+  });
+
+  updatePreviewDownloadAllButton(chunks.length);
+}
 function refreshPreview() {
   $(".refresh-preview").removeClass("shown");
 
@@ -1582,65 +1849,11 @@ function refreshPreview() {
     return;
   }
 
-  const text = $("#text_to_image").val() || "";
-  const lineBreak = extension_settings[extensionName].lineBreak || "byWord";
-
-  const chunks = wrappingTexts(text, lineBreak === "byWord" ? "word" : "char");
-
-  const $container = $("#image_preview_container").empty();
-
-  chunks.forEach((chunk, i) => {
-    $container.append(generateTextImage(chunk, i));
-  });
-
-  const imageCount = chunks.length;
-  const $previewTitle = $("#image_preview_box h4");
-  const $dlAllBtn = $previewTitle.find(".dl_all");
-
-  if (imageCount >= 2) {
-    if ($dlAllBtn.length === 0) {
-      const $newDlAllBtn = $(
-        '<div class="dl_all"><i class="fa-solid fa-circle-down"></i> 전체 다운로드</div>'
-      );
-      $previewTitle.append($newDlAllBtn);
-      $newDlAllBtn.on("click", () => {
-        autoDownload("#image_preview_container .download-btn", 500);
-      });
-    }
-  } else {
-    $dlAllBtn.remove();
-  }
+  renderPreviewContent();
 }
 function manualRefresh() {
   if (!extension_settings[extensionName].autoPreview) {
-    const text = $("#text_to_image").val() || "";
-    const lineBreak = extension_settings[extensionName].lineBreak || "byWord";
-
-    const chunks = wrappingTexts(text, lineBreak === "byWord" ? "word" : "char");
-
-    const $container = $("#image_preview_container").empty();
-
-    chunks.forEach((chunk, i) => {
-      $container.append(generateTextImage(chunk, i));
-    });
-
-    const imageCount = chunks.length;
-    const $previewTitle = $("#image_preview_box h4");
-    const $dlAllBtn = $previewTitle.find(".dl_all");
-
-    if (imageCount >= 2) {
-      if ($dlAllBtn.length === 0) {
-        const $newDlAllBtn = $(
-          '<div class="dl_all"><i class="fa-solid fa-circle-down"></i> 전체 다운로드</div>'
-        );
-        $previewTitle.append($newDlAllBtn);
-        $newDlAllBtn.on("click", () => {
-          autoDownload("#image_preview_container .download-btn", 500);
-        });
-      }
-    } else {
-      $dlAllBtn.remove();
-    }
+    renderPreviewContent();
   }
 }
 
@@ -1655,7 +1868,7 @@ function highlighterTags() {
         <div class="tag-item-left">
           <input type="text" class="tag-name" placeholder="태그이름" value="${tag.name}" />
           <div>            
-            <select class="tag-font-family">
+            <select class="tag-font-family" data-html-hide="tag_font_family">
               <option value="useGlobal" ${(!tag.fontFamily || tag.fontFamily === "useGlobal") ? "selected" : ""}>전역 폰트 사용</option>
             </select>
             <input type="number" class="tag-font-size" value="${tag.fontSize}" min="12" max="50" />
@@ -1687,6 +1900,7 @@ function highlighterTags() {
   });
   const addBtn = $('<button class="add-tag-btn buttons">추가</button>');
   highlightContainer.append(addBtn);
+  applyHtmlModeUIState();
 }
 async function highlighterFonts(fontOption, selectedFont) {
   const fontFamilyName = await fetch(`${extensionFolderPath}/font-family.json`);
@@ -1711,7 +1925,7 @@ function addHighlightTag() {
     fontFamily: "useGlobal",
     fontColor: "#000000",
     bgColor: "#ffffff",
-    fontSize: 24,
+    fontSize: isHtmlModeEnabled() ? 14 : 24,
     strokeWidth: "inherit",
     useTagFontColor: false,
     useTagBgColor: false,
@@ -1828,12 +2042,12 @@ function enableMarkdown(text) {
 // 텍스트 정리
 function wrappingTexts(text, mode = "word") {
   const settings = extension_settings[extensionName];
-
+  
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   const { width, height } = getCanvasSize();
   const maxWidth = width - 80;
-  const fontSize = settings.fontSize;
+  const fontSize = getActiveFontSize(settings);
   const lineHeight = fontSize * parseFloat(settings.fontLineHeight);
 
   const fullSize = settings.imageRatio === "full";
@@ -1870,7 +2084,6 @@ function wrappingTexts(text, mode = "word") {
     const wrapLine = [];
     const spans = enableMarkdown(lineText);
     let currentLine = [];
-    let currentLineText = "";
 
     spans.forEach((span) => {
       const units = mode === "word"
@@ -2005,10 +2218,10 @@ function isBlankLine(line, mode) {
 
 // 텍스트를 이미지로
 function generateTextImage(chunk, index) {
-  const {width, height} = getCanvasSize();  
+  const {width, height} = getCanvasSize();
   const settings = extension_settings[extensionName];
 
-  const fontSize = settings.fontSize;
+  const fontSize = getActiveFontSize(settings);
   const lineHeight = fontSize * parseFloat(settings.fontLineHeight);
   const bgImage = settings.selectedBackgroundImage;
   const useBgColor = settings.useBackgroundColor;
@@ -2168,10 +2381,7 @@ function generateTextImage(chunk, index) {
         line.forEach((span) => {
           setFont(span);
           const width = ctx.measureText(span.text).width;
-          const letterSpacing = `${settings.fontSpacing}em`;
-          if (letterSpacing !== "normal") {
-            ctx.letterSpacing = letterSpacing;
-          }
+          ctx.letterSpacing = `${settings.fontSpacing}em`;
           measuredWidths.push(width);
           totalTextWidth += width;
         });
@@ -2212,9 +2422,7 @@ function generateTextImage(chunk, index) {
       
       if (useSecondBgColor) {
         const gradient = ctx.createLinearGradient(0, 0, width, calcHeight);
-        gradient.addColorStop(0, bgColor);
-        gradient.addColorStop(0.4, bgColor);
-        gradient.addColorStop(1, secondBgColor);
+        addSmoothGradientStops(gradient, bgColor, secondBgColor);
         ctx.fillStyle = gradient;
       } else {
         ctx.fillStyle = bgColor;
@@ -2356,9 +2564,7 @@ function generateTextImage(chunk, index) {
   if (useBgColor && !bgImage) {
     if (useSecondBgColor) {
       const gradient = ctx.createLinearGradient(0, 0, width, calcHeight);
-      gradient.addColorStop(0, bgColor);
-      gradient.addColorStop(0.4, bgColor);
-      gradient.addColorStop(1, secondBgColor);
+      addSmoothGradientStops(gradient, bgColor, secondBgColor);
       ctx.fillStyle = gradient;
     } else {
       ctx.fillStyle = bgColor;
@@ -2397,6 +2603,296 @@ function generateTextImage(chunk, index) {
   $preview.append($img, $downloadBtn);
   return $preview;
 }
+function escapeHTML(text = "") {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+function escapeCSSURL(url = "") {
+  return String(url).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+function toRGBA(hex, alpha = 1) {
+  const fallback = `rgba(255,255,255,${alpha})`;
+  if (!hex || typeof hex !== "string") return fallback;
+
+  const cleanHex = hex.replace("#", "").trim();
+  if (![3, 6].includes(cleanHex.length)) return fallback;
+
+  const fullHex = cleanHex.length === 3
+    ? cleanHex.split("").map((ch) => ch + ch).join("")
+    : cleanHex;
+
+  const r = parseInt(fullHex.slice(0, 2), 16);
+  const g = parseInt(fullHex.slice(2, 4), 16);
+  const b = parseInt(fullHex.slice(4, 6), 16);
+
+  if ([r, g, b].some(Number.isNaN)) return fallback;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+function normalizeHexColor(color = "#000000") {
+  const normalized = String(color || "").trim().toLowerCase();
+  if (!normalized) return null;
+  let hex = normalized.startsWith("#") ? normalized.slice(1) : normalized;
+  if (hex.length === 3) {
+    hex = hex.split("").map((ch) => ch + ch).join("");
+  }
+  if (!/^[0-9a-f]{6}$/.test(hex)) return null;
+  return `#${hex}`;
+}
+function mixHexColors(colorA, colorB, ratio = 0.5) {
+  const a = normalizeHexColor(colorA);
+  const b = normalizeHexColor(colorB);
+  if (!a || !b) return a || b || "#000000";
+
+  const clampRatio = Math.max(0, Math.min(1, Number(ratio)));
+  const ar = parseInt(a.slice(1, 3), 16);
+  const ag = parseInt(a.slice(3, 5), 16);
+  const ab = parseInt(a.slice(5, 7), 16);
+  const br = parseInt(b.slice(1, 3), 16);
+  const bg = parseInt(b.slice(3, 5), 16);
+  const bb = parseInt(b.slice(5, 7), 16);
+
+  const r = Math.round(ar + (br - ar) * clampRatio);
+  const g = Math.round(ag + (bg - ag) * clampRatio);
+  const bl = Math.round(ab + (bb - ab) * clampRatio);
+  const toHex = (n) => n.toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(bl)}`;
+}
+function buildSmoothGradientCSS(colorA, colorB, angle = "135deg") {
+  const c1 = normalizeHexColor(colorA) || colorA;
+  const c2 = normalizeHexColor(colorB) || colorB;
+  const c25 = mixHexColors(c1, c2, 0.25);
+  const c50 = mixHexColors(c1, c2, 0.5);
+  const c75 = mixHexColors(c1, c2, 0.75);
+  return `linear-gradient(${angle}, ${c1} 0%, ${c25} 35%, ${c50} 60%, ${c75} 80%, ${c2} 100%)`;
+}
+function addSmoothGradientStops(gradient, colorA, colorB) {
+  const c1 = normalizeHexColor(colorA) || colorA;
+  const c2 = normalizeHexColor(colorB) || colorB;
+  gradient.addColorStop(0, c1);
+  gradient.addColorStop(0.35, mixHexColors(c1, c2, 0.25));
+  gradient.addColorStop(0.6, mixHexColors(c1, c2, 0.5));
+  gradient.addColorStop(0.8, mixHexColors(c1, c2, 0.75));
+  gradient.addColorStop(1, c2);
+}
+function mapHtmlStrokeWidth(value) {
+  const numeric = parseFloat(value) || 0;
+  if (numeric === 0.8) return 0.1;
+  if (numeric === 1.5) return 0.3;
+  return numeric;
+}
+function getSpanColor(span, settings) {
+  let textColor = settings.fontColor || "#000000";
+  if (span.fontColor) {
+    textColor = span.fontColor;
+  } else {
+    if (span.strikethrough && settings.useStrikethroughColor) {
+      textColor = settings.strikethroughFontColor || textColor;
+    } else if (span.underline && settings.useUnderlineColor) {
+      textColor = settings.underlineFontColor || textColor;
+    } else if (span.bold && span.italic && settings.useBoldItalicColor) {
+      textColor = settings.boldItalicFontColor || textColor;
+    } else if (span.bold && !span.italic && settings.useBoldColor) {
+      textColor = settings.boldFontColor || textColor;
+    } else if (!span.bold && span.italic && settings.useItalicColor) {
+      textColor = settings.italicFontColor || textColor;
+    }
+  }
+  return textColor;
+}
+function getSpanStrokeWidth(span, settings) {
+  if (span.strokeWidth !== undefined && span.strokeWidth !== null) {
+    if (span.strokeWidth === "inherit") {
+      return mapHtmlStrokeWidth(settings.strokeWidth);
+    }
+    return mapHtmlStrokeWidth(span.strokeWidth);
+  }
+  return mapHtmlStrokeWidth(settings.strokeWidth);
+}
+function buildSpanStyle(span, settings) {
+  const style = [];
+  const decorations = [];
+  const strokeWidth = getSpanStrokeWidth(span, settings);
+  const textColor = getSpanColor(span, settings);
+
+  style.push(`color:${textColor} !important`);
+  style.push("line-height:inherit !important");
+  style.push("letter-spacing:inherit !important");
+  style.push("font-size:inherit !important");
+  if (span.bold) style.push("font-weight:700 !important");
+  if (span.italic) style.push("font-style:italic !important");
+  if (span.underline) decorations.push("underline");
+  if (span.strikethrough) decorations.push("line-through");
+  if (decorations.length) {
+    style.push(`text-decoration:${decorations.join(" ")} !important`);
+  }
+  if (span.bgColor) {
+    style.push(`background-color:${span.bgColor} !important`);
+  }
+  if (span.fontSize) {
+    style.push(`font-size:${span.fontSize}px !important`);
+  }
+  if (strokeWidth > 0) {
+    style.push(`-webkit-text-stroke:${strokeWidth}px ${textColor} !important`);
+  }
+  return style.join("; ");
+}
+function renderMarkdownHTML(text, settings) {
+  const lines = String(text || "").split(/\n/);
+  const htmlLines = lines.map((line) => {
+    const trimmedLine = line.trim();
+    if (/^-{3,}$/.test(trimmedLine) || /^<hr\s*\/?>$/i.test(trimmedLine)) {
+      return `<hr style="display: block !important; opacity: 0.4 !important; border:0 !important;height:1px !important;background-image:linear-gradient(90deg, transparent, ${settings.fontColor || "#000000"}, transparent) !important;margin:28px auto !important;" />`;
+    }
+
+    const spans = enableMarkdown(line);
+    if (!spans.length) return "";
+
+    const lineHtml = spans.map((span) => {
+      const spanText = escapeHTML(span.text || "");
+      const spanStyle = buildSpanStyle(span, settings);
+      if (!spanStyle) return spanText;
+      return `<span style="${spanStyle}">${spanText}</span>`;
+    }).join("");
+
+    return `<font face="${HTML_FONT_FACE}">${lineHtml}</font>`;
+  });
+
+  return htmlLines.join("\n");
+}
+function createHTMLSnippet(text, index) {
+  const settings = extension_settings[extensionName];
+  const htmlSelectedBackground = settings.selectedBackgroundImageHtml || settings.selectedBackgroundImage;
+  const bgURL = resolveBackgroundURLForHTML(htmlSelectedBackground);
+  const markdownHTML = renderMarkdownHTML(text, settings);
+
+  const backgroundColor = settings.backgroundColor || "#ffffff";
+  const secondColor = settings.secondBackgroundColor || backgroundColor;
+  const smoothGradient = buildSmoothGradientCSS(backgroundColor, secondColor);
+  const useBgColor = !!settings.useBackgroundColor;
+  const useSecondBgColor = !!settings.useSecondBackgroundColor;
+  const escapedURL = bgURL ? escapeCSSURL(bgURL) : "";
+  const colorBackground = useBgColor
+    ? (useSecondBgColor
+      ? smoothGradient
+      : backgroundColor)
+    : "transparent";
+  const colorBackgroundImage = useBgColor
+    ? (useSecondBgColor
+      ? smoothGradient
+      : `linear-gradient(${backgroundColor}, ${backgroundColor})`)
+    : "none";
+  const bgLayerImage = escapedURL ? (useBgColor ? `${colorBackgroundImage}, url('${escapedURL}')` : `url('${escapedURL}')`) : "none";
+
+  const filterEffects = [];
+  filterEffects.push(`brightness(${settings.bgBrightness ?? 100}%)`);
+  filterEffects.push(`hue-rotate(${settings.bgHue ?? 0}deg)`);
+  if (settings.bgGrayscale > 0) filterEffects.push(`grayscale(${settings.bgGrayscale}%)`);
+  const bgFilter = filterEffects.join(" ");
+
+  const overlayOpacity = Math.min(1, Math.max(0, Number(settings.overlayOpacity) || 0));
+  const blurStrength = Math.max(0, Number(settings.bgBlur) || 0);
+  const lineBreakByChar = (settings.lineBreak || "byWord") === "byChar";
+  const globalStrokeWidth = mapHtmlStrokeWidth(settings.strokeWidth);
+  const globalTextColor = settings.fontColor || "#000000";
+  const htmlFontSize = parseInt(settings.fontSizeHtml, 10) || defaultSettings.fontSizeHtml;
+  const containerInlineStyle = [
+    "background:transparent !important",
+    "box-sizing:border-box !important",
+    "width:100% !important",
+    "max-width:750px !important",
+    "max-height:750px !important",
+    "margin:0 auto !important",
+    "padding:32px !important",
+    "border-radius:15px !important",
+    "overflow:hidden !important",
+    "isolation:isolate !important",
+  ].join(";");
+  const bgInlineStyle = [
+    "border-radius:15px !important",
+    `background:${useBgColor ? colorBackground : "transparent"} !important`,
+    `background-image:${bgLayerImage} !important`,
+    "background-size:cover !important",
+    "background-position:center !important",
+    "background-repeat:no-repeat !important",
+    `filter:${bgFilter || "none"} !important`,
+  ].join(";");
+  const overlayInlineStyle = [
+    "border-radius:15px !important",
+    `background:${toRGBA(settings.overlayColor || "#ffffff", overlayOpacity)} !important`,
+    `-webkit-backdrop-filter:blur(${blurStrength}px) !important`,
+    `backdrop-filter:blur(${blurStrength}px) !important`,
+    "pointer-events:none !important",
+  ].join(";");
+  const contentInlineStyle = [
+    "max-height:calc(750px - 100px) !important",
+    "overflow-y:auto !important",
+    `color:${globalTextColor} !important`,
+    `font-size:${htmlFontSize}px !important`,
+    "font-weight:400 !important",
+    `letter-spacing:${settings.fontSpacing || 0}em !important`,
+    `line-height:${settings.fontLineHeight || 1.5} !important`,
+    `text-align:${settings.fontAlign || "left"} !important`,
+    "white-space:pre-wrap !important",
+    `word-break:${lineBreakByChar ? "break-all" : "break-word"} !important`,
+    "overflow-wrap:anywhere !important",
+    "margin-bottom:44px !important",
+    `-webkit-text-stroke:${globalStrokeWidth}px ${globalTextColor} !important`,
+  ].join(";");
+  const footerInlineStyle = [
+    "right:35px !important",
+    "bottom:35px !important",
+    `color:${settings.footerColor || "#000000"} !important`,
+    "font-size:12px !important",
+    "text-align:right !important",
+  ].join(";");
+
+  const footerHTML = settings.footerText
+    ? `
+  <div class="tti-footer" style="${footerInlineStyle}"><font face="${HTML_FONT_FACE}">${escapeHTML(settings.footerText)}</font></div>`
+    : "";
+  const shouldRenderBg = escapedURL || useBgColor;
+  const backgroundHTML = shouldRenderBg
+    ? `
+  <div class="tti-bg" style="${bgInlineStyle}"></div>`
+    : "";
+  const overlayHTML = `
+  <div class="tti-overlay" style="${overlayInlineStyle}"></div>`;
+
+  const scopedStyle = `.tti{position:relative !important;}.tti-bg{position:absolute !important;inset:0 !important;z-index:0 !important;}.tti-overlay{position:absolute !important;inset:20px !important;z-index:2 !important;}.tti-content{position:relative !important;z-index:3 !important;}.tti-footer{position:absolute !important;z-index:4 !important;}`;
+
+  return `<div>
+<style>${scopedStyle}</style>
+<div class="tti" style="${containerInlineStyle}">
+${backgroundHTML}${overlayHTML}
+  <div class="tti-content" style="${contentInlineStyle}">${markdownHTML}</div>${footerHTML}
+</div>
+</div>`;
+}
+function generateHTMLPreview(text, index) {
+  const htmlCode = createHTMLSnippet(text, index);
+  const previewOnlyStyle = `<style>.html-render-preview .tti-content,.html-render-preview .tti-content span[style],.html-render-preview .tti-footer,.html-render-preview .tti-footer *{font-family:RIDIBatang !important;}</style>`;
+
+  const $preview = $("<div>").addClass("image-preview-item html-preview-item");
+  const $rendered = $("<div>")
+    .addClass("html-render-preview")
+    .html(htmlCode + previewOnlyStyle);
+  const $copyBtn = $("<button>")
+    .addClass("download-btn")
+    .text("코드 복사")
+    .on("click", async () => {
+      const copied = await copyToClipboard(htmlCode);
+      if (!copied) {
+        alert("코드 복사에 실패했습니다.");
+      }
+    });
+
+  $preview.append($rendered, $copyBtn);
+  return $preview;
+}
 
 // 일괄 다운 zip
 function autoDownload(allDLbuttons, delay = 1500) {
@@ -2404,6 +2900,9 @@ function autoDownload(allDLbuttons, delay = 1500) {
     const DLbuttons = $(allDLbuttons);
     if (DLbuttons.length > 1) {
       zipDL(DLbuttons);
+    } else {
+      let index = 0;
+      controlDL(DLbuttons, index);
     }
   }, delay);
 }
@@ -2448,12 +2947,19 @@ async function zipDL(DLbuttons) {
 }
 function loadScript(src) {
   return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
+    const script = document.createElement('script');
     script.src = src;
     script.onload = resolve;
     script.onerror = reject;
     document.head.appendChild(script);
   });
+}
+function controlDL(DLbuttons, index) {
+  if (index < DLbuttons.length) {
+    $(DLbuttons[index]).trigger("click");
+    index++;
+    setTimeout(() => controlDL(DLbuttons, index), 1000);
+  }
 }
 
 // 저장 이미지 형식
@@ -2468,6 +2974,28 @@ function saveImage(dataUrl, filename) {
   link.download = `${dateString} (${index}).png`;
   link.click();
 }
+async function copyToClipboard(content) {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(content);
+      return true;
+    } catch (error) {
+      console.warn("[text-to-image-converter] clipboard write failed", error);
+    }
+  }
+
+  const temp = document.createElement("textarea");
+  temp.value = content;
+  temp.style.position = "fixed";
+  temp.style.opacity = "0";
+  temp.style.pointerEvents = "none";
+  document.body.appendChild(temp);
+  temp.focus();
+  temp.select();
+  const copied = document.execCommand("copy");
+  document.body.removeChild(temp);
+  return copied;
+}
 
 jQuery(async () => {
   await initSettings();
@@ -2476,14 +3004,17 @@ jQuery(async () => {
   customBG();
   setupWordReplacer();
   bindingFunctions();
+  setupRangeValueTooltips();
   restoreButtons();
   tabButtons();
   botCardButtons();
   highlighterOption();
 });
+
 function bindingFunctions() {
   $("#tti_font_family").on("change", fontFamily);
-  $("#tti_font_size").on("change", fontSize);
+  $("#tti_font_size_image").on("change", fontSizeImage);
+  $("#tti_font_size_html").on("change", fontSizeHtml);
   $("#tti_letter_spacing").on("change", fontSpacing);
   $("#tti_line_height").on("change", fontLineHeight);
   $("#tti_font_align").on("change", fontAlign);
@@ -2519,6 +3050,7 @@ function bindingFunctions() {
   $("#upload-local-font").on("click", addLocalFont);
   $("#delete-local-font").on("click", deleteLocalFont);
   $("#preview_toggle").on("change", autoPreview);
+  $("#html_toggle").on("change", htmlMode);
   $(".refresh-preview").on("click", manualRefresh);
   $("#letter_control").on("change", letterCase);
   $("#unit_control").on("change", unitControl);
@@ -2595,9 +3127,8 @@ function botCardButtons() {
       Object.keys(cardDataTab).forEach(key => delete cardDataTab[key]);
       $("#text_to_image").val("");
       $(".bot-data[data-type]").removeClass("active");
-      $(this).removeClass("remover");
+      $(this).removeClass("remover");  
       $(".bot-data:not(.botImporter)").prop("disabled", true);  
-      refreshPreview();
     } else {
       loadBotCard();
       refreshPreview();
@@ -2605,6 +3136,7 @@ function botCardButtons() {
   });
   $(".bot-data.botSaver").on("click", function () {
     botCardSaver();
+    refreshPreview();
   });
 }
 function highlighterOption() {
