@@ -2178,7 +2178,8 @@ function enableMarkdown(text, options = {}) {
     const headingMatch = text.match(/^\s*(#{1,3})\s+(.+)$/);
     if (headingMatch) {
       const hashCount = headingMatch[1].length;
-      headingSizeBonus = (4 - hashCount) * 2;
+      const baseHeadingBonus = (4 - hashCount) * 2;
+      headingSizeBonus = isHtmlModeEnabled() ? baseHeadingBonus : (baseHeadingBonus + 1);
       sourceText = headingMatch[2];
     }
   }
