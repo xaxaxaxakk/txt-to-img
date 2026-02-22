@@ -1594,16 +1594,35 @@ function unitControl(event) {
   saveSettings();
 }
 function setupWordReplacer() {
-  let originalText = "";
+  let originalSnapshot = null;
   $("#apply_replacement").on("click", () => {
-    originalText = $("#text_to_image").val();
+    originalSnapshot = {
+      mainText: $("#text_to_image").val(),
+      switcherTexts: $("#tti_html_switcher_list .tti-html-switcher-text").map(function () {
+        return $(this).val();
+      }).get(),
+    };
     replaceWords();
   });
   $("#restore_text").on("click", () => {
-    if (originalText !== "") {
-      $("#text_to_image").val(originalText);
-      refreshPreview();
+    if (!originalSnapshot) return;
+
+    $("#text_to_image").val(originalSnapshot.mainText ?? "");
+
+    const $switcherList = $("#tti_html_switcher_list");
+    if ($switcherList.length) {
+      $switcherList.empty();
+      (originalSnapshot.switcherTexts || []).forEach((value) => {
+        if (typeof appendHtmlSwitcherInput === "function") {
+          appendHtmlSwitcherInput(value);
+        }
+      });
+      if (typeof syncHtmlSwitcherInputUIState === "function") {
+        syncHtmlSwitcherInputUIState();
+      }
     }
+
+    refreshPreview();
   });
 }
 function replaceWords() {
