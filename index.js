@@ -1607,7 +1607,6 @@ function setupWordReplacer() {
   });
 }
 function replaceWords() {
-  let text = $("#text_to_image").val();
   letterCase = extension_settings[extensionName].letterCase;
   unitControl = extension_settings[extensionName].unitControl;
 
@@ -1634,58 +1633,65 @@ function replaceWords() {
     return;
   }
 
-  const originalTemp = wordGroup.map((_, index) => `__REPLACE_${Date.now()}_${index}__`);
+  const applyWordReplacement = (inputText) => {
+    let text = String(inputText ?? "");
+    const originalTemp = wordGroup.map((_, index) => `__REPLACE_${Date.now()}_${index}__`);
 
-  for (let i = 0; i < wordGroup.length; i++) {
-    const { original, replacement } = wordGroup[i];
-    const temp = originalTemp[i];
-    const oriMulWord = original.split('||').map(word => word.trim()).filter(word => word);
+    for (let i = 0; i < wordGroup.length; i++) {
+      const { original } = wordGroup[i];
+      const temp = originalTemp[i];
+      const oriMulWord = original.split('||').map(word => word.trim()).filter(word => word);
 
-    for (const origWord of oriMulWord) {
-      const containsKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(origWord);
-      if (containsKorean) {
-        text = findKoreanWord(text, origWord, temp, unitControl);
-      } else {
-        text = replaceString(text, origWord, temp, letterCase, unitControl);
+      for (const origWord of oriMulWord) {
+        const containsKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(origWord);
+        if (containsKorean) {
+          text = findKoreanWord(text, origWord, temp, unitControl);
+        } else {
+          text = replaceString(text, origWord, temp, letterCase, unitControl);
+        }
       }
     }
-  }
 
-  for (let i = 0; i < wordGroup.length; i++) {
-    const {replacement} = wordGroup[i];
-    const temp = originalTemp[i];
-    const replacementText = replacement !== undefined ? replacement : "";
+    for (let i = 0; i < wordGroup.length; i++) {
+      const {replacement} = wordGroup[i];
+      const temp = originalTemp[i];
+      const replacementText = replacement !== undefined ? replacement : "";
+      const regex = new RegExp(`${escapeRegExp(temp)}(은|는|이|가|을|를|과|와|이랑|랑|으로|로|아|야)?`, "g");
 
-    const regex = new RegExp(`${escapeRegExp(temp)}(은|는|이|가|을|를|과|와|이랑|랑|으로|로|아|야)?`, "g");
+      text = text.replace(regex, (match, particle) => {
+        if (!particle) {
+          return replacementText;
+        }
 
-    text = text.replace(regex, (match, particle) => {
-      if (!particle) {
-        return replacementText;
-      }
-      
-      let newParticle = particle;
-      const hasEndConsonant = hasConsonantLetter(replacementText);
+        let newParticle = particle;
+        const hasEndConsonant = hasConsonantLetter(replacementText);
 
-      if (particle === "는" && hasEndConsonant) newParticle = "은";
-      else if (particle === "은" && !hasEndConsonant) newParticle = "는";
-      else if (particle === "가" && hasEndConsonant) newParticle = "이";
-      else if (particle === "이" && !hasEndConsonant) newParticle = "가";
-      else if (particle === "를" && hasEndConsonant) newParticle = "을";
-      else if (particle === "을" && !hasEndConsonant) newParticle = "를";
-      else if (particle === "아" && !hasEndConsonant) newParticle = "야";
-      else if (particle === "야" && hasEndConsonant) newParticle = "아";
-      else if (particle === "와" && hasEndConsonant) newParticle = "과";
-      else if (particle === "과" && !hasEndConsonant) newParticle = "와";
-      else if (particle === "랑" && hasEndConsonant) newParticle = "이랑";
-      else if (particle === "이랑" && !hasEndConsonant) newParticle = "랑";
-      else if (particle === "로" && hasEndConsonant) newParticle = "으로";
-      else if (particle === "으로" && !hasEndConsonant) newParticle = "로";
+        if (particle === "는" && hasEndConsonant) newParticle = "은";
+        else if (particle === "은" && !hasEndConsonant) newParticle = "는";
+        else if (particle === "가" && hasEndConsonant) newParticle = "이";
+        else if (particle === "이" && !hasEndConsonant) newParticle = "가";
+        else if (particle === "를" && hasEndConsonant) newParticle = "을";
+        else if (particle === "을" && !hasEndConsonant) newParticle = "를";
+        else if (particle === "아" && !hasEndConsonant) newParticle = "야";
+        else if (particle === "야" && hasEndConsonant) newParticle = "아";
+        else if (particle === "와" && hasEndConsonant) newParticle = "과";
+        else if (particle === "과" && !hasEndConsonant) newParticle = "와";
+        else if (particle === "랑" && hasEndConsonant) newParticle = "이랑";
+        else if (particle === "이랑" && !hasEndConsonant) newParticle = "랑";
+        else if (particle === "로" && hasEndConsonant) newParticle = "으로";
+        else if (particle === "으로" && !hasEndConsonant) newParticle = "로";
 
-      return replacementText + newParticle;
-    });
-  }
+        return replacementText + newParticle;
+      });
+    }
 
-  $("#text_to_image").val(text);
+    return text;
+  };
+
+  $("#text_to_image").val(applyWordReplacement($("#text_to_image").val()));
+  $("#tti_html_switcher_list .tti-html-switcher-text").each(function () {
+    $(this).val(applyWordReplacement($(this).val()));
+  });
   refreshPreview();
 }
 function replaceString(text, original, replacement, letterCase, unitControl) {
