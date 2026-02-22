@@ -24,6 +24,9 @@ const defaultSettings = {
   strikethroughFontColor: "#000000",
   useUnderlineColor: false,
   underlineFontColor: "#000000",
+  blockquoteFontColor: "#000000",
+  blockquoteBgColor: "#ffffff",
+  blockquoteBorderColor: "#000000",
   strokeWidth: "0",
   lineBreak: "byWord",
   selectedBackgroundImage: `${extensionFolderPath}/default-backgrounds/bg40.png`,
@@ -44,7 +47,11 @@ const defaultSettings = {
   presets: {},
   currentPreset: null,
   footerText: "",
+  footerLayoutMode: "scroll",
+  footerWidth: 750,
+  footerHeight: 750,
   footerColor: "#000000",
+  footerBgColor: "#ffffff",
   autoPreview: true,
   htmlMode: false,
   letterCase: false,
@@ -63,6 +70,17 @@ function saveSettings() {
 
 function isHtmlModeEnabled() {
   return !!extension_settings[extensionName]?.htmlMode;
+}
+function getFooterLayoutMode(settings = extension_settings[extensionName]) {
+  return settings?.footerLayoutMode === "full" ? "full" : "scroll";
+}
+function parsePositiveInt(value, fallback) {
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+function updateFooterLayoutUIState() {
+  const isScroll = $("#footer_layout_mode").val() !== "full";
+  $("#footer .footer-scroll-only").toggleClass("footer-scroll-only-hidden", !isScroll);
 }
 function ensureFontSizeSettings() {
   const settings = extension_settings[extensionName];
@@ -195,6 +213,9 @@ async function initSettings() {
     strikethroughFontColor,
     useUnderlineColor,
     underlineFontColor,
+    blockquoteFontColor,
+    blockquoteBgColor,
+    blockquoteBorderColor,
     strokeWidth,
     lineBreak,
     imageRatio,
@@ -212,7 +233,11 @@ async function initSettings() {
     overlayColor,
     currentPreset,
     footerText,
+    footerLayoutMode,
+    footerWidth,
+    footerHeight,
     footerColor,
+    footerBgColor,
     autoPreview,
     htmlMode,
     letterCase,
@@ -236,6 +261,9 @@ async function initSettings() {
   $("#tti_strikethrough_font_color").val(strikethroughFontColor);
   $("#use_underline_color").prop("checked", useUnderlineColor);
   $("#tti_underline_font_color").val(underlineFontColor);
+  $("#tti_blockquote_font_color").val(blockquoteFontColor || defaultSettings.blockquoteFontColor);
+  $("#tti_blockquote_bg_color").val(blockquoteBgColor || defaultSettings.blockquoteBgColor);
+  $("#tti_blockquote_border_color").val(blockquoteBorderColor || defaultSettings.blockquoteBorderColor);
   $("#tti_stroke_width").val(strokeWidth);
   $("#tti_line_break").val(lineBreak);
   $("#tti_ratio").val(imageRatio);
@@ -252,7 +280,11 @@ async function initSettings() {
   $("#overlay_opacity").val(overlayOpacity);
   $("#overlay_color").val(overlayColor);
   $("#footer_text").val(footerText);
+  $("#footer_layout_mode").val(getFooterLayoutMode(extension_settings[extensionName]));
+  $("#footer_width").val(parsePositiveInt(footerWidth, defaultSettings.footerWidth));
+  $("#footer_height").val(parsePositiveInt(footerHeight, defaultSettings.footerHeight));
   $("#footer_color").val(footerColor);
+  $("#footer_bg_color").val(footerBgColor || defaultSettings.footerBgColor);
   $("#preview_toggle").prop("checked", autoPreview);
   $("#html_toggle").prop("checked", htmlMode);
   $("#letter_control").prop("checked", letterCase);
@@ -263,6 +295,7 @@ async function initSettings() {
   await loadBackgroundURLMap();
   highlighterTags();
   applyHtmlModeUIState();
+  updateFooterLayoutUIState();
 
   if (currentPreset && extension_settings[extensionName].presets[currentPreset]) {
     applyPreset(currentPreset);
@@ -307,22 +340,23 @@ function getPresetSettings() {
   settings.backgroundColor = $("#background_color").val();
   settings.useSecondBackgroundColor = $("#use_second_background_color").prop("checked");
   settings.secondBackgroundColor = $("#second_background_color").val();
+  settings.blockquoteFontColor = $("#tti_blockquote_font_color").val();
+  settings.blockquoteBgColor = $("#tti_blockquote_bg_color").val();
+  settings.blockquoteBorderColor = $("#tti_blockquote_border_color").val();
   settings.footerText = $("#footer_text").val();
+  settings.footerLayoutMode = $("#footer_layout_mode").val();
+  settings.footerWidth = parsePositiveInt($("#footer_width").val(), defaultSettings.footerWidth);
+  settings.footerHeight = parsePositiveInt($("#footer_height").val(), defaultSettings.footerHeight);
   settings.footerColor = $("#footer_color").val();
+  settings.footerBgColor = $("#footer_bg_color").val();
   settings.autoPreview = $("#preview_toggle").prop("checked");
   settings.htmlMode = $("#html_toggle").prop("checked");
   settings.fontSize = settings.htmlMode ? settings.fontSizeHtml : settings.fontSizeImage;
   settings.letterCase = $("#letter_control").is(":checked");
   settings.unitControl = $("#unit_control").is(":checked");
-  const currentAddedTags = [];
-  $("#custom-highlighter .tag-item").each(function() {
-    const index = $(this).data("index");
-    if (extension_settings[extensionName].setHighlighterTags && 
-        extension_settings[extensionName].setHighlighterTags[index]) {
-      currentAddedTags.push({...extension_settings[extensionName].setHighlighterTags[index]});
-    }
-  });
-  settings.setHighlighterTags = currentAddedTags;
+  settings.setHighlighterTags = JSON.parse(
+    JSON.stringify(extension_settings[extensionName].setHighlighterTags || [])
+  );
   
   return settings;
 }
@@ -411,6 +445,9 @@ function deletePreset() {
     $("#tti_strikethrough_font_color").val(defaultSettings.strikethroughFontColor);
     $("#use_underline_color").prop("checked", defaultSettings.useUnderlineColor);
     $("#tti_underline_font_color").val(defaultSettings.underlineFontColor);
+    $("#tti_blockquote_font_color").val(defaultSettings.blockquoteFontColor);
+    $("#tti_blockquote_bg_color").val(defaultSettings.blockquoteBgColor);
+    $("#tti_blockquote_border_color").val(defaultSettings.blockquoteBorderColor);
     $("#tti_stroke_width").val(defaultSettings.strokeWidth);
     $("#tti_line_break").val(defaultSettings.lineBreak);
     $("#tti_ratio").val(defaultSettings.imageRatio);
@@ -436,7 +473,11 @@ function deletePreset() {
     $("#second_background_color").val(defaultSettings.secondBackgroundColor);
     syncSelectedBackgroundUI();
     $("#footer_text").val("");
+    $("#footer_layout_mode").val(defaultSettings.footerLayoutMode);
+    $("#footer_width").val(defaultSettings.footerWidth);
+    $("#footer_height").val(defaultSettings.footerHeight);
     $("#footer_color").val(defaultSettings.footerColor);
+    $("#footer_bg_color").val(defaultSettings.footerBgColor);
     $("#preview_toggle").prop("checked", defaultSettings.autoPreview);
     $("#html_toggle").prop("checked", defaultSettings.htmlMode);
     $("#letter_control").prop("checked", defaultSettings.letterCase);
@@ -445,6 +486,7 @@ function deletePreset() {
 
     highlighterTags();
     applyHtmlModeUIState();
+    updateFooterLayoutUIState();
   }
   saveSettings();
   updatePresetSelector();
@@ -487,6 +529,9 @@ function selectPreset() {
     $("#tti_strikethrough_font_color").val(defaultSettings.strikethroughFontColor);
     $("#use_underline_color").prop("checked", defaultSettings.useUnderlineColor);
     $("#tti_underline_font_color").val(defaultSettings.underlineFontColor);
+    $("#tti_blockquote_font_color").val(defaultSettings.blockquoteFontColor);
+    $("#tti_blockquote_bg_color").val(defaultSettings.blockquoteBgColor);
+    $("#tti_blockquote_border_color").val(defaultSettings.blockquoteBorderColor);
     $("#tti_stroke_width").val(defaultSettings.strokeWidth);
     $("#tti_line_break").val(defaultSettings.lineBreak);
     $("#tti_ratio").val(defaultSettings.imageRatio);
@@ -512,7 +557,11 @@ function selectPreset() {
     $("#second_background_color").val(defaultSettings.secondBackgroundColor);
     syncSelectedBackgroundUI();
     $("#footer_text").val("");
+    $("#footer_layout_mode").val(defaultSettings.footerLayoutMode);
+    $("#footer_width").val(defaultSettings.footerWidth);
+    $("#footer_height").val(defaultSettings.footerHeight);
     $("#footer_color").val(defaultSettings.footerColor);
+    $("#footer_bg_color").val(defaultSettings.footerBgColor);
     $("#preview_toggle").prop("checked", defaultSettings.autoPreview);
     $("#html_toggle").prop("checked", defaultSettings.htmlMode);
     $("#letter_control").prop("checked", defaultSettings.letterCase);
@@ -521,6 +570,7 @@ function selectPreset() {
     extension_settings[extensionName].setHighlighterTags = [];
     highlighterTags();
     applyHtmlModeUIState();
+    updateFooterLayoutUIState();
 
     refreshPreview();
   } else if (presetName) {
@@ -624,6 +674,15 @@ function applyPreset(presetName) {
       case "underlineFontColor":
         $("#tti_underline_font_color").val(value);
         break;
+      case "blockquoteFontColor":
+        $("#tti_blockquote_font_color").val(value || defaultSettings.blockquoteFontColor);
+        break;
+      case "blockquoteBgColor":
+        $("#tti_blockquote_bg_color").val(value || defaultSettings.blockquoteBgColor);
+        break;
+      case "blockquoteBorderColor":
+        $("#tti_blockquote_border_color").val(value || defaultSettings.blockquoteBorderColor);
+        break;
       case "strokeWidth":
         $("#tti_stroke_width").val(value);
         break;
@@ -678,8 +737,21 @@ function applyPreset(presetName) {
       case "footerText":
         $("#footer_text").val(value);
         break;
+      case "footerLayoutMode":
+        $("#footer_layout_mode").val(getFooterLayoutMode({footerLayoutMode: value}));
+        updateFooterLayoutUIState();
+        break;
+      case "footerWidth":
+        $("#footer_width").val(parsePositiveInt(value, defaultSettings.footerWidth));
+        break;
+      case "footerHeight":
+        $("#footer_height").val(parsePositiveInt(value, defaultSettings.footerHeight));
+        break;
       case "footerColor":
         $("#footer_color").val(value);
+        break;
+      case "footerBgColor":
+        $("#footer_bg_color").val(value || defaultSettings.footerBgColor);
         break;
       case "autoPreview":
         $("#preview_toggle").prop("checked", value);
@@ -695,6 +767,20 @@ function applyPreset(presetName) {
         break;
     }
   }
+
+  if (!Object.prototype.hasOwnProperty.call(preset, "blockquoteFontColor")) {
+    extension_settings[extensionName].blockquoteFontColor = defaultSettings.blockquoteFontColor;
+    $("#tti_blockquote_font_color").val(defaultSettings.blockquoteFontColor);
+  }
+  if (!Object.prototype.hasOwnProperty.call(preset, "blockquoteBgColor")) {
+    extension_settings[extensionName].blockquoteBgColor = defaultSettings.blockquoteBgColor;
+    $("#tti_blockquote_bg_color").val(defaultSettings.blockquoteBgColor);
+  }
+  if (!Object.prototype.hasOwnProperty.call(preset, "blockquoteBorderColor")) {
+    extension_settings[extensionName].blockquoteBorderColor = defaultSettings.blockquoteBorderColor;
+    $("#tti_blockquote_border_color").val(defaultSettings.blockquoteBorderColor);
+  }
+
   const presetImageFontSize = parseInt(preset.fontSizeImage, 10);
   const presetHtmlFontSize = parseInt(preset.fontSizeHtml, 10);
   const legacyPresetFontSize = parseInt(preset.fontSize, 10);
@@ -718,6 +804,7 @@ function applyPreset(presetName) {
 
   highlighterTags();
   applyHtmlModeUIState();
+  updateFooterLayoutUIState();
   loadCustomBG();
   syncSelectedBackgroundUI();
   saveSettings();
@@ -1768,7 +1855,21 @@ function underlineFontColor(event) {
   saveSettings();
   refreshPreview();
 }
-
+function blockquoteFontColor(event) {
+  extension_settings[extensionName].blockquoteFontColor = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
+function blockquoteBgColor(event) {
+  extension_settings[extensionName].blockquoteBgColor = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
+function blockquoteBorderColor(event) {
+  extension_settings[extensionName].blockquoteBorderColor = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
 // 바닥글
 function footerText(event) {
   extension_settings[extensionName].footerText = event.target.value;
@@ -1777,6 +1878,27 @@ function footerText(event) {
 }
 function footerColor(event) {
   extension_settings[extensionName].footerColor = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
+function footerBgColor(event) {
+  extension_settings[extensionName].footerBgColor = event.target.value;
+  saveSettings();
+  refreshPreview();
+}
+function footerLayoutMode(event) {
+  extension_settings[extensionName].footerLayoutMode = event.target.value === "full" ? "full" : "scroll";
+  updateFooterLayoutUIState();
+  saveSettings();
+  refreshPreview();
+}
+function footerWidth(event) {
+  extension_settings[extensionName].footerWidth = parsePositiveInt(event.target.value, defaultSettings.footerWidth);
+  saveSettings();
+  refreshPreview();
+}
+function footerHeight(event) {
+  extension_settings[extensionName].footerHeight = parsePositiveInt(event.target.value, defaultSettings.footerHeight);
   saveSettings();
   refreshPreview();
 }
@@ -1797,6 +1919,7 @@ function htmlMode(event) {
   extension_settings[extensionName].fontSize = getActiveFontSize();
   saveSettings();
   applyHtmlModeUIState();
+  updateFooterLayoutUIState();
   loadCustomBG();
   syncSelectedBackgroundUI();
   refreshPreview();
@@ -1946,7 +2069,8 @@ function updateHighlightTag(index, field, value) {
 }
 
 // 마크다운
-function enableMarkdown(text) {
+function enableMarkdown(text, options = {}) {
+  const {allowHeading = true} = options;
   const spans = [];
   let currentText = "";
   let bold = false;
@@ -1954,6 +2078,17 @@ function enableMarkdown(text) {
   let strikethrough = false;
   let underline = false;
   let i = 0;
+  let headingSizeBonus = 0;
+  let sourceText = text;
+
+  if (allowHeading) {
+    const headingMatch = text.match(/^\s*(#{1,3})\s+(.+)$/);
+    if (headingMatch) {
+      const hashCount = headingMatch[1].length;
+      headingSizeBonus = (4 - hashCount) * 2;
+      sourceText = headingMatch[2];
+    }
+  }
 
   const setHighlighterTags = extension_settings[extensionName].setHighlighterTags || [];
   const tagMap = {};
@@ -1961,22 +2096,22 @@ function enableMarkdown(text) {
     if (tag.name) tagMap[tag.name.toLowerCase()] = tag;
   });
 
-  while (i < text.length) {
-    if (text[i] === '<') {
-      let tagMatch = text.slice(i).match(/^<(\w+)>/);
+  while (i < sourceText.length) {
+    if (sourceText[i] === '<') {
+      let tagMatch = sourceText.slice(i).match(/^<(\w+)>/);
       if (tagMatch && tagMap[tagMatch[1].toLowerCase()]) {
         const tagName = tagMatch[1].toLowerCase();
         const tagSet = tagMap[tagName];
         const closeTag = `</${tagName}>`;
-        const closeIndex = text.indexOf(closeTag, i + tagMatch[0].length);
+        const closeIndex = sourceText.indexOf(closeTag, i + tagMatch[0].length);
         
         if (closeIndex !== -1) {
           if (currentText) {
             spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null});
             currentText = "";
           }
-          const tagContent = text.slice(i + tagMatch[0].length, closeIndex);
-          const innerContents = enableMarkdown(tagContent);
+          const tagContent = sourceText.slice(i + tagMatch[0].length, closeIndex);
+          const innerContents = enableMarkdown(tagContent, {allowHeading: false});
           
           innerContents.forEach(innerContent => {
             if (innerContent.fontFamily || innerContent.fontSize) {
@@ -2003,39 +2138,46 @@ function enableMarkdown(text) {
       }
     }
     
-    if (text.slice(i, i + 3) === "***") {
+    if (sourceText.slice(i, i + 3) === "***") {
       if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
       bold = !bold;
       italic = !italic;
       currentText = "";
       i += 3;
-    } else if (text.slice(i, i + 2) === "**") {
+    } else if (sourceText.slice(i, i + 2) === "**") {
       if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
       bold = !bold;
       currentText = "";
       i += 2;
-    } else if (text.slice(i, i + 2) === "__") {
+    } else if (sourceText.slice(i, i + 2) === "__") {
       if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
       underline = !underline;
       currentText = "";
       i += 2;
-    } else if (text.slice(i, i + 2) === "~~") {
+    } else if (sourceText.slice(i, i + 2) === "~~") {
       if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
       strikethrough = !strikethrough;
       currentText = "";
       i += 2;
-    } else if (text[i] === "*" && (i + 1 >= text.length || text[i + 1] !== "*")) {
+    } else if (sourceText[i] === "*" && (i + 1 >= sourceText.length || sourceText[i + 1] !== "*")) {
       if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
       italic = !italic;
       currentText = "";
       i++;
     } else {
-      currentText += text[i];
+      currentText += sourceText[i];
       i++;
     }
   }
 
   if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
+  if (headingSizeBonus > 0) {
+    const globalFontSize = getActiveFontSize(extension_settings[extensionName]);
+    return spans.map((span) => ({
+      ...span,
+      fontSize: (parseInt(span.fontSize, 10) || globalFontSize) + headingSizeBonus,
+    }));
+  }
   return spans;
 }
 
@@ -2060,7 +2202,29 @@ function wrappingTexts(text, mode = "word") {
   const lines = text.split(/\n/);
 
   lines.forEach((lineText) => {
+    const trimmedLine = lineText.trim();
+    const isHrLine = /^-{3,}$/.test(trimmedLine) || /^<hr\s*\/?>$/i.test(trimmedLine);
+    const parsedLineText = lineText;
     const isBlank = lineText.trim() === "";
+
+    if (isHrLine) {
+      if (!fullSize && lineCount >= maxLines && currentPage.length > 0) {
+        pages.push(currentPage);
+        currentPage = [];
+        lineCount = 0;
+      }
+
+      if (mode === "word") {
+        currentPage.push([{text: "", isHr: true}]);
+      } else {
+        currentPage.push({
+          spans: [{text: "", isHr: true}],
+          softBreak: false,
+        });
+      }
+      lineCount++;
+      return;
+    }
 
     if (isBlank) {
       if (!fullSize && lineCount >= maxLines) {
@@ -2082,7 +2246,8 @@ function wrappingTexts(text, mode = "word") {
     }
 
     const wrapLine = [];
-    const spans = enableMarkdown(lineText);
+    const spans = enableMarkdown(parsedLineText);
+    const lineMaxWidth = maxWidth;
     let currentLine = [];
 
     spans.forEach((span) => {
@@ -2117,7 +2282,7 @@ function wrappingTexts(text, mode = "word") {
         ctx.letterSpacing = `${settings.fontSpacing}em`;
         const unitWidth = ctx.measureText(unit).width;
         
-        if (currentLineWidth + unitWidth <= maxWidth) {
+        if (currentLineWidth + unitWidth <= lineMaxWidth) {
           currentLine.push({
             text: unit,
             bold: span.bold,
@@ -2333,9 +2498,46 @@ function generateTextImage(chunk, index) {
 
       return textWidth;
     }
+    function getAlignedX(totalTextWidth) {
+      if (setAlign === "center") return width / 2 - totalTextWidth / 2;
+      if (setAlign === "right") return width - totalTextWidth - 40;
+      return 40;
+    }
+    function isHrRenderLine(lineData) {
+      if (!lineData) return false;
+      if (Array.isArray(lineData)) {
+        return lineData.length === 1 && !!lineData[0]?.isHr;
+      }
+      return Array.isArray(lineData.spans) && lineData.spans.length === 1 && !!lineData.spans[0]?.isHr;
+    }
+    function renderHrLine(yPos) {
+      const startX = 40;
+      const endX = width - 40;
+      const centerY = yPos - lineHeight * 0.45;
+      const lineColor = settings.fontColor || "#000000";
+      const gradient = ctx.createLinearGradient(startX, centerY, endX, centerY);
+      gradient.addColorStop(0, "rgba(0,0,0,0)");
+      gradient.addColorStop(0.5, lineColor);
+      gradient.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.beginPath();
+      ctx.moveTo(startX, centerY);
+      ctx.lineTo(endX, centerY);
+      ctx.strokeStyle = gradient;
+      ctx.globalAlpha = 0.4;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
 
     if (lineBreak === "byWord") {
-      chunk.forEach((line) => {
+      for (let lineIndex = 0; lineIndex < chunk.length; lineIndex++) {
+        const line = chunk[lineIndex];
+        if (isHrRenderLine(line)) {
+          renderHrLine(y);
+          y += lineHeight;
+          continue;
+        }
+        const textY = y;
         let totalTextWidth = 0;
         const measuredWidths = [];
 
@@ -2347,29 +2549,31 @@ function generateTextImage(chunk, index) {
           totalTextWidth += width;
         });
 
-        let alignX = 40;
-        if (setAlign === "center") {
-          alignX = width / 2 - totalTextWidth / 2;
-        } else if (setAlign === "right") {
-          alignX = width - totalTextWidth - 40;
-        }
+        let alignX = getAlignedX(totalTextWidth);
 
         ctx.textAlign = "left";
         let x = alignX;
         line.forEach((span) => {
-          renderSpan(span, x, y, "background");
+          renderSpan(span, x, textY, "background");
           x += measuredWidths[line.indexOf(span)];
         });
         
         x = alignX;
         line.forEach((span, i) => {
-          x += renderSpan(span, x, y, "text");
+          x += renderSpan(span, x, textY, "text");
         });
 
         y += lineHeight;
-      });
+      }
     } else {
-      chunk.forEach((lineObj, index) => {
+      for (let index = 0; index < chunk.length; index++) {
+        const lineObj = chunk[index];
+        if (isHrRenderLine(lineObj)) {
+          renderHrLine(y);
+          y += lineHeight;
+          continue;
+        }
+        const textY = y;
         const line = lineObj.spans;
         const isLastLine = index === chunk.length - 1;
         const isBlankLine = line.every((span) => span.text.trim() === "");
@@ -2386,31 +2590,26 @@ function generateTextImage(chunk, index) {
           totalTextWidth += width;
         });
 
-        let alignX = 40;
-        if (setAlign === "center") {
-          alignX = width / 2 - totalTextWidth / 2;
-        } else if (setAlign === "right") {
-          alignX = width - totalTextWidth - 40;
-        }
+        let alignX = getAlignedX(totalTextWidth);
 
         const gapCount = line.length - 1;
         const spacing = gapCount > 0 && shouldJustify ? (maxLineWidth - totalTextWidth) / gapCount : 0;
 
         let x = alignX;
         line.forEach((span, i) => {
-          renderSpan(span, x, y, "background");
+          renderSpan(span, x, textY, "background");
           x += measuredWidths[i];
           if (i < line.length - 1) x += spacing;
         });
 
         x = alignX;
         line.forEach((span, i) => {
-          x += renderSpan(span, x, y, "text");
+          x += renderSpan(span, x, textY, "text");
           if (i < line.length - 1) x += spacing;
         });
 
         y += lineHeight;
-      });
+      }
     }
   };
 
@@ -2685,7 +2884,9 @@ function mapHtmlStrokeWidth(value) {
   return numeric;
 }
 function getSpanColor(span, settings) {
-  let textColor = settings.fontColor || "#000000";
+  let textColor = span.isBlockquote
+    ? (settings.blockquoteFontColor || defaultSettings.blockquoteFontColor)
+    : (settings.fontColor || "#000000");
   if (span.fontColor) {
     textColor = span.fontColor;
   } else {
@@ -2742,14 +2943,12 @@ function buildSpanStyle(span, settings) {
 }
 function renderMarkdownHTML(text, settings) {
   const lines = String(text || "").split(/\n/);
-  const htmlLines = lines.map((line) => {
-    const trimmedLine = line.trim();
-    if (/^-{3,}$/.test(trimmedLine) || /^<hr\s*\/?>$/i.test(trimmedLine)) {
-      return `<hr style="display: block !important; opacity: 0.4 !important; border:0 !important;height:1px !important;background-image:linear-gradient(90deg, transparent, ${settings.fontColor || "#000000"}, transparent) !important;margin:28px auto !important;" />`;
+  const renderLineHTML = (lineText, isBlockquoteLine = false) => {
+    let spans = enableMarkdown(lineText);
+    if (isBlockquoteLine) {
+      spans = spans.map((span) => ({...span, isBlockquote: true}));
     }
-
-    const spans = enableMarkdown(line);
-    if (!spans.length) return "";
+    if (!spans.length) return `<font face="${HTML_FONT_FACE}"></font>`;
 
     const lineHtml = spans.map((span) => {
       const spanText = escapeHTML(span.text || "");
@@ -2757,9 +2956,41 @@ function renderMarkdownHTML(text, settings) {
       if (!spanStyle) return spanText;
       return `<span style="${spanStyle}">${spanText}</span>`;
     }).join("");
-
     return `<font face="${HTML_FONT_FACE}">${lineHtml}</font>`;
-  });
+  };
+
+  const htmlLines = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
+
+    if (/^-{3,}$/.test(trimmedLine) || /^<hr\s*\/?>$/i.test(trimmedLine)) {
+      htmlLines.push(`<hr style="display: block !important; opacity: 0.4 !important; border:0 !important;height:1px !important;background-image:linear-gradient(90deg, transparent, ${settings.fontColor || "#000000"}, transparent) !important;margin:28px auto calc(28px - 1rem) !important;" />`);
+      continue;
+    }
+
+    const quoteMatch = line.match(/^\s*>\s?(.*)$/);
+    if (quoteMatch) {
+      const quoteLines = [];
+      let j = i;
+      while (j < lines.length) {
+        const m = lines[j].match(/^\s*>\s?(.*)$/);
+        if (!m) break;
+        quoteLines.push(m[1] ?? "");
+        j++;
+      }
+      const fontColor = settings.blockquoteFontColor || defaultSettings.blockquoteFontColor;
+      const borderColor = settings.blockquoteBorderColor || defaultSettings.blockquoteBorderColor;
+      const bgColor = toRGBA(settings.blockquoteBgColor || defaultSettings.blockquoteBgColor, 0.3);
+      const quoteHTML = quoteLines
+        .map((quoteLine) => `<div style="margin:0 !important;">${renderLineHTML(quoteLine, true)}</div>`)
+        .join("");
+      htmlLines.push(`<div class="blockquote" style="width:auto !important;color:${fontColor} !important;border-radius:5px !important;border-left:5px solid ${borderColor} !important;padding:8px !important;background:${bgColor} !important;-webkit-backdrop-filter:blur(10px) !important;backdrop-filter:blur(10px) !important;margin:8px 0 !important;"><div style="display:flex !important;flex-direction:column !important;gap:0 !important;margin:0 !important;">${quoteHTML}</div></div>`);
+      i = j - 1;
+      continue;
+    }
+    htmlLines.push(renderLineHTML(line));
+  }
 
   return htmlLines.join("\n");
 }
@@ -2799,12 +3030,21 @@ function createHTMLSnippet(text, index) {
   const globalStrokeWidth = mapHtmlStrokeWidth(settings.strokeWidth);
   const globalTextColor = settings.fontColor || "#000000";
   const htmlFontSize = parseInt(settings.fontSizeHtml, 10) || defaultSettings.fontSizeHtml;
+  const footerLayoutMode = getFooterLayoutMode(settings);
+  const footerWidthPx = parsePositiveInt(settings.footerWidth, defaultSettings.footerWidth);
+  const footerHeightPx = parsePositiveInt(settings.footerHeight, defaultSettings.footerHeight);
+  const rawFooterText = String(settings.footerText || "").trim();
+  const hasFooter = rawFooterText.length > 0;
+  const isScrollFooterLayout = footerLayoutMode === "scroll";
+  const contentMaxHeightValue = isScrollFooterLayout
+    ? (hasFooter ? `calc(${footerHeightPx}px - 100px)` : `${footerHeightPx}px`)
+    : "none";
   const containerInlineStyle = [
     "background:transparent !important",
     "box-sizing:border-box !important",
     "width:100% !important",
-    "max-width:750px !important",
-    "max-height:750px !important",
+    `max-width:${footerWidthPx}px !important`,
+    isScrollFooterLayout ? `max-height:${footerHeightPx}px !important` : "max-height:none !important",
     "margin:0 auto !important",
     "padding:32px !important",
     "border-radius:15px !important",
@@ -2828,8 +3068,8 @@ function createHTMLSnippet(text, index) {
     "pointer-events:none !important",
   ].join(";");
   const contentInlineStyle = [
-    "max-height:calc(750px - 100px) !important",
-    "overflow-y:auto !important",
+    `max-height:${contentMaxHeightValue} !important`,
+    `overflow-y:${isScrollFooterLayout ? "auto" : "visible"} !important`,
     `color:${globalTextColor} !important`,
     `font-size:${htmlFontSize}px !important`,
     "font-weight:400 !important",
@@ -2839,20 +3079,38 @@ function createHTMLSnippet(text, index) {
     "white-space:pre-wrap !important",
     `word-break:${lineBreakByChar ? "break-all" : "break-word"} !important`,
     "overflow-wrap:anywhere !important",
-    "margin-bottom:44px !important",
+    `margin-bottom:${hasFooter ? 44 : 0}px !important`,
     `-webkit-text-stroke:${globalStrokeWidth}px ${globalTextColor} !important`,
   ].join(";");
   const footerInlineStyle = [
+    "display:flex !important",
+    "flex-wrap:wrap !important",
+    "justify-content:flex-end !important",
+    "gap:6px !important",
     "right:35px !important",
     "bottom:35px !important",
-    `color:${settings.footerColor || "#000000"} !important`,
     "font-size:12px !important",
     "text-align:right !important",
   ].join(";");
-
-  const footerHTML = settings.footerText
+  const footerItemStyle = [
+    "display:inline-block !important",
+    "padding:2px 8px !important",
+    "border-radius:999px !important",
+    `color:${settings.footerColor || "#000000"} !important`,
+    `background:${toRGBA(settings.footerBgColor || "#ffffff", 0.2)} !important`,
+    "line-height:1.4 !important",
+  ].join(";");
+  const footerTokens = rawFooterText
+    ? rawFooterText.split(",").map((token) => token.trim()).filter(Boolean)
+    : [];
+  const footerItemsHTML = footerTokens.length
+    ? footerTokens.map((token) => `<span style="${footerItemStyle}"><font face="${HTML_FONT_FACE}">${escapeHTML(token)}</font></span>`).join("")
+    : (rawFooterText
+      ? `<span style="${footerItemStyle}"><font face="${HTML_FONT_FACE}">${escapeHTML(rawFooterText)}</font></span>`
+      : "");
+  const footerHTML = hasFooter
     ? `
-  <div class="tti-footer" style="${footerInlineStyle}"><font face="${HTML_FONT_FACE}">${escapeHTML(settings.footerText)}</font></div>`
+  <div class="tti-footer" style="${footerInlineStyle}">${footerItemsHTML}</div>`
     : "";
   const shouldRenderBg = escapedURL || useBgColor;
   const backgroundHTML = shouldRenderBg
@@ -2862,7 +3120,7 @@ function createHTMLSnippet(text, index) {
   const overlayHTML = `
   <div class="tti-overlay" style="${overlayInlineStyle}"></div>`;
 
-  const scopedStyle = `.tti{position:relative !important;}.tti-bg{position:absolute !important;inset:0 !important;z-index:0 !important;}.tti-overlay{position:absolute !important;inset:20px !important;z-index:2 !important;}.tti-content{position:relative !important;z-index:3 !important;}.tti-footer{position:absolute !important;z-index:4 !important;}`;
+  const scopedStyle = `.tti{position:relative !important;}.tti-bg{position:absolute !important;inset:0 !important;z-index:0 !important;}.tti-overlay{position:absolute !important;inset:16px !important;z-index:2 !important;}.tti-content{position:relative !important;z-index:3 !important;}.tti-footer{position:absolute !important;z-index:4 !important;}`;
 
   return `<div>
 <style>${scopedStyle}</style>
@@ -3029,6 +3287,9 @@ function bindingFunctions() {
   $("#tti_strikethrough_font_color").on("change", strikethroughFontColor);
   $("#use_underline_color").on("change", useUnderlineColor);
   $("#tti_underline_font_color").on("change", underlineFontColor);
+  $("#tti_blockquote_font_color").on("change", blockquoteFontColor);
+  $("#tti_blockquote_bg_color").on("change", blockquoteBgColor);
+  $("#tti_blockquote_border_color").on("change", blockquoteBorderColor);
   $("#tti_stroke_width").on("change", strokeWidth);
   $("#tti_line_break").on("change", lineBreak);
   $("#tti_ratio").on("change", aspectRatio);
@@ -3045,8 +3306,12 @@ function bindingFunctions() {
   $("#bg_noise").on("change", addNoise);
   $("#overlay_color").on("change", overlayColor);
   $("#overlay_opacity").on("change", addOverlay);
+  $("#footer_layout_mode").on("change", footerLayoutMode);
+  $("#footer_width").on("change", footerWidth);
+  $("#footer_height").on("change", footerHeight);
   $("#footer_text").on("change", footerText);
   $("#footer_color").on("change", footerColor);
+  $("#footer_bg_color").on("change", footerBgColor);
   $("#upload-local-font").on("click", addLocalFont);
   $("#delete-local-font").on("click", deleteLocalFont);
   $("#preview_toggle").on("change", autoPreview);

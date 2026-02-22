@@ -110,7 +110,8 @@ h4 {
   gap: 8px;
 }
 h5 {
-  margin: 15px 0;
+  width: 100% !important;  
+  margin: 5px 0 8px 0 !important;
   font-size: 15px !important;
 }
 
@@ -336,7 +337,8 @@ h5 {
 }
 .tab-content select,
 .tab-content input[type="text"],
-.tab-content input[type="color"] {
+.tab-content input[type="color"],
+.tab-content input[type="number"] {
   width: calc(100% - 70px);
   height: 40px;
   margin: 8px 0;
@@ -367,6 +369,9 @@ label {
   width: 60px;
   color: #2c3e50;
   font-size: 14px;
+}
+.footer-scroll-only-hidden {
+  display: none !important;
 }
 input[type="checkbox"] {
   width: 15px !important;
@@ -414,6 +419,25 @@ div:has(> input[type="checkbox"]):has(> input[type="color"]) {
 }
 .font-color-lists {
   padding-top: 10px !important;
+}
+.markdown-color-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 6px;
+  gap: 6px;
+}
+.markdown-color-row-spacer {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+}
+.markdown-color-row > label {
+  width: 80px !important;
+}
+.markdown-color-row > input[type="color"] {
+  width: calc(100% - 115px) !important;
 }
 #tti_font_family:disabled {
   background: rgba(0, 0, 0, 0.07);

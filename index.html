@@ -168,7 +168,7 @@
             <button class="tab-btn" data-tab="custom-highlighter">태그</button>
             <button class="tab-btn" data-tab="background">배경</button>
             <button class="tab-btn" data-tab="image-style">포토샵</button>
-            <button class="tab-btn" data-tab="footer">바닥글</button>
+            <button class="tab-btn" data-tab="footer">기타</button>
           </div>
 
           <div id="text-style" class="tab-content flex-container">
@@ -243,6 +243,21 @@
                   <label>밑줄</label>
                   <input type="color" id="tti_underline_font_color" value="#000000" />
                 </div>
+                <div class="markdown-color-row" data-html-only="blockquote_color">
+                  <span class="markdown-color-row-spacer"></span>
+                  <label data-html-only="blockquote_color">인용폰트</label>
+                  <input type="color" id="tti_blockquote_font_color" value="#000000" data-html-only="blockquote_color" />
+                </div>
+                <div class="markdown-color-row" data-html-only="blockquote_color">
+                  <span class="markdown-color-row-spacer"></span>
+                  <label data-html-only="blockquote_color">인용배경</label>
+                  <input type="color" id="tti_blockquote_bg_color" value="#ffffff" data-html-only="blockquote_color" />
+                </div>
+                <div class="markdown-color-row" data-html-only="blockquote_color">
+                  <span class="markdown-color-row-spacer"></span>
+                  <label data-html-only="blockquote_color">인용테두리</label>
+                  <input type="color" id="tti_blockquote_border_color" value="#000000" data-html-only="blockquote_color" />
+                </div>
               </div>
             </div>
           </div>
@@ -314,11 +329,24 @@
           </div>
 
           <div id="footer" class="tab-content flex-container">
-            <h4>바닥글 추가</h4>
-            <label>텍스트</label>
+            <h5 data-html-only="footer_layout">컨테이너 설정</h5>
+            <label data-html-only="footer_layout">형식</label>
+            <select id="footer_layout_mode" data-html-only="footer_layout">
+              <option value="scroll">스크롤하기</option>
+              <option value="full">전체보기</option>
+            </select>
+            <label data-html-only="footer_width">가로</label>
+            <input type="number" id="footer_width" min="100" step="10" data-html-only="footer_width" />
+            <label class="footer-scroll-only" data-html-only="footer_height">세로</label>            
+            <input type="number" id="footer_height" min="100" step="10" class="footer-scroll-only" data-html-only="footer_height"/>
+            <div data-html-only="footer_layout" style="width: 100%; margin-bottom: 15px;"></div>
+            <h5>바닥글</h5>
+            <label>태그</label>
             <input type="text" id="footer_text" placeholder="" />
-            <label>색상</label>
+            <label>폰트색</label>
             <input type="color" id="footer_color" />
+            <label data-html-only="footer_bg_color">배경색</label>
+            <input type="color" id="footer_bg_color" data-html-only="footer_bg_color" />
           </div>
 
           <div class="flex-container" id="image_preview_box">
