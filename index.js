@@ -2007,6 +2007,46 @@ function manualRefresh() {
     renderPreviewContent();
   }
 }
+function syncHtmlSwitcherInputUIState() {
+  const hasItems = $("#tti_html_switcher_list .tti-html-switcher-text").length > 0;
+  $(".html-switcher-inputs").toggleClass("has-items", hasItems);
+}
+function appendHtmlSwitcherInput(value = "") {
+  const itemCount = $("#tti_html_switcher_list .html-switcher-input-item").length + 1;
+  const $item = $(`
+    <div class="html-switcher-input-item">
+      <textarea class="tti-html-switcher-text" placeholder="전환 텍스트 ${itemCount}"></textarea>
+      <button type="button" class="html-switcher-remove-btn buttons clear" title="삭제"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+  `);
+  $item.find(".tti-html-switcher-text").val(value);
+  $("#tti_html_switcher_list").append($item);
+  syncHtmlSwitcherInputUIState();
+  return $item;
+}
+function getHtmlSwitcherTexts() {
+  return $("#tti_html_switcher_list .tti-html-switcher-text")
+    .map(function () {
+      const value = String($(this).val() || "");
+      return value;
+    })
+    .get()
+    .filter((value) => value.trim().length > 0);
+}
+function setupHtmlSwitcherInputs() {
+  $("#add_html_switcher_text").on("click", () => {
+    const $item = appendHtmlSwitcherInput("");
+    $item.find(".tti-html-switcher-text").trigger("focus");
+    refreshPreview();
+  });
+  $(document).on("input change", "#tti_html_switcher_list .tti-html-switcher-text", refreshPreview);
+  $(document).on("click", "#tti_html_switcher_list .html-switcher-remove-btn buttons clear", function () {
+    $(this).closest(".html-switcher-input-item").remove();
+    syncHtmlSwitcherInputUIState();
+    refreshPreview();
+  });
+  syncHtmlSwitcherInputUIState();
+}
 
 // 하이라이터 태그
 function highlighterTags() {
@@ -3028,6 +3068,10 @@ function createHTMLSnippet(text, index) {
   const htmlSelectedBackground = settings.selectedBackgroundImageHtml || settings.selectedBackgroundImage;
   const bgURL = resolveBackgroundURLForHTML(htmlSelectedBackground);
   const markdownHTML = renderMarkdownHTML(text, settings);
+  const switcherTexts = getHtmlSwitcherTexts();
+  const switcherRenderedHTML = switcherTexts.map((itemText) => renderMarkdownHTML(itemText, settings));
+  const switcherUid = `tti-switch-${index}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1679616).toString(36)}`;
+  const switcherBaseId = `${switcherUid}-base`;
 
   const backgroundColor = settings.backgroundColor || "#ffffff";
   const secondColor = settings.secondBackgroundColor || backgroundColor;
@@ -3096,6 +3140,24 @@ function createHTMLSnippet(text, index) {
     `backdrop-filter:blur(${blurStrength}px) !important`,
     "pointer-events:none !important",
   ].join(";");
+  const switcherDotsWrapStyle = [
+    "display:flex !important",
+    "justify-content:flex-end !important",
+    "margin:6px 10px 0 0 !important",
+    "gap:6px !important",
+    "z-index:1 !important",
+    "pointer-events:auto !important",
+  ].join(";");
+  const switcherDotStyle = [
+    "display:block !important",
+    "width:15px !important",
+    "height:10px !important",
+    "border-radius:999px !important",
+    "background:rgba(255,255,255,0.55) !important",
+    "border:1px solid rgba(0,0,0,0.18) !important",
+    "cursor:pointer !important",
+    "transition:transform .15s ease, background-color .15s ease !important",
+  ].join(";");
   const contentInlineStyle = [
     `max-height:${contentMaxHeightValue} !important`,
     `overflow-y:${isScrollFooterLayout ? "auto" : "visible"} !important`,
@@ -3147,16 +3209,49 @@ function createHTMLSnippet(text, index) {
     ? `
   <div class="tti-bg" style="${bgInlineStyle}"></div>`
     : "";
+  const hasSwitcher = switcherRenderedHTML.length > 0;
+  const switcherItems = switcherRenderedHTML.map((html, itemIndex) => ({
+    id: `${switcherUid}-${itemIndex}`,
+    panelClass: `tti-panel-${itemIndex}`,
+    html,
+    itemIndex,
+  }));
+  const switcherRadiosHTML = hasSwitcher
+    ? `
+  <input type="radio" class="tti-switch-input" name="${switcherUid}" id="${switcherBaseId}" checked>
+${switcherItems.map((item) => `  <input type="radio" class="tti-switch-input" name="${switcherUid}" id="${item.id}">`).join("\n")}`
+    : "";
+  const switcherDotsHTML = hasSwitcher
+    ? `<div class="tti-switcher-dots" style="${switcherDotsWrapStyle}"><label style="${switcherDotStyle}" title="기본 텍스트" for="${switcherBaseId}"></label>${switcherItems.map((item) => `<label style="${switcherDotStyle}" title="텍스트 ${item.itemIndex + 1}" for="${item.id}"></label>`).join("")}</div>`
+    : "";
   const overlayHTML = `
-  <div class="tti-overlay" style="${overlayInlineStyle}"></div>`;
-
-  const scopedStyle = `.tti{position:relative !important;}.tti-bg{position:absolute !important;inset:0 !important;z-index:0 !important;}.tti-overlay{position:absolute !important;inset:16px !important;z-index:2 !important;}.tti-content{position:relative !important;z-index:3 !important;}.tti-footer{position:absolute !important;z-index:4 !important;}`;
+  <div class="tti-overlay" style="${overlayInlineStyle}">${switcherDotsHTML}</div>`;
+  const contentHTML = hasSwitcher
+    ? `
+  <div class="tti-panels" style="margin-top: 10px;">
+    <div class="tti-content tti-panel tti-panel-base" style="${contentInlineStyle}">${markdownHTML}</div>
+${switcherItems.map((item) => `    <div class="tti-content tti-panel ${item.panelClass}" style="${contentInlineStyle}">${item.html}</div>`).join("\n")}
+  </div>`
+    : `
+  <div class="tti-content" style="${contentInlineStyle}">${markdownHTML}</div>`;
+  const switcherRuleStyle = hasSwitcher
+    ? [
+      `.tti-switch-input{position:absolute !important;opacity:0 !important;pointer-events:none !important;}`,
+      `.tti-panels{position:relative !important;z-index:3 !important;}`,
+      `.tti-panel{display:none !important;}`,
+      `#${switcherBaseId}:checked ~ .tti-panels .tti-panel-base{display:block !important;}`,
+      `#${switcherBaseId}:checked ~ .tti-overlay .tti-switcher-dots label[for="${switcherBaseId}"]{background:rgba(255,255,255,0.95) !important;transform:scale(1.12) !important;}`,
+      ...switcherItems.map((item) => `#${item.id}:checked ~ .tti-panels .${item.panelClass}{display:block !important;}`),
+      ...switcherItems.map((item) => `#${item.id}:checked ~ .tti-overlay .tti-switcher-dots label[for="${item.id}"]{background:rgba(255,255,255,0.95) !important;transform:scale(1.12) !important;}`),
+    ].join("")
+    : "";
+  const scopedStyle = `.tti{position:relative !important;}.tti-bg{position:absolute !important;inset:0 !important;z-index:0 !important;}.tti-overlay{position:absolute !important;inset:16px !important;z-index:2 !important;}.tti-content{position:relative !important;z-index:3 !important;}.tti-footer{position:absolute !important;z-index:4 !important;}${switcherRuleStyle}`;
 
   return `<div>
 <style>${scopedStyle}</style>
 <div class="tti" style="${containerInlineStyle}">
-${backgroundHTML}${overlayHTML}
-  <div class="tti-content" style="${contentInlineStyle}">${markdownHTML}</div>${footerHTML}
+${backgroundHTML}${switcherRadiosHTML}${overlayHTML}
+${contentHTML}${footerHTML}
 </div>
 </div>`;
 }
@@ -3292,6 +3387,7 @@ jQuery(async () => {
   presetBackupSys();
   customBG();
   setupWordReplacer();
+  setupHtmlSwitcherInputs();
   bindingFunctions();
   setupRangeValueTooltips();
   restoreButtons();

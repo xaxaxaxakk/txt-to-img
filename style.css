@@ -245,6 +245,65 @@ h5 {
   backdrop-filter: blur(5px);
   resize: vertical;
 }
+.html-switcher-inputs {
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.35);
+}
+.html-switcher-inputs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.html-switcher-inputs-header > span {
+  font-size: 13px;
+  font-weight: 600;
+}
+#add_html_switcher_text {
+  min-width: 56px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  border-radius: 12px;
+}
+.html-switcher-inputs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.html-switcher-input-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: start;
+}
+.html-switcher-input-item textarea {
+  width: 100%;
+  min-height: 66px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.55);
+  resize: vertical;
+}
+.html-switcher-remove-btn {
+  width: 25px !important;
+  height: 25px !important;
+}
+.html-switcher-inputs-empty {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.8;
+  text-align: center;
+}
+.html-switcher-inputs.has-items .html-switcher-inputs-empty {
+  display: none;
+}
 .text-field-buttons {
   display: flex;
   justify-content: space-between;
