@@ -2065,7 +2065,7 @@ function setupHtmlSwitcherInputs() {
     refreshPreview();
   });
   $(document).on("input change", "#tti_html_switcher_list .tti-html-switcher-text", refreshPreview);
-  $(document).on("click", "#tti_html_switcher_list .html-switcher-remove-btn buttons clear", function () {
+  $(document).on("click", "#tti_html_switcher_list .html-switcher-remove-btn", function () {
     $(this).closest(".html-switcher-input-item").remove();
     syncHtmlSwitcherInputUIState();
     refreshPreview();
