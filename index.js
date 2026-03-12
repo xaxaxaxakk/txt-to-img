@@ -3203,16 +3203,20 @@ function createHTMLSnippet(text, index) {
   ].join(";");
   const footerInlineStyle = [
     "display:flex !important",
-    "flex-wrap:wrap !important",
-    "justify-content:flex-end !important",
+    "flex-wrap:nowrap !important",
     "gap:6px !important",
+    "width:calc(100% - 70px) !important",
     "right:35px !important",
     "bottom:35px !important",
+    "overflow-x:auto !important",
+    "overflow-y:hidden !important",
+    "white-space:nowrap !important",
     "font-size:12px !important",
     "text-align:right !important",
   ].join(";");
   const footerItemStyle = [
     "display:inline-block !important",
+    "white-space:nowrap !important",
     "padding:2px 8px !important",
     "border-radius:999px !important",
     `color:${settings.footerColor || "#000000"} !important`,
@@ -3273,7 +3277,7 @@ ${switcherItems.map((item) => `    <div class="tti-content tti-panel ${item.pane
       ...switcherItems.map((item) => `#${item.id}:checked ~ .tti-overlay .tti-switcher-dots label[for="${item.id}"]{background:rgba(255,255,255,0.95) !important;transform:scale(1.12) !important;}`),
     ].join("")
     : "";
-  const scopedStyle = `.tti{position:relative !important;}.tti-bg{position:absolute !important;inset:0 !important;z-index:0 !important;}.tti-overlay{position:absolute !important;inset:16px !important;z-index:2 !important;}.tti-content{position:relative !important;z-index:3 !important;}.tti-footer{position:absolute !important;z-index:4 !important;}${switcherRuleStyle}`;
+  const scopedStyle = `.tti{position:relative !important;}.tti-bg{position:absolute !important;inset:0 !important;z-index:0 !important;}.tti-overlay{position:absolute !important;inset:16px !important;z-index:2 !important;}.tti-content{position:relative !important;z-index:3 !important;}.tti-footer{position:absolute !important;z-index:4 !important;scrollbar-width:none !important;}.tti-footer>span:first-child{margin-left:auto !important;}.tti-footer::-webkit-scrollbar{height:0 !important;}${switcherRuleStyle}`;
 
   return `<div>
 <style>${scopedStyle}</style>
