@@ -210,5 +210,21 @@
   {
     "label": "G마켓 산스 B",
     "value": "GMarketSans-B"
+  },
+  {
+    "label": "그리운 경찰공평체",
+    "value": "NostalgicPoliceFairness"
+  },
+  {
+    "label": "그리운 경찰인권체",
+    "value": "NostalgicPoliceHumanRights"
+  },
+  {
+    "label": "그리운 코코초이툰",
+    "value": "NostalgicCocochoitoon"
+  },
+  {
+    "label": "그리운 민",
+    "value": "GriunXHangeul Min"
   }
 ]
