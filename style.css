@@ -1215,9 +1215,14 @@ h4:has(.replace-control) {
   font-display: swap;
 }
 @font-face {
-  font-family: "GriunXHangeul Min";
-  src: url("https://d26ciffk7xlrlz.cloudfront.net/free-fonts/hangeulmin/GriunXHangeulMin-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
+  font-family: "A2z";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-6@1.0/에이투지체-5Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Tangba";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2601-4@1.1/Tangba12.woff2") format("woff2");
+  font-weight: normal;
   font-display: swap;
 }
