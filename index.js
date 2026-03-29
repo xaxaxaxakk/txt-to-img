@@ -3047,7 +3047,7 @@ function buildSpanStyle(span, settings) {
     const isGangwon = span.htmlFontFamily === "GangwonEducationModuche"
       || (!span.htmlFontFamily || span.htmlFontFamily === "useGlobal") && settings?.htmlFontFace === "GangwonEducationModuche";
     if (isGangwon) {
-      style.push("padding: 0.25em 0 0.1em 0  !important");
+      style.push("padding: 0.23em 0 0.1em 0  !important");
     }
     style.push("-webkit-box-decoration-break:clone !important");
     style.push("box-decoration-break:clone !important");
