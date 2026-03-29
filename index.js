@@ -63,7 +63,7 @@ let defaultBackgroundUrlMap = new Map();
 let defaultBackgroundBasenameMap = new Map();
 const CUSTOM_BG_STORAGE_IMAGE_KEY = "textToImageCustomBgsImage";
 const CUSTOM_BG_STORAGE_HTML_KEY = "textToImageCustomBgsHTML";
-const HTML_FONT_FACE_OPTIONS = new Set(["Ridibatang", "Nanum Gothic"]);
+const HTML_FONT_FACE_OPTIONS = new Set(["Ridibatang", "Nanum Gothic", "OngleipParkDahyeon", "GangwonEducationModuche"]);
 
 function saveSettings() {
   localStorage.setItem(extensionName, JSON.stringify(extension_settings[extensionName]));
@@ -82,7 +82,14 @@ function getHtmlFontFace(settings = extension_settings[extensionName]) {
   return normalizeHtmlFontFace(settings?.htmlFontFace);
 }
 function getHtmlPreviewFontFamily(settings = extension_settings[extensionName]) {
-  return getHtmlFontFace(settings) === "Nanum Gothic" ? "Pretendard-Regular" : "RIDIBatang";
+  const face = getHtmlFontFace(settings);
+  const fallback = "RIDIBatang";
+  
+  const overrides = {
+    "Nanum Gothic": "Pretendard-Regular",
+  };
+  
+  return overrides[face] ?? (HTML_FONT_FACE_OPTIONS.has(face) ? face : fallback);
 }
 function parsePositiveInt(value, fallback) {
   const parsed = parseInt(value, 10);
@@ -2089,6 +2096,13 @@ function highlighterTags() {
             <select class="tag-font-family" data-html-hide="tag_font_family">
               <option value="useGlobal" ${(!tag.fontFamily || tag.fontFamily === "useGlobal") ? "selected" : ""}>전역 폰트 사용</option>
             </select>
+            <select class="tag-html-font-family" data-html-only="tag_html_font_family">
+              <option value="useGlobal" ${(!tag.htmlFontFamily || tag.htmlFontFamily === "useGlobal") ? "selected" : ""}>전역 폰트 사용</option>
+              <option value="Ridibatang" ${tag.htmlFontFamily === "Ridibatang" ? "selected" : ""}>리디바탕</option>
+              <option value="Nanum Gothic" ${tag.htmlFontFamily === "Nanum Gothic" ? "selected" : ""}>나눔고딕</option>
+              <option value="GangwonEducationModuche" ${tag.htmlFontFamily === "GangwonEducationModuche" ? "selected" : ""}>강원교육모두체</option>
+              <option value="OngleipParkDahyeon" ${tag.htmlFontFamily === "OngleipParkDahyeon" ? "selected" : ""}>온글잎 박다현체</option>
+            </select>
             <input type="number" class="tag-font-size" value="${tag.fontSize}" min="12" max="50" />
             <select class="tag-stroke-width">
               <option value="inherit" ${(!tag.strokeWidth || tag.strokeWidth === "inherit") ? "selected" : ""}>전역</option>
@@ -2141,6 +2155,7 @@ function addHighlightTag() {
   extension_settings[extensionName].setHighlighterTags.push({
     name: "",
     fontFamily: "useGlobal",
+    htmlFontFamily: "useGlobal",
     fontColor: "#000000",
     bgColor: "#ffffff",
     fontSize: isHtmlModeEnabled() ? 14 : 24,
@@ -2222,6 +2237,7 @@ function enableMarkdown(text, options = {}) {
                 fontColor: tagSet.useTagFontColor ? tagSet.fontColor : (innerContent.fontColor || null),
                 bgColor: tagSet.useTagBgColor ? tagSet.bgColor : (innerContent.bgColor || null),
                 fontFamily: tagSet.fontFamily || null,
+                htmlFontFamily: tagSet.htmlFontFamily || null,
                 fontSize: tagSet.fontSize,
                 strokeWidth: tagSet.strokeWidth || null, 
               });
@@ -3028,6 +3044,13 @@ function buildSpanStyle(span, settings) {
   }
   if (span.bgColor) {
     style.push(`background-color:${span.bgColor} !important`);
+    const isGangwon = span.htmlFontFamily === "GangwonEducationModuche"
+      || (!span.htmlFontFamily || span.htmlFontFamily === "useGlobal") && settings?.htmlFontFace === "GangwonEducationModuche";
+    if (isGangwon) {
+      style.push("padding: 0.25em 0 0.1em 0  !important");
+    }
+    style.push("-webkit-box-decoration-break:clone !important");
+    style.push("box-decoration-break:clone !important");
   }
   if (span.fontSize) {
     style.push(`font-size:${span.fontSize}px !important`);
@@ -3047,13 +3070,23 @@ function renderMarkdownHTML(text, settings) {
     }
     if (!spans.length) return `<font face="${htmlFontFace}"></font>`;
 
-    const lineHtml = spans.map((span) => {
+    const groups = [];
+    let currentGroup = { face: htmlFontFace, parts: [] };
+    spans.forEach((span) => {
+      const spanFace = (span.htmlFontFamily && span.htmlFontFamily !== "useGlobal")
+        ? normalizeHtmlFontFace(span.htmlFontFamily)
+        : htmlFontFace;
+      if (spanFace !== currentGroup.face) {
+        if (currentGroup.parts.length) groups.push(currentGroup);
+        currentGroup = { face: spanFace, parts: [] };
+      }
       const spanText = escapeHTML(span.text || "");
       const spanStyle = buildSpanStyle(span, settings);
-      if (!spanStyle) return spanText;
-      return `<span style="${spanStyle}">${spanText}</span>`;
-    }).join("");
-    return `<font face="${htmlFontFace}">${lineHtml}</font>`;
+      currentGroup.parts.push(spanStyle ? `<span style="${spanStyle}">${spanText}</span>` : spanText);
+    });
+    if (currentGroup.parts.length) groups.push(currentGroup);
+
+    return groups.map((g) => `<font face="${g.face}">${g.parts.join("")}</font>`).join("");
   };
 
   const htmlLines = [];
@@ -3290,7 +3323,16 @@ ${contentHTML}${footerHTML}
 function generateHTMLPreview(text, index) {
   const htmlCode = createHTMLSnippet(text, index);
   const previewFontFamily = getHtmlPreviewFontFamily();
-  const previewOnlyStyle = `<style>.html-render-preview .tti-content,.html-render-preview .tti-content span[style],.html-render-preview .tti-footer,.html-render-preview .tti-footer *{font-family:${previewFontFamily} !important;}</style>`;
+  const fontFaceMap = {
+    "Ridibatang": "RIDIBatang",
+    "Nanum Gothic": "Pretendard-Regular",
+    "GangwonEducationModuche": "GangwonEducationModuche",
+    "OngleipParkDahyeon": "OngleipParkDahyeon",
+  };
+  const perFontFaceRules = Object.entries(fontFaceMap).map(([face, family]) =>
+    `.html-render-preview .tti-content font[face="${face}"],.html-render-preview .tti-content font[face="${face}"] span[style]{font-family:${family} !important;}`
+  ).join("");
+  const previewOnlyStyle = `<style>.html-render-preview .tti-content,.html-render-preview .tti-content span[style],.html-render-preview .tti-footer,.html-render-preview .tti-footer *{font-family:${previewFontFamily} !important;}${perFontFaceRules}</style>`;
 
   const $preview = $("<div>").addClass("image-preview-item html-preview-item");
   const $rendered = $("<div>")
@@ -3579,6 +3621,11 @@ function highlighterOption() {
   $(document).on("change", ".tag-font-family", function() {
     const index = $(this).closest(".tag-item").data("index");
     updateHighlightTag(index, "fontFamily", $(this).val());
+    refreshPreview();
+  });
+  $(document).on("change", ".tag-html-font-family", function() {
+    const index = $(this).closest(".tag-item").data("index");
+    updateHighlightTag(index, "htmlFontFamily", $(this).val());
     refreshPreview();
   });
   $(document).on("change", ".tag-stroke-width", function() {

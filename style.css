@@ -897,10 +897,10 @@ h4:has(.replace-control) {
   font-style: normal;
 }
 @font-face {
-  font-family: "GangwonEdu_OTFBoldA";
-  font-weight: normal;
-  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2201-2@1.0/GangwonEdu_OTFBoldA.woff") format("woff");
-  font-style: normal;
+    font-family: 'GangwonEducationModuche';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2201-2@1.0/GangwonEdu_OTFLightA.woff') format('woff');
+    font-weight: 300;
+    font-display: swap;
 }
 @font-face {
   font-family: "MaruBuriSemiBold";
@@ -981,10 +981,10 @@ h4:has(.replace-control) {
   font-style: normal;
 }
 @font-face {
-  font-family: "Ownglyph_ParkDaHyun";
-  font-weight: normal;
-  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/2411-3@1.0/Ownglyph_ParkDaHyun.woff2") format("woff2");
-  font-style: normal;
+    font-family: 'OngleipParkDahyeon';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2411-3@1.0/Ownglyph_ParkDaHyun.woff2') format('woff2');
+    font-weight: normal;
+    font-display: swap;
 }
 @font-face {
   font-family: "Uiyeun";
