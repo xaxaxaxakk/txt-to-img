@@ -1226,3 +1226,27 @@ h4:has(.replace-control) {
   font-weight: normal;
   font-display: swap;
 }
+@font-face {
+    font-family: 'NostalgicWensonjabiSeulgiru';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2601-1@1.0/Griun_LEFTSG-Rg.woff2') format('woff2');
+    font-weight: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'PyeojinGothic';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2504-1@1.0/PyeojinGothic-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'NostalgicDesertYeonwoo';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2508-2@1.0/Griun_YEONWOO-Rg.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}
+@font-face {
+    font-family: 'ReperiBase';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2201-2@1.0/LeferiBaseType-RegularA.woff') format('woff');
+    font-weight: normal;
+    font-display: swap;
+}

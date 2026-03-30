@@ -230,5 +230,21 @@
   {
     "label": "탕바",
     "value": "Tangba"
+  },
+  {
+    "label": "그리운 왼손자비슬기루체",
+    "value": "NostalgicWensonjabiSeulgiru"
+  },
+  {
+    "label": "펴진고딕",
+    "value": "PyeojinGothic"
+  },
+  {
+    "label": "그리운 사막의 연우체",
+    "value": "NostalgicDesertYeonwoo"
+  }
+  {
+    "label": "레페리베이스",
+    "value": "ReperiBase"
   }
 ]
