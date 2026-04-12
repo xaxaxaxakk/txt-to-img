@@ -3476,9 +3476,6 @@ function bindingFunctions() {
   $("#letter_control").on("change", letterCase);
   $("#unit_control").on("change", unitControl);
 
-  $("#how_to_use").on("click", () => {
-    $(".how_to_use_box").slideToggle();
-  });
   $("#create_preset").on("click", () => {
     $("#preset_name").val("");
   });
