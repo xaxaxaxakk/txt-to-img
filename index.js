@@ -1,6 +1,35 @@
-const extension_settings = JSON.parse(localStorage.getItem("txt-to-img") || "{}");
+const extension_settings = JSON.parse(safeGetItem("txt-to-img") || "{}");
+const JSZipLocal = "libs/jszip.min.js";
 const JSZipCDN = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+const FileSaverLocal = "libs/FileSaver.min.js";
 const FileSaverCDN = "https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js";
+
+function safeGetItem(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function safeSetItem(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    console.warn("[txt-to-img] localStorage 저장 실패:", e);
+  }
+}
+function safeRemoveItem(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch {}
+}
+function debounce(fn, delay) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
 
 const extensionName = "txt-to-img";
 const extensionFolderPath = `https://xaxaxaxakk.github.io/${extensionName}`;
@@ -65,9 +94,11 @@ const CUSTOM_BG_STORAGE_IMAGE_KEY = "textToImageCustomBgsImage";
 const CUSTOM_BG_STORAGE_HTML_KEY = "textToImageCustomBgsHTML";
 const HTML_FONT_FACE_OPTIONS = new Set(["Ridibatang", "Nanum Gothic", "OngleipParkDahyeon", "GangwonEducationModuche"]);
 
-function saveSettings() {
-  localStorage.setItem(extensionName, JSON.stringify(extension_settings[extensionName]));
+function _saveSettingsNow() {
+  safeSetItem(extensionName, JSON.stringify(extension_settings[extensionName]));
 }
+const saveSettings = debounce(_saveSettingsNow, 200);
+window.addEventListener("beforeunload", _saveSettingsNow);
 
 function isHtmlModeEnabled() {
   return !!extension_settings[extensionName]?.htmlMode;
@@ -84,11 +115,11 @@ function getHtmlFontFace(settings = extension_settings[extensionName]) {
 function getHtmlPreviewFontFamily(settings = extension_settings[extensionName]) {
   const face = getHtmlFontFace(settings);
   const fallback = "RIDIBatang";
-  
+
   const overrides = {
     "Nanum Gothic": "Pretendard-Regular",
   };
-  
+
   return overrides[face] ?? (HTML_FONT_FACE_OPTIONS.has(face) ? face : fallback);
 }
 function parsePositiveInt(value, fallback) {
@@ -105,18 +136,15 @@ function ensureFontSizeSettings() {
   const imageSize = parseInt(settings.fontSizeImage, 10);
   const htmlSize = parseInt(settings.fontSizeHtml, 10);
 
-  settings.fontSizeImage = Number.isFinite(imageSize)
-    ? imageSize
-    : (Number.isFinite(legacyFontSize) ? legacyFontSize : defaultSettings.fontSizeImage);
-  settings.fontSizeHtml = Number.isFinite(htmlSize)
-    ? htmlSize
-    : defaultSettings.fontSizeHtml;
+  settings.fontSizeImage =
+    Number.isFinite(imageSize) ? imageSize
+    : Number.isFinite(legacyFontSize) ? legacyFontSize
+    : defaultSettings.fontSizeImage;
+  settings.fontSizeHtml = Number.isFinite(htmlSize) ? htmlSize : defaultSettings.fontSizeHtml;
   settings.fontSize = isHtmlModeEnabled() ? settings.fontSizeHtml : settings.fontSizeImage;
 }
 function getActiveFontSize(settings = extension_settings[extensionName]) {
-  return isHtmlModeEnabled()
-    ? (parseInt(settings.fontSizeHtml, 10) || defaultSettings.fontSizeHtml)
-    : (parseInt(settings.fontSizeImage, 10) || defaultSettings.fontSizeImage);
+  return isHtmlModeEnabled() ? parseInt(settings.fontSizeHtml, 10) || defaultSettings.fontSizeHtml : parseInt(settings.fontSizeImage, 10) || defaultSettings.fontSizeImage;
 }
 function getCustomBackgroundStorageKey() {
   return isHtmlModeEnabled() ? CUSTOM_BG_STORAGE_HTML_KEY : CUSTOM_BG_STORAGE_IMAGE_KEY;
@@ -167,7 +195,7 @@ function showRangeTooltip(input) {
   const value = parseFloat(input.value || "0");
   const percentage = max > min ? (value - min) / (max - min) : 0;
   const rect = input.getBoundingClientRect();
-  const x = rect.left + (rect.width * percentage) + window.scrollX;
+  const x = rect.left + rect.width * percentage + window.scrollX;
   const y = rect.top + window.scrollY - 30;
 
   tooltip.textContent = formatRangeValue(input.value, input.step);
@@ -180,18 +208,7 @@ function hideRangeTooltip() {
   rangeValueTooltip.classList.remove("shown");
 }
 function setupRangeValueTooltips() {
-  const selector = [
-    "#tti_font_size_image",
-    "#tti_font_size_html",
-    "#tti_letter_spacing",
-    "#tti_line_height",
-    "#bg_blur",
-    "#bg_brightness",
-    "#bg_hue",
-    "#bg_grayscale",
-    "#bg_noise",
-    "#overlay_opacity",
-  ].join(", ");
+  const selector = ["#tti_font_size_image", "#tti_font_size_html", "#tti_letter_spacing", "#tti_line_height", "#bg_blur", "#bg_brightness", "#bg_hue", "#bg_grayscale", "#bg_noise", "#overlay_opacity"].join(", ");
   $(document).on("input", selector, function () {
     showRangeTooltip(this);
   });
@@ -203,64 +220,15 @@ function setupRangeValueTooltips() {
   });
 }
 
-
 async function initSettings() {
-  const savedSettings = JSON.parse(localStorage.getItem(extensionName) || "{}");
+  const savedSettings = JSON.parse(safeGetItem(extensionName) || "{}");
   extension_settings[extensionName] = {
     ...defaultSettings,
     ...savedSettings,
     ...extension_settings[extensionName],
   };
   ensureFontSizeSettings();
-  const {
-    fontFamily,
-    fontSizeImage,
-    fontSizeHtml,
-    htmlFontFace,
-    fontSpacing,
-    fontLineHeight,
-    fontAlign,
-    fontColor,
-    useItalicColor,
-    italicFontColor,
-    useBoldColor,
-    boldFontColor,
-    useBoldItalicColor,
-    boldItalicFontColor,
-    useStrikethroughColor,
-    strikethroughFontColor,
-    useUnderlineColor,
-    underlineFontColor,
-    blockquoteFontColor,
-    blockquoteBgColor,
-    blockquoteBorderColor,
-    strokeWidth,
-    lineBreak,
-    imageRatio,
-    imageFillMode,
-    useBackgroundColor,
-    backgroundColor,
-    useSecondBackgroundColor,
-    secondBackgroundColor,
-    bgBlur,
-    bgBrightness,
-    bgHue,
-    bgGrayscale,
-    bgNoise,
-    overlayOpacity,
-    overlayColor,
-    currentPreset,
-    footerText,
-    footerLayoutMode,
-    footerWidth,
-    footerHeight,
-    footerColor,
-    footerBgColor,
-    autoPreview,
-    htmlMode,
-    letterCase,
-    unitControl,
-  } = extension_settings[extensionName];
+  const {fontFamily, fontSizeImage, fontSizeHtml, htmlFontFace, fontSpacing, fontLineHeight, fontAlign, fontColor, useItalicColor, italicFontColor, useBoldColor, boldFontColor, useBoldItalicColor, boldItalicFontColor, useStrikethroughColor, strikethroughFontColor, useUnderlineColor, underlineFontColor, blockquoteFontColor, blockquoteBgColor, blockquoteBorderColor, strokeWidth, lineBreak, imageRatio, imageFillMode, useBackgroundColor, backgroundColor, useSecondBackgroundColor, secondBackgroundColor, bgBlur, bgBrightness, bgHue, bgGrayscale, bgNoise, overlayOpacity, overlayColor, currentPreset, footerText, footerLayoutMode, footerWidth, footerHeight, footerColor, footerBgColor, autoPreview, htmlMode, letterCase, unitControl} = extension_settings[extensionName];
 
   $("#tti_font_family").val(fontFamily);
   $("#tti_font_size_image").val(fontSizeImage);
@@ -309,9 +277,7 @@ async function initSettings() {
   $("#letter_control").prop("checked", letterCase);
   $("#unit_control").prop("checked", unitControl);
 
-  await loadFonts();
-  await loadBG();
-  await loadBackgroundURLMap();
+  await Promise.all([loadFonts(), loadBG(), loadBackgroundURLMap()]);
   highlighterTags();
   applyHtmlModeUIState();
   updateFooterLayoutUIState();
@@ -339,15 +305,15 @@ function getPresetSettings() {
   delete settings.currentPreset;
   const imageFontSize = parseInt($("#tti_font_size_image").val(), 10);
   const htmlFontSize = parseInt($("#tti_font_size_html").val(), 10);
-  settings.fontSizeImage = Number.isFinite(imageFontSize) ? imageFontSize : (settings.fontSizeImage || defaultSettings.fontSizeImage);
-  settings.fontSizeHtml = Number.isFinite(htmlFontSize) ? htmlFontSize : (settings.fontSizeHtml || defaultSettings.fontSizeHtml);
+  settings.fontSizeImage = Number.isFinite(imageFontSize) ? imageFontSize : settings.fontSizeImage || defaultSettings.fontSizeImage;
+  settings.fontSizeHtml = Number.isFinite(htmlFontSize) ? htmlFontSize : settings.fontSizeHtml || defaultSettings.fontSizeHtml;
   settings.fontSize = settings.htmlMode ? settings.fontSizeHtml : settings.fontSizeImage;
   settings.htmlFontFace = normalizeHtmlFontFace($("#tti_html_font_face").val());
 
   if (currentCustomFont && oriFontFamily) {
     settings.fontFamily = oriFontFamily;
   }
-  
+
   settings.originalWord1 = $("#original_word_1").val();
   settings.replacementWord1 = $("#replacement_word_1").val();
   settings.originalWord2 = $("#original_word_2").val();
@@ -374,10 +340,8 @@ function getPresetSettings() {
   settings.fontSize = settings.htmlMode ? settings.fontSizeHtml : settings.fontSizeImage;
   settings.letterCase = $("#letter_control").is(":checked");
   settings.unitControl = $("#unit_control").is(":checked");
-  settings.setHighlighterTags = JSON.parse(
-    JSON.stringify(extension_settings[extensionName].setHighlighterTags || [])
-  );
-  
+  settings.setHighlighterTags = JSON.parse(JSON.stringify(extension_settings[extensionName].setHighlighterTags || []));
+
   return settings;
 }
 function createPreset() {
@@ -626,22 +590,7 @@ function applyPreset(presetName) {
   });
 
   for (const [key, value] of Object.entries(preset)) {
-    if (
-      [
-        "originalWord1",
-        "replacementWord1",
-        "originalWord2",
-        "replacementWord2",
-        "originalWord3",
-        "replacementWord3",
-        "originalWord4",
-        "replacementWord4",
-        "setHighlighterTags",
-        "fontSize",
-        "fontSizeImage",
-        "fontSizeHtml",
-      ].includes(key)
-    ) {
+    if (["originalWord1", "replacementWord1", "originalWord2", "replacementWord2", "originalWord3", "replacementWord3", "originalWord4", "replacementWord4", "setHighlighterTags", "fontSize", "fontSizeImage", "fontSizeHtml"].includes(key)) {
       continue;
     }
 
@@ -816,15 +765,12 @@ function applyPreset(presetName) {
   const presetImageFontSize = parseInt(preset.fontSizeImage, 10);
   const presetHtmlFontSize = parseInt(preset.fontSizeHtml, 10);
   const legacyPresetFontSize = parseInt(preset.fontSize, 10);
-  extension_settings[extensionName].fontSizeImage = Number.isFinite(presetImageFontSize)
-    ? presetImageFontSize
-    : (Number.isFinite(legacyPresetFontSize) ? legacyPresetFontSize : defaultSettings.fontSizeImage);
-  extension_settings[extensionName].fontSizeHtml = Number.isFinite(presetHtmlFontSize)
-    ? presetHtmlFontSize
-    : defaultSettings.fontSizeHtml;
-  extension_settings[extensionName].fontSize = isHtmlModeEnabled()
-    ? extension_settings[extensionName].fontSizeHtml
-    : extension_settings[extensionName].fontSizeImage;
+  extension_settings[extensionName].fontSizeImage =
+    Number.isFinite(presetImageFontSize) ? presetImageFontSize
+    : Number.isFinite(legacyPresetFontSize) ? legacyPresetFontSize
+    : defaultSettings.fontSizeImage;
+  extension_settings[extensionName].fontSizeHtml = Number.isFinite(presetHtmlFontSize) ? presetHtmlFontSize : defaultSettings.fontSizeHtml;
+  extension_settings[extensionName].fontSize = isHtmlModeEnabled() ? extension_settings[extensionName].fontSizeHtml : extension_settings[extensionName].fontSizeImage;
   $("#tti_font_size_image").val(extension_settings[extensionName].fontSizeImage);
   $("#tti_font_size_html").val(extension_settings[extensionName].fontSizeHtml);
 
@@ -941,9 +887,7 @@ function loadBotCard(dataType) {
     oriCard = file;
     oriCardType = file.name.endsWith(".json") ? "json" : "png";
 
-    const botData = file.name.endsWith(".json")
-      ? await MDFromJSON(file)
-      : await MDFromPNG(file);
+    const botData = file.name.endsWith(".json") ? await MDFromJSON(file) : await MDFromPNG(file);
     if (botData) botDataClass(botData, dataType);
   };
 
@@ -961,12 +905,7 @@ async function MDFromPNG(file) {
   while (offset < arrayBuffer.byteLength) {
     const chunkLength = dataView.getUint32(offset);
     offset += 4;
-    const chunkType = String.fromCharCode(
-      dataView.getUint8(offset),
-      dataView.getUint8(offset + 1),
-      dataView.getUint8(offset + 2),
-      dataView.getUint8(offset + 3)
-    );
+    const chunkType = String.fromCharCode(dataView.getUint8(offset), dataView.getUint8(offset + 1), dataView.getUint8(offset + 2), dataView.getUint8(offset + 3));
     offset += 4;
 
     if (chunkType === "tEXt") {
@@ -995,7 +934,7 @@ async function MDFromPNG(file) {
       if (key.toLowerCase() === "chara" || key.toLowerCase() === "ccv3") {
         const compressionFlag = parts[1] ? parts[1].charCodeAt(0) : 0;
         const text = parts[parts.length - 1];
-        
+
         if (compressionFlag === 0) {
           const binary = atob(text.trim());
           const uint8Array = new Uint8Array(binary.length);
@@ -1015,22 +954,22 @@ async function MDFromPNG(file) {
 }
 function botDataClass(data) {
   const oriCardData = data.data || data;
-  
+
   cardDataTab.description = (oriCardData.description || "").trim();
   cardDataTab.greeting = (oriCardData.first_mes || "").trim();
   cardDataTab.scenario = (oriCardData.scenario || "").trim();
   cardDataTab.json = JSON.stringify(oriCardData, null, 2);
   cardDataTab.oriData = oriCardData;
   cardDataTab.fullData = data;
-  
+
   $(".bot-data[data-type]").removeClass("active");
   $(`.bot-data[data-type="description"]`).addClass("active");
   const activeTab = $(".bot-data[data-type].active").data("type") || "description";
   $("#text_to_image").val(cardDataTab[activeTab] || "");
-  
+
   $(".bot-data.botImporter").addClass("remover");
   $(".bot-data:not(.botImporter)").prop("disabled", false);
-  refreshPreview();  
+  refreshPreview();
 }
 async function botCardSaver() {
   if (!oriCard || !cardDataTab.oriData) {
@@ -1063,7 +1002,7 @@ async function botCardSaver() {
 }
 function cardToJSON(data, filename) {
   const jsonStr = JSON.stringify(data, null, 2);
-  const blob = new Blob([jsonStr], { type: "application/json" });
+  const blob = new Blob([jsonStr], {type: "application/json"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -1087,7 +1026,7 @@ async function cardToPNG(oriCardData, oriCard) {
   newChunks.push(textChunk("ccv3", encoded));
   newChunks.push(ITxtChunk("chara", encoded));
   const finalPNG = replaceChunks(uint8Array, newChunks);
-  const blob = new Blob([finalPNG], { type: "image/png" });
+  const blob = new Blob([finalPNG], {type: "image/png"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -1106,7 +1045,7 @@ function textChunk(key, encoded) {
   const chunkType = [0x74, 0x45, 0x58, 0x74];
   const chunkDataForCRC = [...chunkType, ...textBytes];
   const crc = crc32(new Uint8Array(chunkDataForCRC));
-  
+
   const chunkLength = textBytes.length;
   const chunk = new Uint8Array(12 + chunkLength);
   const view = new DataView(chunk.buffer);
@@ -1114,7 +1053,7 @@ function textChunk(key, encoded) {
   chunk.set(chunkType, 4);
   chunk.set(textBytes, 8);
   view.setUint32(8 + chunkLength, crc, false);
-  
+
   return chunk;
 }
 function ITxtChunk(key, encoded) {
@@ -1133,7 +1072,7 @@ function ITxtChunk(key, encoded) {
   chunk.set(chunkType, 4);
   chunk.set(textBytes, 8);
   view.setUint32(8 + chunkLength, crc, false);
-  
+
   return chunk;
 }
 function replaceChunks(uint8Array, newChunks) {
@@ -1145,12 +1084,7 @@ function replaceChunks(uint8Array, newChunks) {
   while (offset < uint8Array.length) {
     if (offset + 8 > uint8Array.length) break;
     const length = view.getUint32(offset, false);
-    const type = String.fromCharCode(
-      uint8Array[offset + 4],
-      uint8Array[offset + 5],
-      uint8Array[offset + 6],
-      uint8Array[offset + 7]
-    );
+    const type = String.fromCharCode(uint8Array[offset + 4], uint8Array[offset + 5], uint8Array[offset + 6], uint8Array[offset + 7]);
     const chunkTotalSize = 12 + length;
     if (offset + chunkTotalSize > uint8Array.length) break;
     let isChunk = false;
@@ -1162,7 +1096,7 @@ function replaceChunks(uint8Array, newChunks) {
         i++;
       }
       key = key.toLowerCase();
-      
+
       if (key === "chara" || key === "ccv3") {
         isChunk = true;
       }
@@ -1202,14 +1136,14 @@ function replaceChunks(uint8Array, newChunks) {
   return result;
 }
 function crc32(data) {
-  let crc = 0xFFFFFFFF;
+  let crc = 0xffffffff;
   for (let i = 0; i < data.length; i++) {
     crc = crc ^ data[i];
     for (let j = 0; j < 8; j++) {
-      crc = (crc >>> 1) ^ (0xEDB88320 & -(crc & 1));
+      crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
     }
   }
-  return (crc ^ 0xFFFFFFFF) >>> 0;
+  return (crc ^ 0xffffffff) >>> 0;
 }
 
 // 폰트 패밀리
@@ -1221,20 +1155,25 @@ function fontFamily(event) {
 
 // 폰트 로드
 async function loadFonts() {
-  const response = await fetch(`${extensionFolderPath}/font-family.json`);
-  const fonts = await response.json();
-  fonts.sort((a, b) => a.label.localeCompare(b.label));
-  const select = $("#tti_font_family").empty();
+  try {
+    const response = await fetch(`${extensionFolderPath}/font-family.json`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const fonts = await response.json();
+    fonts.sort((a, b) => a.label.localeCompare(b.label));
+    const select = $("#tti_font_family").empty();
 
-  const fontPromises = fonts.map(font => document.fonts.load(`1em ${font.value}`));
-  await Promise.all(fontPromises);
-  
-  fonts.forEach(font => {
-    select.append(`<option value="${font.value}">${font.label}</option>`);
-  });
+    const fontPromises = fonts.map((font) => document.fonts.load(`1em ${font.value}`).catch(() => {}));
+    await Promise.all(fontPromises);
 
-  select.val(extension_settings[extensionName].fontFamily);
-  refreshPreview();
+    fonts.forEach((font) => {
+      select.append(`<option value="${font.value}">${font.label}</option>`);
+    });
+
+    select.val(extension_settings[extensionName].fontFamily);
+    refreshPreview();
+  } catch (e) {
+    console.warn("[txt-to-img] 폰트 로드 실패:", e);
+  }
 }
 
 // 로컬 폰트 로드
@@ -1243,82 +1182,85 @@ let oriFontFamily = null;
 function addLocalFont() {
   if (isHtmlModeEnabled()) return;
 
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.ttf,.otf,.woff,.woff2';
-  
-  input.onchange = function(event) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".ttf,.otf,.woff,.woff2";
+
+  input.onchange = function (event) {
     const file = event.target.files[0];
     if (!file) return;
-    
-    const checkFontFormat = ['.ttf', '.otf', '.woff', '.woff2'];
-    const fontFormat = '.' + file.name.split('.').pop().toLowerCase();
-    
+
+    const checkFontFormat = [".ttf", ".otf", ".woff", ".woff2"];
+    const fontFormat = "." + file.name.split(".").pop().toLowerCase();
+
     if (!checkFontFormat.includes(fontFormat)) {
-      alert('.ttf, .otf, .woff, .woff2 형식의 파일만 등록할 수 있습니다.');
+      alert(".ttf, .otf, .woff, .woff2 형식의 파일만 등록할 수 있습니다.");
       return;
     }
-    
-    const fontReader = new FileReader();
-    fontReader.onload = function(e) {
-      const fontData = e.target.result;
-      const fontName = 'CustomFont_' + Date.now();
-      
-      const fontFace = new FontFace(fontName, fontData);
-      
-      fontFace.load().then(function(loadedFont) {
-        document.fonts.add(loadedFont);
 
-        if (!oriFontFamily) {
-          oriFontFamily = extension_settings[extensionName].fontFamily;
-        }
-        
-        currentCustomFont = fontName;
-        extension_settings[extensionName].fontFamily = fontName;
-        
-        $("#tti_font_family").prop("disabled", true);
-        
-        $("#upload-local-font").text("로컬 폰트 변경");
-        $("#delete-local-font").prop("disabled", false);
-        
-        applyHtmlModeUIState();
-        refreshPreview();
-      }).catch(function(error) {
-        console.error('폰트 로드 실패:', error);
-        alert('폰트 파일을 등록할 수 없습니다.');
-      });
+    const fontReader = new FileReader();
+    fontReader.onload = function (e) {
+      const fontData = e.target.result;
+      const fontName = "CustomFont_" + Date.now();
+
+      const fontFace = new FontFace(fontName, fontData);
+
+      fontFace
+        .load()
+        .then(function (loadedFont) {
+          document.fonts.add(loadedFont);
+
+          if (!oriFontFamily) {
+            oriFontFamily = extension_settings[extensionName].fontFamily;
+          }
+
+          currentCustomFont = fontName;
+          extension_settings[extensionName].fontFamily = fontName;
+
+          $("#tti_font_family").prop("disabled", true);
+
+          $("#upload-local-font").text("로컬 폰트 변경");
+          $("#delete-local-font").prop("disabled", false);
+
+          applyHtmlModeUIState();
+          refreshPreview();
+        })
+        .catch(function (error) {
+          console.error("폰트 로드 실패:", error);
+          alert("폰트 파일을 등록할 수 없습니다.");
+        });
     };
-    
-    fontReader.onerror = function() {
-      alert('파일을 읽을 수 없습니다.');
+
+    fontReader.onerror = function () {
+      alert("파일을 읽을 수 없습니다.");
     };
-    
+
     fontReader.readAsArrayBuffer(file);
   };
-  
+
   input.click();
 }
 function deleteLocalFont() {
   if (!currentCustomFont) return;
-  
+
   if (document.fonts && currentCustomFont) {
     const fonts = Array.from(document.fonts);
-    const customFontFamily = fonts.find(font => font.family === currentCustomFont);
+    const customFontFamily = fonts.find((font) => font.family === currentCustomFont);
     if (customFontFamily) {
       document.fonts.delete(customFontFamily);
     }
   }
 
-  extension_settings[extensionName].fontFamily = oriFontFamily || extension_settings[extensionName].fontFamily || 'Pretendard-Regular';
+  extension_settings[extensionName].fontFamily = oriFontFamily || extension_settings[extensionName].fontFamily || "Pretendard-Regular";
 
   $("#tti_font_family").val(extension_settings[extensionName].fontFamily).prop("disabled", false);
-  
+
   currentCustomFont = null;
   oriFontFamily = null;
-  
+
   $("#upload-local-font").text("로컬 폰트 등록");
   $("#delete-local-font").prop("disabled", true);
-  
+
   applyHtmlModeUIState();
   saveSettings();
   refreshPreview();
@@ -1390,43 +1332,142 @@ function resolveBackgroundURLForHTML(backgroundValue) {
   return backgroundValue;
 }
 async function loadBG() {
-  const response = await fetch(`${extensionFolderPath}/backgrounds-list.json`);
-  const backgrounds = await response.json();
-  const gallery = $("#background_image_gallery").empty();
-  const selectedBackground = getSelectedBackgroundForCurrentMode();
-  const galleryHtml = backgrounds.map((bg) => {
-    const bgPath = `${extensionFolderPath}/default-backgrounds/${bg}`;
-    const isSelected = selectedBackground === bgPath;
-    return `
-      <div class="bg-image-item ${isSelected ? "selected" : ""}" data-path="${bgPath}">
-        <img src="${bgPath}" alt="${bg}" loading="lazy" decoding="async" />
-      </div>
-    `;
-  }).join("");
-  gallery.html(galleryHtml);
-  $(".bg-image-item").on("click", selectCanvasBG);
-}
-function storeBackground(name, imageData, storageKey = getCustomBackgroundStorageKey()) {
-  const customBackgrounds = JSON.parse(localStorage.getItem(storageKey) || "{}");
-  customBackgrounds[name] = imageData;
-  localStorage.setItem(storageKey, JSON.stringify(customBackgrounds));
-}
-function deleteBackground(name, storageKey = getCustomBackgroundStorageKey()) {
-  const customBackgrounds = JSON.parse(localStorage.getItem(storageKey) || "{}");
-  delete customBackgrounds[name];
-  localStorage.setItem(storageKey, JSON.stringify(customBackgrounds));
+  try {
+    const response = await fetch(`${extensionFolderPath}/backgrounds-list.json`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const backgrounds = await response.json();
+    const gallery = $("#background_image_gallery").empty();
+    const selectedBackground = getSelectedBackgroundForCurrentMode();
+    const galleryHtml = backgrounds
+      .map((bg) => {
+        const bgPath = `${extensionFolderPath}/default-backgrounds/${bg}`;
+        const isSelected = selectedBackground === bgPath;
+        return `
+        <div class="bg-image-item ${isSelected ? "selected" : ""}" data-path="${bgPath}">
+          <img src="${bgPath}" alt="${bg}" loading="lazy" decoding="async" />
+        </div>
+      `;
+      })
+      .join("");
+    gallery.html(galleryHtml);
+    $(".bg-image-item").on("click", selectCanvasBG);
+  } catch (e) {
+    console.warn("[txt-to-img] 배경 목록 로드 실패:", e);
+  }
 }
 
-// 커스텀 배경이미지 로드
-function loadCustomBG(storageKey = getCustomBackgroundStorageKey()) {
-  const customBackgrounds = JSON.parse(localStorage.getItem(storageKey) || "{}");
-  const gallery = $("#custom_background_gallery").empty();
-  Object.entries(customBackgrounds).forEach(([name, imageData]) => addBGtoGallery(name, imageData, storageKey));
+const BG_DB_NAME = "txtToImgBackgrounds";
+const BG_DB_VERSION = 1;
+const BG_STORE_NAME = "backgrounds";
+
+function openBgDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(BG_DB_NAME, BG_DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(BG_STORE_NAME)) {
+        db.createObjectStore(BG_STORE_NAME);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
 }
-function customBG() {
+
+async function migrateLocalStorageBgToIDB() {
+  if (safeGetItem("txtToImg_bgMigrated") === "1") return;
+  for (const key of [CUSTOM_BG_STORAGE_IMAGE_KEY, CUSTOM_BG_STORAGE_HTML_KEY]) {
+    const raw = safeGetItem(key);
+    if (!raw) continue;
+    try {
+      const entries = JSON.parse(raw);
+      if (!entries || typeof entries !== "object") continue;
+      const db = await openBgDB();
+      const tx = db.transaction(BG_STORE_NAME, "readwrite");
+      const store = tx.objectStore(BG_STORE_NAME);
+      for (const [name, data] of Object.entries(entries)) {
+        store.put(data, `${key}::${name}`);
+      }
+      await new Promise((res, rej) => {
+        tx.oncomplete = res;
+        tx.onerror = rej;
+      });
+      db.close();
+      safeRemoveItem(key);
+    } catch (e) {
+      console.warn("[txt-to-img] IndexedDB \ub9c8\uc774\uadf8\ub808\uc774\uc158 \uc2e4\ud328:", e);
+    }
+  }
+  safeSetItem("txtToImg_bgMigrated", "1");
+}
+
+async function storeBackground(name, imageData, storageKey = getCustomBackgroundStorageKey()) {
+  try {
+    const db = await openBgDB();
+    const tx = db.transaction(BG_STORE_NAME, "readwrite");
+    tx.objectStore(BG_STORE_NAME).put(imageData, `${storageKey}::${name}`);
+    await new Promise((res, rej) => {
+      tx.oncomplete = res;
+      tx.onerror = rej;
+    });
+    db.close();
+  } catch (e) {
+    console.warn("[txt-to-img] \ubc30\uacbd \uc800\uc7a5 \uc2e4\ud328:", e);
+  }
+}
+
+async function deleteBackground(name, storageKey = getCustomBackgroundStorageKey()) {
+  try {
+    const db = await openBgDB();
+    const tx = db.transaction(BG_STORE_NAME, "readwrite");
+    tx.objectStore(BG_STORE_NAME).delete(`${storageKey}::${name}`);
+    await new Promise((res, rej) => {
+      tx.oncomplete = res;
+      tx.onerror = rej;
+    });
+    db.close();
+  } catch (e) {
+    console.warn("[txt-to-img] \ubc30\uacbd \uc0ad\uc81c \uc2e4\ud328:", e);
+  }
+}
+
+let _loadCustomBGId = 0;
+async function loadCustomBG(storageKey = getCustomBackgroundStorageKey()) {
+  const loadId = ++_loadCustomBGId;
+  const gallery = $("#custom_background_gallery").empty();
+  try {
+    const db = await openBgDB();
+    if (loadId !== _loadCustomBGId) {
+      db.close();
+      return;
+    }
+    const tx = db.transaction(BG_STORE_NAME, "readonly");
+    const store = tx.objectStore(BG_STORE_NAME);
+    const prefix = `${storageKey}::`;
+    const req = store.openCursor();
+    req.onsuccess = function () {
+      const cursor = this.result;
+      if (!cursor) return;
+      if (loadId === _loadCustomBGId && cursor.key.startsWith(prefix)) {
+        const name = cursor.key.slice(prefix.length);
+        addBGtoGallery(name, cursor.value, storageKey);
+      }
+      cursor.continue();
+    };
+    await new Promise((res, rej) => {
+      tx.oncomplete = res;
+      tx.onerror = rej;
+    });
+    db.close();
+  } catch (e) {
+    console.warn("[txt-to-img] \ubc30\uacbd \ub85c\ub4dc \uc2e4\ud328:", e);
+  }
+}
+async function customBG() {
   $("#bg_image_upload").on("change", uploadImage);
   $("#bg_url_btn").on("click", uploadImageFromURL);
-  loadCustomBG();
+  await migrateLocalStorageBgToIDB();
+  await loadCustomBG();
 }
 function uploadImageFromURL() {
   if (!isHtmlModeEnabled()) return;
@@ -1434,19 +1475,18 @@ function uploadImageFromURL() {
   const url = $("#bg_image_url").val().trim();
   if (!url) return;
 
-  const fileName = url.split('/').pop().split('?')[0] || 'url-image-' + Date.now();
+  const fileName = url.split("/").pop().split("?")[0] || "url-image-" + Date.now();
   const storageKey = getCustomBackgroundStorageKey();
 
-  storeBackground(fileName, url, storageKey);
-  addBGtoGallery(fileName, url, storageKey);
-  $("#bg_image_url").val("");
+  storeBackground(fileName, url, storageKey).then(() => {
+    addBGtoGallery(fileName, url, storageKey);
+    $("#bg_image_url").val("");
+  });
 }
 function addBGtoGallery(name, imageData, storageKey = getCustomBackgroundStorageKey()) {
   const isSelected = getSelectedBackgroundForCurrentMode() === imageData;
   const bgElement = $(`
-    <div class="bg-image-item ${
-      isSelected ? "selected" : ""
-    }" data-path="${imageData}" data-name="${name}" data-storage-key="${storageKey}">
+    <div class="bg-image-item ${isSelected ? "selected" : ""}" data-path="${imageData}" data-name="${name}" data-storage-key="${storageKey}">
       <img src="${imageData}" alt="${name}" loading="lazy" decoding="async" />
       <div class="delete-bg-btn">×</div>
     </div>
@@ -1463,9 +1503,9 @@ function uploadImage(event) {
   if (!file) return;
   const storageKey = getCustomBackgroundStorageKey();
   const img = new Image();
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  img.onload = () => {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  img.onload = async () => {
     const max_size = 800;
     let width = img.width;
     let height = img.height;
@@ -1479,8 +1519,8 @@ function uploadImage(event) {
     canvas.width = width;
     canvas.height = height;
     ctx.drawImage(img, 0, 0, width, height);
-    const imageData = canvas.toDataURL('image/jpeg', 0.8);
-    storeBackground(file.name, imageData, storageKey);
+    const imageData = canvas.toDataURL("image/jpeg", 0.8);
+    await storeBackground(file.name, imageData, storageKey);
     addBGtoGallery(file.name, imageData, storageKey);
     $("#bg_image_upload").val("");
   };
@@ -1493,13 +1533,14 @@ function uploadImage(event) {
 function removeCustomBg(event) {
   event.stopPropagation();
   const bgItem = $(this).closest(".bg-image-item");
-  deleteBackground(bgItem.data("name"), bgItem.data("storage-key"));
-  bgItem.remove();
-  if (bgItem.hasClass("selected")) {
-    setSelectedBackgroundForCurrentMode(null);
-    saveSettings();
-    refreshPreview();
-  }
+  deleteBackground(bgItem.data("name"), bgItem.data("storage-key")).then(() => {
+    bgItem.remove();
+    if (bgItem.hasClass("selected")) {
+      setSelectedBackgroundForCurrentMode(null);
+      saveSettings();
+      refreshPreview();
+    }
+  });
 }
 
 // 배경 & 이미지 편집
@@ -1607,9 +1648,11 @@ function setupWordReplacer() {
   $("#apply_replacement").on("click", () => {
     originalSnapshot = {
       mainText: $("#text_to_image").val(),
-      switcherTexts: $("#tti_html_switcher_list .tti-html-switcher-text").map(function () {
-        return $(this).val();
-      }).get(),
+      switcherTexts: $("#tti_html_switcher_list .tti-html-switcher-text")
+        .map(function () {
+          return $(this).val();
+        })
+        .get(),
     };
     replaceWords();
   });
@@ -1655,7 +1698,7 @@ function replaceWords() {
       original: $("#original_word_4").val().trim(),
       replacement: $("#replacement_word_4").val(),
     },
-  ].filter(group => group.original);
+  ].filter((group) => group.original);
 
   if (wordGroup.length === 0) {
     return;
@@ -1666,9 +1709,12 @@ function replaceWords() {
     const originalTemp = wordGroup.map((_, index) => `__REPLACE_${Date.now()}_${index}__`);
 
     for (let i = 0; i < wordGroup.length; i++) {
-      const { original } = wordGroup[i];
+      const {original} = wordGroup[i];
       const temp = originalTemp[i];
-      const oriMulWord = original.split('||').map(word => word.trim()).filter(word => word);
+      const oriMulWord = original
+        .split("||")
+        .map((word) => word.trim())
+        .filter((word) => word);
 
       for (const origWord of oriMulWord) {
         const containsKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(origWord);
@@ -1725,22 +1771,17 @@ function replaceWords() {
 function replaceString(text, original, replacement, letterCase, unitControl) {
   const specialChar = /[\s\.,;:!?\(\)\[\]{}"'<>\/\\\-_=\+\*&\^%\$#@~`|]/;
   let result = "";
-  
+
   for (let i = 0; i < text.length; i++) {
-    if (
-      i <= text.length - original.length &&
-      (letterCase 
-        ? text.slice(i, i + original.length) === original
-        : text.slice(i, i + original.length).toLowerCase() === original.toLowerCase())
-    ) {
+    if (i <= text.length - original.length && (letterCase ? text.slice(i, i + original.length) === original : text.slice(i, i + original.length).toLowerCase() === original.toLowerCase())) {
       const isStartBoundary = i === 0 || specialChar.test(text[i - 1]);
       const endPos = i + original.length;
       const nextChar = text[endPos] || "";
       const containSymbols = /[^\wa-zA-Z]/.test(original);
-      
+
       if (unitControl) {
         const isEndBoundary = endPos === text.length || specialChar.test(nextChar) || !/[a-zA-Z0-9]/.test(nextChar);
-        
+
         if (containSymbols || (isStartBoundary && isEndBoundary)) {
           result += replacement;
           i = endPos - 1;
@@ -1752,10 +1793,10 @@ function replaceString(text, original, replacement, letterCase, unitControl) {
         continue;
       }
     }
-    
+
     result += text[i];
   }
-  
+
   return result;
 }
 function findKoreanWord(text, originalWord, replacementWord, unitControl) {
@@ -1763,19 +1804,13 @@ function findKoreanWord(text, originalWord, replacementWord, unitControl) {
   let result = "";
 
   for (let i = 0; i < text.length; i++) {
-    if (
-      i <= text.length - originalWord.length &&
-      text.slice(i, i + originalWord.length) === originalWord
-    ) {
+    if (i <= text.length - originalWord.length && text.slice(i, i + originalWord.length) === originalWord) {
       const endPos = i + originalWord.length;
 
       if (unitControl) {
         const isStartBoundary = i === 0 || specialChar.test(text[i - 1]);
         const nextChar = text[endPos] || "";
-        const isEndBoundary =
-          endPos === text.length ||
-          specialChar.test(nextChar) ||
-          !/[가-힣0-9]/.test(nextChar);
+        const isEndBoundary = endPos === text.length || specialChar.test(nextChar) || !/[가-힣0-9]/.test(nextChar);
 
         if (isStartBoundary && isEndBoundary) {
           result += replacementWord;
@@ -1971,8 +2006,7 @@ function autoPreview(event) {
   saveSettings();
   if (event.target.checked) {
     refreshPreview();
-  }
-  else {
+  } else {
     $(".refresh-preview").addClass("shown");
   }
 }
@@ -2001,9 +2035,7 @@ function updatePreviewDownloadAllButton(itemCount) {
 
   if (itemCount >= 2 && !isHtmlModeEnabled()) {
     if ($dlAllBtn.length === 0) {
-      const $newDlAllBtn = $(
-        '<div class="dl_all"><i class="fa-solid fa-circle-down"></i> 전체 다운로드</div>'
-      );
+      const $newDlAllBtn = $('<div class="dl_all"><i class="fa-solid fa-circle-down"></i> 전체 다운로드</div>');
       $previewTitle.append($newDlAllBtn);
       $newDlAllBtn.on("click", () => {
         autoDownload("#image_preview_container .download-btn", 500);
@@ -2024,6 +2056,7 @@ function renderPreviewContent() {
 
   updatePreviewDownloadAllButton(chunks.length);
 }
+const _debouncedRender = debounce(() => renderPreviewContent(), 150);
 function refreshPreview() {
   $(".refresh-preview").removeClass("shown");
 
@@ -2034,7 +2067,7 @@ function refreshPreview() {
     return;
   }
 
-  renderPreviewContent();
+  _debouncedRender();
 }
 function manualRefresh() {
   if (!extension_settings[extensionName].autoPreview) {
@@ -2094,10 +2127,10 @@ function highlighterTags() {
           <input type="text" class="tag-name" placeholder="태그이름" value="${tag.name}" />
           <div>            
             <select class="tag-font-family" data-html-hide="tag_font_family">
-              <option value="useGlobal" ${(!tag.fontFamily || tag.fontFamily === "useGlobal") ? "selected" : ""}>전역 폰트 사용</option>
+              <option value="useGlobal" ${!tag.fontFamily || tag.fontFamily === "useGlobal" ? "selected" : ""}>전역 폰트 사용</option>
             </select>
             <select class="tag-html-font-family" data-html-only="tag_html_font_family">
-              <option value="useGlobal" ${(!tag.htmlFontFamily || tag.htmlFontFamily === "useGlobal") ? "selected" : ""}>전역 폰트 사용</option>
+              <option value="useGlobal" ${!tag.htmlFontFamily || tag.htmlFontFamily === "useGlobal" ? "selected" : ""}>전역 폰트 사용</option>
               <option value="Ridibatang" ${tag.htmlFontFamily === "Ridibatang" ? "selected" : ""}>리디바탕</option>
               <option value="Nanum Gothic" ${tag.htmlFontFamily === "Nanum Gothic" ? "selected" : ""}>나눔고딕</option>
               <option value="GangwonEducationModuche" ${tag.htmlFontFamily === "GangwonEducationModuche" ? "selected" : ""}>강원교육모두체</option>
@@ -2105,7 +2138,7 @@ function highlighterTags() {
             </select>
             <input type="number" class="tag-font-size" value="${tag.fontSize}" min="12" max="50" />
             <select class="tag-stroke-width">
-              <option value="inherit" ${(!tag.strokeWidth || tag.strokeWidth === "inherit") ? "selected" : ""}>전역</option>
+              <option value="inherit" ${!tag.strokeWidth || tag.strokeWidth === "inherit" ? "selected" : ""}>전역</option>
               <option value="0" ${tag.strokeWidth === "0" ? "selected" : ""}>기본</option>
               <option value="0.8" ${tag.strokeWidth === "0.8" ? "selected" : ""}>세미 볼드</option>
               <option value="1.5" ${tag.strokeWidth === "1.5" ? "selected" : ""}>볼드</option>
@@ -2113,21 +2146,21 @@ function highlighterTags() {
           </div>
           <div>
             <div class="font-color-container">
-              <input type="checkbox" class="use-tag-font-color" ${tag.useTagFontColor ? 'checked' : ""} />
-              <input type="color" class="tag-font-color" value="${tag.fontColor}" ${!tag.useTagFontColor ? 'disabled' : ""} />
+              <input type="checkbox" class="use-tag-font-color" ${tag.useTagFontColor ? "checked" : ""} />
+              <input type="color" class="tag-font-color" value="${tag.fontColor}" ${!tag.useTagFontColor ? "disabled" : ""} />
             </div>
             <div class="bg-color-container">
-              <input type="checkbox" class="use-tag-bg-color" ${tag.useTagBgColor ? 'checked' : ""} />
-              <input type="color" class="tag-bg-color" value="${tag.bgColor}" ${!tag.useTagBgColor ? 'disabled' : ""} />       
+              <input type="checkbox" class="use-tag-bg-color" ${tag.useTagBgColor ? "checked" : ""} />
+              <input type="color" class="tag-bg-color" value="${tag.bgColor}" ${!tag.useTagBgColor ? "disabled" : ""} />       
             </div>
           </div>
           </div>
         <button class="delete-tag-btn buttons clear"><i class="fa-solid fa-eraser"></i></button>
       </div>
     `);
-    
-    highlighterFonts(highlightTagItem.find('.tag-font-family'), tag.fontFamily);
-    
+
+    highlighterFonts(highlightTagItem.find(".tag-font-family"), tag.fontFamily);
+
     highlightContainer.append(highlightTagItem);
   });
   const addBtn = $('<button class="add-tag-btn buttons">추가</button>');
@@ -2138,10 +2171,10 @@ async function highlighterFonts(fontOption, selectedFont) {
   const fontFamilyName = await fetch(`${extensionFolderPath}/font-family.json`);
   const fonts = await fontFamilyName.json();
   fonts.sort((a, b) => a.label.localeCompare(b.label));
-  
+
   fontOption.empty();
-  fontOption.append(`<option value="useGlobal">전역 폰트 사용</option>`);  
-  fonts.forEach(font => {
+  fontOption.append(`<option value="useGlobal">전역 폰트 사용</option>`);
+  fonts.forEach((font) => {
     fontOption.append(`<option value="${font.value}">${font.label}</option>`);
   });
   if (selectedFont) {
@@ -2196,26 +2229,26 @@ function enableMarkdown(text, options = {}) {
     if (headingMatch) {
       const hashCount = headingMatch[1].length;
       const baseHeadingBonus = (4 - hashCount) * 2;
-      headingSizeBonus = isHtmlModeEnabled() ? baseHeadingBonus : (baseHeadingBonus + 1);
+      headingSizeBonus = isHtmlModeEnabled() ? baseHeadingBonus : baseHeadingBonus + 1;
       sourceText = headingMatch[2];
     }
   }
 
   const setHighlighterTags = extension_settings[extensionName].setHighlighterTags || [];
   const tagMap = {};
-  setHighlighterTags.forEach(tag => {
+  setHighlighterTags.forEach((tag) => {
     if (tag.name) tagMap[tag.name.toLowerCase()] = tag;
   });
 
   while (i < sourceText.length) {
-    if (sourceText[i] === '<') {
+    if (sourceText[i] === "<") {
       let tagMatch = sourceText.slice(i).match(/^<(\w+)>/);
       if (tagMatch && tagMap[tagMatch[1].toLowerCase()]) {
         const tagName = tagMatch[1].toLowerCase();
         const tagSet = tagMap[tagName];
         const closeTag = `</${tagName}>`;
         const closeIndex = sourceText.indexOf(closeTag, i + tagMatch[0].length);
-        
+
         if (closeIndex !== -1) {
           if (currentText) {
             spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null});
@@ -2223,8 +2256,8 @@ function enableMarkdown(text, options = {}) {
           }
           const tagContent = sourceText.slice(i + tagMatch[0].length, closeIndex);
           const innerContents = enableMarkdown(tagContent, {allowHeading: false});
-          
-          innerContents.forEach(innerContent => {
+
+          innerContents.forEach((innerContent) => {
             if (innerContent.fontFamily || innerContent.fontSize) {
               spans.push(innerContent);
             } else {
@@ -2234,22 +2267,22 @@ function enableMarkdown(text, options = {}) {
                 italic: innerContent.italic,
                 strikethrough: innerContent.strikethrough,
                 underline: innerContent.underline,
-                fontColor: tagSet.useTagFontColor ? tagSet.fontColor : (innerContent.fontColor || null),
-                bgColor: tagSet.useTagBgColor ? tagSet.bgColor : (innerContent.bgColor || null),
+                fontColor: tagSet.useTagFontColor ? tagSet.fontColor : innerContent.fontColor || null,
+                bgColor: tagSet.useTagBgColor ? tagSet.bgColor : innerContent.bgColor || null,
                 fontFamily: tagSet.fontFamily || null,
                 htmlFontFamily: tagSet.htmlFontFamily || null,
                 fontSize: tagSet.fontSize,
-                strokeWidth: tagSet.strokeWidth || null, 
+                strokeWidth: tagSet.strokeWidth || null,
               });
             }
           });
-          
+
           i = closeIndex + closeTag.length;
           continue;
         }
       }
     }
-    
+
     if (sourceText.slice(i, i + 3) === "***") {
       if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
       bold = !bold;
@@ -2296,10 +2329,10 @@ function enableMarkdown(text, options = {}) {
 // 텍스트 정리
 function wrappingTexts(text, mode = "word") {
   const settings = extension_settings[extensionName];
-  
+
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
-  const { width, height } = getCanvasSize();
+  const {width, height} = getCanvasSize();
   const maxWidth = width - 80;
   const fontSize = getActiveFontSize(settings);
   const lineHeight = fontSize * parseFloat(settings.fontLineHeight);
@@ -2345,10 +2378,10 @@ function wrappingTexts(text, mode = "word") {
         lineCount = 0;
       } else {
         if (mode === "word") {
-          currentPage.push([{ text: "", bold: false, italic: false, strikethrough: false, underline: false, fontColor: null, bgColor: null }]);
+          currentPage.push([{text: "", bold: false, italic: false, strikethrough: false, underline: false, fontColor: null, bgColor: null}]);
         } else {
           currentPage.push({
-            spans: [{ text: "", bold: false, italic: false, strikethrough: false, underline: false }],
+            spans: [{text: "", bold: false, italic: false, strikethrough: false, underline: false}],
             softBreak: false,
           });
         }
@@ -2363,24 +2396,20 @@ function wrappingTexts(text, mode = "word") {
     let currentLine = [];
 
     spans.forEach((span) => {
-      const units = mode === "word"
-        ? (span.text.match(/\S+\s*|\s+/g) || [])
-        : Array.from(span.text);
+      const units = mode === "word" ? span.text.match(/\S+\s*|\s+/g) || [] : Array.from(span.text);
 
       units.forEach((unit) => {
         if (mode === "char" && (unit === " " || unit === "\t") && currentLine.length === 0) return;
 
         const fontWeight = span.bold ? "bold" : settings.fontWeight;
         const fontStyle = span.italic ? "italic" : "normal";
-        const fontFamily = (span.fontFamily && span.fontFamily !== "useGlobal") 
-          ? span.fontFamily 
-          : settings.fontFamily;
+        const fontFamily = span.fontFamily && span.fontFamily !== "useGlobal" ? span.fontFamily : settings.fontFamily;
         const setFontSize = span.fontSize || fontSize;
         ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${fontFamily}`;
         ctx.letterSpacing = `${settings.fontSpacing}em`;
 
         let currentLineWidth = 0;
-        currentLine.forEach(item => {
+        currentLine.forEach((item) => {
           const itemFontWeight = item.bold ? "bold" : settings.fontWeight;
           const itemFontStyle = item.italic ? "italic" : "normal";
           const itemFontFamily = item.fontFamily || settings.fontFamily;
@@ -2389,11 +2418,11 @@ function wrappingTexts(text, mode = "word") {
           ctx.letterSpacing = `${settings.fontSpacing}em`;
           currentLineWidth += ctx.measureText(item.text).width;
         });
-        
+
         ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${fontFamily}`;
         ctx.letterSpacing = `${settings.fontSpacing}em`;
         const unitWidth = ctx.measureText(unit).width;
-        
+
         if (currentLineWidth + unitWidth <= lineMaxWidth) {
           currentLine.push({
             text: unit,
@@ -2419,18 +2448,20 @@ function wrappingTexts(text, mode = "word") {
             }
           }
 
-          currentLine = [{
-            text: unit.trimStart(),
-            bold: span.bold,
-            italic: span.italic,
-            strikethrough: span.strikethrough,
-            underline: span.underline,
-            fontColor: span.fontColor,
-            bgColor: span.bgColor,
-            fontFamily: span.fontFamily,
-            fontSize: span.fontSize,
-            strokeWidth: span.strokeWidth,
-          }];
+          currentLine = [
+            {
+              text: unit.trimStart(),
+              bold: span.bold,
+              italic: span.italic,
+              strikethrough: span.strikethrough,
+              underline: span.underline,
+              fontColor: span.fontColor,
+              bgColor: span.bgColor,
+              fontFamily: span.fontFamily,
+              fontSize: span.fontSize,
+              strokeWidth: span.strokeWidth,
+            },
+          ];
         }
       });
     });
@@ -2507,9 +2538,7 @@ function generateTextImage(chunk, index) {
   const secondBgColor = settings.secondBackgroundColor;
 
   const isFullSize = settings.imageRatio === "full";
-  const calcHeight = isFullSize
-    ? Math.max(700, chunk.length * lineHeight + 160)
-    : height;
+  const calcHeight = isFullSize ? Math.max(700, chunk.length * lineHeight + 160) : height;
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -2530,9 +2559,7 @@ function generateTextImage(chunk, index) {
     function setFont(span) {
       const fontWeight = span.bold ? "bold" : settings.fontWeight;
       const fontStyle = span.italic ? "italic" : "normal";
-      const fontFamily = (span.fontFamily && span.fontFamily !== "useGlobal") 
-        ? span.fontFamily 
-        : settings.fontFamily;
+      const fontFamily = span.fontFamily && span.fontFamily !== "useGlobal" ? span.fontFamily : settings.fontFamily;
       const setFontSize = span.fontSize || fontSize;
       ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${fontFamily}`;
     }
@@ -2669,7 +2696,7 @@ function generateTextImage(chunk, index) {
           renderSpan(span, x, textY, "background");
           x += measuredWidths[line.indexOf(span)];
         });
-        
+
         x = alignX;
         line.forEach((span, i) => {
           x += renderSpan(span, x, textY, "text");
@@ -2730,7 +2757,7 @@ function generateTextImage(chunk, index) {
 
     const drawBackground = () => {
       if (!useBgColor) return;
-      
+
       if (useSecondBgColor) {
         const gradient = ctx.createLinearGradient(0, 0, width, calcHeight);
         addSmoothGradientStops(gradient, bgColor, secondBgColor);
@@ -2751,38 +2778,33 @@ function generateTextImage(chunk, index) {
         tempCanvas.height = img.height * scale;
         const tempCtx = tempCanvas.getContext("2d");
         tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
-        
+
         ctx.fillStyle = ctx.createPattern(tempCanvas, "repeat");
         ctx.fillRect(0, 0, width, calcHeight);
       }
     } else if (fillMode === "mix-top" || fillMode === "mix-bottom") {
       drawBackground();
-      
+
       const scale = width / img.width;
       const drawWidth = width;
       const drawHeight = img.height * scale;
       const offsetY = fillMode === "mix-top" ? 0 : calcHeight - drawHeight;
-      
+
       const tempCanvas = document.createElement("canvas");
       tempCanvas.width = width;
       tempCanvas.height = calcHeight;
       const tempCtx = tempCanvas.getContext("2d");
       tempCtx.drawImage(img, 0, offsetY, drawWidth, drawHeight);
-      
+
       const gradientHeight = Math.min(drawHeight * 0.4, calcHeight * 0.3);
-      const gradient = tempCtx.createLinearGradient(
-        0, 
-        fillMode === "mix-top" ? offsetY + drawHeight - gradientHeight : offsetY + gradientHeight,
-        0, 
-        fillMode === "mix-top" ? offsetY + drawHeight : offsetY
-      );
-      gradient.addColorStop(0, 'rgba(0,0,0,1)');
-      gradient.addColorStop(1, 'rgba(0,0,0,0)');
-      
-      tempCtx.globalCompositeOperation = 'destination-in';
+      const gradient = tempCtx.createLinearGradient(0, fillMode === "mix-top" ? offsetY + drawHeight - gradientHeight : offsetY + gradientHeight, 0, fillMode === "mix-top" ? offsetY + drawHeight : offsetY);
+      gradient.addColorStop(0, "rgba(0,0,0,1)");
+      gradient.addColorStop(1, "rgba(0,0,0,0)");
+
+      tempCtx.globalCompositeOperation = "destination-in";
       tempCtx.fillStyle = gradient;
       tempCtx.fillRect(0, 0, width, calcHeight);
-      
+
       ctx.drawImage(tempCanvas, 0, 0);
     } else {
       if (useBgColor) {
@@ -2790,7 +2812,10 @@ function generateTextImage(chunk, index) {
       } else {
         const imgRatio = img.width / img.height;
         const canvasRatio = width / calcHeight;
-        let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
+        let drawWidth,
+          drawHeight,
+          offsetX = 0,
+          offsetY = 0;
 
         if (imgRatio > canvasRatio) {
           drawHeight = calcHeight;
@@ -2807,8 +2832,7 @@ function generateTextImage(chunk, index) {
 
     let filterEffects = [];
     if (settings.bgBlur > 0) filterEffects.push(`blur(${settings.bgBlur}px)`);
-    if (settings.bgBrightness !== undefined)
-      filterEffects.push(`brightness(${settings.bgBrightness}%)`);
+    if (settings.bgBrightness !== undefined) filterEffects.push(`brightness(${settings.bgBrightness}%)`);
     if (settings.bgHue !== undefined) filterEffects.push(`hue-rotate(${settings.bgHue}deg)`);
 
     if (filterEffects.length > 0) {
@@ -2915,12 +2939,7 @@ function generateTextImage(chunk, index) {
   return $preview;
 }
 function escapeHTML(text = "") {
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+  return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 function escapeCSSURL(url = "") {
   return String(url).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
@@ -2932,8 +2951,12 @@ function toRGBA(hex, alpha = 1) {
   const cleanHex = hex.replace("#", "").trim();
   if (![3, 6].includes(cleanHex.length)) return fallback;
 
-  const fullHex = cleanHex.length === 3
-    ? cleanHex.split("").map((ch) => ch + ch).join("")
+  const fullHex =
+    cleanHex.length === 3 ?
+      cleanHex
+        .split("")
+        .map((ch) => ch + ch)
+        .join("")
     : cleanHex;
 
   const r = parseInt(fullHex.slice(0, 2), 16);
@@ -2944,11 +2967,16 @@ function toRGBA(hex, alpha = 1) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 function normalizeHexColor(color = "#000000") {
-  const normalized = String(color || "").trim().toLowerCase();
+  const normalized = String(color || "")
+    .trim()
+    .toLowerCase();
   if (!normalized) return null;
   let hex = normalized.startsWith("#") ? normalized.slice(1) : normalized;
   if (hex.length === 3) {
-    hex = hex.split("").map((ch) => ch + ch).join("");
+    hex = hex
+      .split("")
+      .map((ch) => ch + ch)
+      .join("");
   }
   if (!/^[0-9a-f]{6}$/.test(hex)) return null;
   return `#${hex}`;
@@ -2996,9 +3024,7 @@ function mapHtmlStrokeWidth(value) {
   return numeric;
 }
 function getSpanColor(span, settings) {
-  let textColor = span.isBlockquote
-    ? (settings.blockquoteFontColor || defaultSettings.blockquoteFontColor)
-    : (settings.fontColor || "#000000");
+  let textColor = span.isBlockquote ? settings.blockquoteFontColor || defaultSettings.blockquoteFontColor : settings.fontColor || "#000000";
   if (span.fontColor) {
     textColor = span.fontColor;
   } else {
@@ -3044,8 +3070,7 @@ function buildSpanStyle(span, settings) {
   }
   if (span.bgColor) {
     style.push(`background-color:${span.bgColor} !important`);
-    const isGangwon = span.htmlFontFamily === "GangwonEducationModuche"
-      || (!span.htmlFontFamily || span.htmlFontFamily === "useGlobal") && settings?.htmlFontFace === "GangwonEducationModuche";
+    const isGangwon = span.htmlFontFamily === "GangwonEducationModuche" || ((!span.htmlFontFamily || span.htmlFontFamily === "useGlobal") && settings?.htmlFontFace === "GangwonEducationModuche");
     if (isGangwon) {
       style.push("padding: 0.23em 0 0.1em 0  !important");
     }
@@ -3071,14 +3096,12 @@ function renderMarkdownHTML(text, settings) {
     if (!spans.length) return `<font face="${htmlFontFace}"></font>`;
 
     const groups = [];
-    let currentGroup = { face: htmlFontFace, parts: [] };
+    let currentGroup = {face: htmlFontFace, parts: []};
     spans.forEach((span) => {
-      const spanFace = (span.htmlFontFamily && span.htmlFontFamily !== "useGlobal")
-        ? normalizeHtmlFontFace(span.htmlFontFamily)
-        : htmlFontFace;
+      const spanFace = span.htmlFontFamily && span.htmlFontFamily !== "useGlobal" ? normalizeHtmlFontFace(span.htmlFontFamily) : htmlFontFace;
       if (spanFace !== currentGroup.face) {
         if (currentGroup.parts.length) groups.push(currentGroup);
-        currentGroup = { face: spanFace, parts: [] };
+        currentGroup = {face: spanFace, parts: []};
       }
       const spanText = escapeHTML(span.text || "");
       const spanStyle = buildSpanStyle(span, settings);
@@ -3112,9 +3135,7 @@ function renderMarkdownHTML(text, settings) {
       const fontColor = settings.blockquoteFontColor || defaultSettings.blockquoteFontColor;
       const borderColor = settings.blockquoteBorderColor || defaultSettings.blockquoteBorderColor;
       const bgColor = toRGBA(settings.blockquoteBgColor || defaultSettings.blockquoteBgColor, 0.3);
-      const quoteHTML = quoteLines
-        .map((quoteLine) => `<div style="margin:0 !important;">${renderLineHTML(quoteLine, true)}</div>`)
-        .join("");
+      const quoteHTML = quoteLines.map((quoteLine) => `<div style="margin:0 !important;">${renderLineHTML(quoteLine, true)}</div>`).join("");
       htmlLines.push(`<div class="blockquote" style="width:auto !important;color:${fontColor} !important;border-radius:5px !important;border-left:5px solid ${borderColor} !important;padding:8px !important;background:${bgColor} !important;-webkit-backdrop-filter:blur(10px) !important;backdrop-filter:blur(10px) !important;margin:8px 0 !important;"><div style="display:flex !important;flex-direction:column !important;gap:0 !important;margin:0 !important;">${quoteHTML}</div></div>`);
       i = j - 1;
       continue;
@@ -3140,17 +3161,21 @@ function createHTMLSnippet(text, index) {
   const useBgColor = !!settings.useBackgroundColor;
   const useSecondBgColor = !!settings.useSecondBackgroundColor;
   const escapedURL = bgURL ? escapeCSSURL(bgURL) : "";
-  const colorBackground = useBgColor
-    ? (useSecondBgColor
-      ? smoothGradient
-      : backgroundColor)
+  const colorBackground =
+    useBgColor ?
+      useSecondBgColor ? smoothGradient
+      : backgroundColor
     : "transparent";
-  const colorBackgroundImage = useBgColor
-    ? (useSecondBgColor
-      ? smoothGradient
-      : `linear-gradient(${backgroundColor}, ${backgroundColor})`)
+  const colorBackgroundImage =
+    useBgColor ?
+      useSecondBgColor ? smoothGradient
+      : `linear-gradient(${backgroundColor}, ${backgroundColor})`
     : "none";
-  const bgLayerImage = escapedURL ? (useBgColor ? `${colorBackgroundImage}, url('${escapedURL}')` : `url('${escapedURL}')`) : "none";
+  const bgLayerImage =
+    escapedURL ?
+      useBgColor ? `${colorBackgroundImage}, url('${escapedURL}')`
+      : `url('${escapedURL}')`
+    : "none";
 
   const filterEffects = [];
   filterEffects.push(`brightness(${settings.bgBrightness ?? 100}%)`);
@@ -3170,108 +3195,40 @@ function createHTMLSnippet(text, index) {
   const rawFooterText = String(settings.footerText || "").trim();
   const hasFooter = rawFooterText.length > 0;
   const isScrollFooterLayout = footerLayoutMode === "scroll";
-  const contentMaxHeightValue = isScrollFooterLayout
-    ? (hasFooter ? `calc(${footerHeightPx}px - 100px)` : `calc(${footerHeightPx}px - 64px)`)
+  const contentMaxHeightValue =
+    isScrollFooterLayout ?
+      hasFooter ? `calc(${footerHeightPx}px - 100px)`
+      : `calc(${footerHeightPx}px - 64px)`
     : "none";
-  const containerInlineStyle = [
-    "background:transparent !important",
-    "box-sizing:border-box !important",
-    "width:100% !important",
-    `max-width:${footerWidthPx}px !important`,
-    isScrollFooterLayout ? `max-height:${footerHeightPx}px !important` : "max-height:none !important",
-    "margin:0 auto !important",
-    "padding:32px !important",
-    "border-radius:15px !important",
-    "overflow:hidden !important",
-    "isolation:isolate !important",
-  ].join(";");
-  const bgInlineStyle = [
-    "border-radius:15px !important",
-    `background:${useBgColor ? colorBackground : "transparent"} !important`,
-    `background-image:${bgLayerImage} !important`,
-    "background-size:cover !important",
-    "background-position:center !important",
-    "background-repeat:no-repeat !important",
-    `filter:${bgFilter || "none"} !important`,
-  ].join(";");
-  const overlayInlineStyle = [
-    "border-radius:15px !important",
-    `background:${toRGBA(settings.overlayColor || "#ffffff", overlayOpacity)} !important`,
-    `-webkit-backdrop-filter:blur(${blurStrength}px) !important`,
-    `backdrop-filter:blur(${blurStrength}px) !important`,
-    "pointer-events:none !important",
-  ].join(";");
-  const switcherDotsWrapStyle = [
-    "display:flex !important",
-    "justify-content:flex-end !important",
-    "margin:6px 10px 0 0 !important",
-    "gap:6px !important",
-    "z-index:1 !important",
-    "pointer-events:auto !important",
-  ].join(";");
-  const switcherDotStyle = [
-    "display:block !important",
-    "width:15px !important",
-    "height:10px !important",
-    "border-radius:999px !important",
-    "background:rgba(255,255,255,0.55) !important",
-    "border:1px solid rgba(0,0,0,0.18) !important",
-    "cursor:pointer !important",
-    "transition:transform .15s ease, background-color .15s ease !important",
-  ].join(";");
-  const contentInlineStyle = [
-    `max-height:${contentMaxHeightValue} !important`,
-    `overflow-y:${isScrollFooterLayout ? "auto" : "visible"} !important`,
-    `color:${globalTextColor} !important`,
-    `font-size:${htmlFontSize}px !important`,
-    "font-weight:400 !important",
-    `letter-spacing:${settings.fontSpacing || 0}em !important`,
-    `line-height:${settings.fontLineHeight || 1.5} !important`,
-    `text-align:${settings.fontAlign || "left"} !important`,
-    "white-space:pre-wrap !important",
-    `word-break:${lineBreakByChar ? "break-all" : "break-word"} !important`,
-    "overflow-wrap:anywhere !important",
-    `margin-bottom:${hasFooter ? 44 : 0}px !important`,
-    `-webkit-text-stroke:${globalStrokeWidth}px ${globalTextColor} !important`,
-  ].join(";");
-  const footerInlineStyle = [
-    "display:flex !important",
-    "flex-wrap:nowrap !important",
-    "gap:6px !important",
-    "width:calc(100% - 70px) !important",
-    "right:35px !important",
-    "bottom:35px !important",
-    "overflow-x:auto !important",
-    "overflow-y:hidden !important",
-    "white-space:nowrap !important",
-    "font-size:12px !important",
-    "text-align:right !important",
-  ].join(";");
-  const footerItemStyle = [
-    "display:inline-block !important",
-    "white-space:nowrap !important",
-    "padding:2px 8px !important",
-    "border-radius:999px !important",
-    `color:${settings.footerColor || "#000000"} !important`,
-    `background:${toRGBA(settings.footerBgColor || "#ffffff", 0.2)} !important`,
-    "line-height:1.4 !important",
-  ].join(";");
-  const footerTokens = rawFooterText
-    ? rawFooterText.split(",").map((token) => token.trim()).filter(Boolean)
+  const containerInlineStyle = ["background:transparent !important", "box-sizing:border-box !important", "width:100% !important", `max-width:${footerWidthPx}px !important`, isScrollFooterLayout ? `max-height:${footerHeightPx}px !important` : "max-height:none !important", "margin:0 auto !important", "padding:32px !important", "border-radius:15px !important", "overflow:hidden !important", "isolation:isolate !important"].join(";");
+  const bgInlineStyle = ["border-radius:15px !important", `background:${useBgColor ? colorBackground : "transparent"} !important`, `background-image:${bgLayerImage} !important`, "background-size:cover !important", "background-position:center !important", "background-repeat:no-repeat !important", `filter:${bgFilter || "none"} !important`].join(";");
+  const overlayInlineStyle = ["border-radius:15px !important", `background:${toRGBA(settings.overlayColor || "#ffffff", overlayOpacity)} !important`, `-webkit-backdrop-filter:blur(${blurStrength}px) !important`, `backdrop-filter:blur(${blurStrength}px) !important`, "pointer-events:none !important"].join(";");
+  const switcherDotsWrapStyle = ["display:flex !important", "justify-content:flex-end !important", "margin:6px 10px 0 0 !important", "gap:6px !important", "z-index:1 !important", "pointer-events:auto !important"].join(";");
+  const switcherDotStyle = ["display:block !important", "width:15px !important", "height:10px !important", "border-radius:999px !important", "background:rgba(255,255,255,0.55) !important", "border:1px solid rgba(0,0,0,0.18) !important", "cursor:pointer !important", "transition:transform .15s ease, background-color .15s ease !important"].join(";");
+  const contentInlineStyle = [`max-height:${contentMaxHeightValue} !important`, `overflow-y:${isScrollFooterLayout ? "auto" : "visible"} !important`, `color:${globalTextColor} !important`, `font-size:${htmlFontSize}px !important`, "font-weight:400 !important", `letter-spacing:${settings.fontSpacing || 0}em !important`, `line-height:${settings.fontLineHeight || 1.5} !important`, `text-align:${settings.fontAlign || "left"} !important`, "white-space:pre-wrap !important", `word-break:${lineBreakByChar ? "break-all" : "break-word"} !important`, "overflow-wrap:anywhere !important", `margin-bottom:${hasFooter ? 44 : 0}px !important`, `-webkit-text-stroke:${globalStrokeWidth}px ${globalTextColor} !important`].join(";");
+  const footerInlineStyle = ["display:flex !important", "flex-wrap:nowrap !important", "gap:6px !important", "width:calc(100% - 70px) !important", "right:35px !important", "bottom:35px !important", "overflow-x:auto !important", "overflow-y:hidden !important", "white-space:nowrap !important", "font-size:12px !important", "text-align:right !important"].join(";");
+  const footerItemStyle = ["display:inline-block !important", "white-space:nowrap !important", "padding:2px 8px !important", "border-radius:999px !important", `color:${settings.footerColor || "#000000"} !important`, `background:${toRGBA(settings.footerBgColor || "#ffffff", 0.2)} !important`, "line-height:1.4 !important"].join(";");
+  const footerTokens =
+    rawFooterText ?
+      rawFooterText
+        .split(",")
+        .map((token) => token.trim())
+        .filter(Boolean)
     : [];
   const htmlFontFace = getHtmlFontFace(settings);
-  const footerItemsHTML = footerTokens.length
-    ? footerTokens.map((token) => `<span style="${footerItemStyle}"><font face="${htmlFontFace}">${escapeHTML(token)}</font></span>`).join("")
-    : (rawFooterText
-      ? `<span style="${footerItemStyle}"><font face="${htmlFontFace}">${escapeHTML(rawFooterText)}</font></span>`
-      : "");
-  const footerHTML = hasFooter
-    ? `
+  const footerItemsHTML =
+    footerTokens.length ? footerTokens.map((token) => `<span style="${footerItemStyle}"><font face="${htmlFontFace}">${escapeHTML(token)}</font></span>`).join("")
+    : rawFooterText ? `<span style="${footerItemStyle}"><font face="${htmlFontFace}">${escapeHTML(rawFooterText)}</font></span>`
+    : "";
+  const footerHTML =
+    hasFooter ?
+      `
   <div class="tti-footer" style="${footerInlineStyle}">${footerItemsHTML}</div>`
     : "";
   const shouldRenderBg = escapedURL || useBgColor;
-  const backgroundHTML = shouldRenderBg
-    ? `
+  const backgroundHTML =
+    shouldRenderBg ?
+      `
   <div class="tti-bg" style="${bgInlineStyle}"></div>`
     : "";
   const hasSwitcher = switcherRenderedHTML.length > 0;
@@ -3281,35 +3238,25 @@ function createHTMLSnippet(text, index) {
     html,
     itemIndex,
   }));
-  const switcherRadiosHTML = hasSwitcher
-    ? `
+  const switcherRadiosHTML =
+    hasSwitcher ?
+      `
   <input type="radio" class="tti-switch-input" name="${switcherUid}" id="${switcherBaseId}" checked>
 ${switcherItems.map((item) => `  <input type="radio" class="tti-switch-input" name="${switcherUid}" id="${item.id}">`).join("\n")}`
     : "";
-  const switcherDotsHTML = hasSwitcher
-    ? `<div class="tti-switcher-dots" style="${switcherDotsWrapStyle}"><label style="${switcherDotStyle}" title="기본 텍스트" for="${switcherBaseId}"></label>${switcherItems.map((item) => `<label style="${switcherDotStyle}" title="텍스트 ${item.itemIndex + 1}" for="${item.id}"></label>`).join("")}</div>`
-    : "";
+  const switcherDotsHTML = hasSwitcher ? `<div class="tti-switcher-dots" style="${switcherDotsWrapStyle}"><label style="${switcherDotStyle}" title="기본 텍스트" for="${switcherBaseId}"></label>${switcherItems.map((item) => `<label style="${switcherDotStyle}" title="텍스트 ${item.itemIndex + 1}" for="${item.id}"></label>`).join("")}</div>` : "";
   const overlayHTML = `
   <div class="tti-overlay" style="${overlayInlineStyle}">${switcherDotsHTML}</div>`;
-  const contentHTML = hasSwitcher
-    ? `
+  const contentHTML =
+    hasSwitcher ?
+      `
   <div class="tti-panels" style="margin-top: 10px;">
     <div class="tti-content tti-panel tti-panel-base" style="${contentInlineStyle}">${markdownHTML}</div>
 ${switcherItems.map((item) => `    <div class="tti-content tti-panel ${item.panelClass}" style="${contentInlineStyle}">${item.html}</div>`).join("\n")}
   </div>`
     : `
   <div class="tti-content" style="${contentInlineStyle}">${markdownHTML}</div>`;
-  const switcherRuleStyle = hasSwitcher
-    ? [
-      `.tti-switch-input{position:absolute !important;opacity:0 !important;pointer-events:none !important;}`,
-      `.tti-panels{position:relative !important;z-index:3 !important;}`,
-      `.tti-panel{display:none !important;}`,
-      `#${switcherBaseId}:checked ~ .tti-panels .tti-panel-base{display:block !important;}`,
-      `#${switcherBaseId}:checked ~ .tti-overlay .tti-switcher-dots label[for="${switcherBaseId}"]{background:rgba(255,255,255,0.95) !important;transform:scale(1.12) !important;}`,
-      ...switcherItems.map((item) => `#${item.id}:checked ~ .tti-panels .${item.panelClass}{display:block !important;}`),
-      ...switcherItems.map((item) => `#${item.id}:checked ~ .tti-overlay .tti-switcher-dots label[for="${item.id}"]{background:rgba(255,255,255,0.95) !important;transform:scale(1.12) !important;}`),
-    ].join("")
-    : "";
+  const switcherRuleStyle = hasSwitcher ? [`.tti-switch-input{position:absolute !important;opacity:0 !important;pointer-events:none !important;}`, `.tti-panels{position:relative !important;z-index:3 !important;}`, `.tti-panel{display:none !important;}`, `#${switcherBaseId}:checked ~ .tti-panels .tti-panel-base{display:block !important;}`, `#${switcherBaseId}:checked ~ .tti-overlay .tti-switcher-dots label[for="${switcherBaseId}"]{background:rgba(255,255,255,0.95) !important;transform:scale(1.12) !important;}`, ...switcherItems.map((item) => `#${item.id}:checked ~ .tti-panels .${item.panelClass}{display:block !important;}`), ...switcherItems.map((item) => `#${item.id}:checked ~ .tti-overlay .tti-switcher-dots label[for="${item.id}"]{background:rgba(255,255,255,0.95) !important;transform:scale(1.12) !important;}`)].join("") : "";
   const scopedStyle = `.tti{position:relative !important;}.tti-bg{position:absolute !important;inset:0 !important;z-index:0 !important;}.tti-overlay{position:absolute !important;inset:16px !important;z-index:2 !important;}.tti-content{position:relative !important;z-index:3 !important;}.tti-footer{position:absolute !important;z-index:4 !important;scrollbar-width:none !important;}.tti-footer>span:first-child{margin-left:auto !important;}.tti-footer::-webkit-scrollbar{height:0 !important;}${switcherRuleStyle}`;
 
   return `<div>
@@ -3324,14 +3271,14 @@ function generateHTMLPreview(text, index) {
   const htmlCode = createHTMLSnippet(text, index);
   const previewFontFamily = getHtmlPreviewFontFamily();
   const fontFaceMap = {
-    "Ridibatang": "RIDIBatang",
+    Ridibatang: "RIDIBatang",
     "Nanum Gothic": "Pretendard-Regular",
-    "GangwonEducationModuche": "GangwonEducationModuche",
-    "OngleipParkDahyeon": "OngleipParkDahyeon",
+    GangwonEducationModuche: "GangwonEducationModuche",
+    OngleipParkDahyeon: "OngleipParkDahyeon",
   };
-  const perFontFaceRules = Object.entries(fontFaceMap).map(([face, family]) =>
-    `.html-render-preview .tti-content font[face="${face}"],.html-render-preview .tti-content font[face="${face}"] span[style]{font-family:${family} !important;}`
-  ).join("");
+  const perFontFaceRules = Object.entries(fontFaceMap)
+    .map(([face, family]) => `.html-render-preview .tti-content font[face="${face}"],.html-render-preview .tti-content font[face="${face}"] span[style]{font-family:${family} !important;}`)
+    .join("");
   const previewOnlyStyle = `<style>.html-render-preview .tti-content,.html-render-preview .tti-content span[style],.html-render-preview .tti-footer,.html-render-preview .tti-footer *{font-family:${previewFontFamily} !important;}${perFontFaceRules}</style>`;
 
   const $preview = $("<div>").addClass("image-preview-item html-preview-item");
@@ -3365,50 +3312,59 @@ function autoDownload(allDLbuttons, delay = 1500) {
   }, delay);
 }
 async function zipDL(DLbuttons) {
-  if (typeof JSZip === 'undefined') {
-    await loadScript(JSZipCDN);
+  if (typeof JSZip === "undefined") {
+    await loadScript(JSZipLocal, JSZipCDN);
   }
-  if (typeof saveAs === 'undefined') {
-    await loadScript(FileSaverCDN);
+  if (typeof saveAs === "undefined") {
+    await loadScript(FileSaverLocal, FileSaverCDN);
   }
 
   const zip = new JSZip();
   const now = new Date();
-  const dateString = `[Log] ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
-    now.getDate()
-  ).padStart(2, "0")}-${now.getHours()}-${now.getMinutes()}`;
-  
+  const dateString = `[Log] ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}-${now.getHours()}-${now.getMinutes()}`;
+
   const zipper = `${dateString}`;
-  const zipFormat = '.zip';
+  const zipFormat = ".zip";
   const promises = [];
 
   for (let i = 0; i < DLbuttons.length; i++) {
     const $img = $(DLbuttons[i]).siblings("img");
     const imgSrc = $img.attr("src");
-    const imageName = `${zipper} (${i+1}).png`;
-  
-    const base64ori = imgSrc.split(',')[1];
+    const imageName = `${zipper} (${i + 1}).png`;
+
+    const base64ori = imgSrc.split(",")[1];
     const imageData = atob(base64ori);
     const imgArray = new Uint8Array(imageData.length);
-    
+
     for (let j = 0; j < imageData.length; j++) {
       imgArray[j] = imageData.charCodeAt(j);
     }
-    
+
     zip.file(imageName, imgArray);
   }
   Promise.all(promises).then(() => {
-    zip.generateAsync({ type: 'blob' }).then(content => {
+    zip.generateAsync({type: "blob"}).then((content) => {
       saveAs(content, zipper + zipFormat);
     });
   });
 }
-function loadScript(src) {
+function loadScript(src, fallbackSrc) {
   return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
+    const script = document.createElement("script");
     script.src = src;
     script.onload = resolve;
-    script.onerror = reject;
+    script.onerror = () => {
+      if (fallbackSrc) {
+        console.warn(`[txt-to-img] ${src} 로드 실패, fallback: ${fallbackSrc}`);
+        const fb = document.createElement("script");
+        fb.src = fallbackSrc;
+        fb.onload = resolve;
+        fb.onerror = reject;
+        document.head.appendChild(fb);
+      } else {
+        reject(new Error(`Script load failed: ${src}`));
+      }
+    };
     document.head.appendChild(script);
   });
 }
@@ -3423,9 +3379,7 @@ function controlDL(DLbuttons, index) {
 // 저장 이미지 형식
 function saveImage(dataUrl, filename) {
   const now = new Date();
-  const dateString = `[Log] ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
-    now.getDate()
-  ).padStart(2, "0")}-${now.getHours()}-${now.getMinutes()}`;
+  const dateString = `[Log] ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}-${now.getHours()}-${now.getMinutes()}`;
   const index = filename.replace(".png", "");
   const link = document.createElement("a");
   link.href = dataUrl;
@@ -3459,7 +3413,7 @@ jQuery(async () => {
   await initSettings();
   presetUI();
   presetBackupSys();
-  customBG();
+  await customBG();
   setupWordReplacer();
   setupHtmlSwitcherInputs();
   bindingFunctions();
@@ -3591,11 +3545,11 @@ function botCardButtons() {
     if ($(this).hasClass("remover")) {
       oriCard = null;
       oriCardType = null;
-      Object.keys(cardDataTab).forEach(key => delete cardDataTab[key]);
+      Object.keys(cardDataTab).forEach((key) => delete cardDataTab[key]);
       $("#text_to_image").val("");
       $(".bot-data[data-type]").removeClass("active");
-      $(this).removeClass("remover");  
-      $(".bot-data:not(.botImporter)").prop("disabled", true);  
+      $(this).removeClass("remover");
+      $(".bot-data:not(.botImporter)").prop("disabled", true);
     } else {
       loadBotCard();
       refreshPreview();
@@ -3608,53 +3562,53 @@ function botCardButtons() {
 }
 function highlighterOption() {
   $(document).on("click", ".add-tag-btn", addHighlightTag);
-  $(document).on("click", ".delete-tag-btn", function() {
+  $(document).on("click", ".delete-tag-btn", function () {
     const index = $(this).closest(".tag-item").data("index");
     deleteHighlightTag(index);
   });
 
-  $(document).on("input", ".tag-name", function() {
+  $(document).on("input", ".tag-name", function () {
     const index = $(this).closest(".tag-item").data("index");
     updateHighlightTag(index, "name", $(this).val());
   });
 
-  $(document).on("change", ".tag-font-family", function() {
+  $(document).on("change", ".tag-font-family", function () {
     const index = $(this).closest(".tag-item").data("index");
     updateHighlightTag(index, "fontFamily", $(this).val());
     refreshPreview();
   });
-  $(document).on("change", ".tag-html-font-family", function() {
+  $(document).on("change", ".tag-html-font-family", function () {
     const index = $(this).closest(".tag-item").data("index");
     updateHighlightTag(index, "htmlFontFamily", $(this).val());
     refreshPreview();
   });
-  $(document).on("change", ".tag-stroke-width", function() {
+  $(document).on("change", ".tag-stroke-width", function () {
     const index = $(this).closest(".tag-item").data("index");
     updateHighlightTag(index, "strokeWidth", $(this).val());
   });
-  $(document).on("change", ".use-tag-font-color", function() {
+  $(document).on("change", ".use-tag-font-color", function () {
     const index = $(this).closest(".tag-item").data("index");
     const checked = $(this).prop("checked");
     updateHighlightTag(index, "useTagFontColor", checked);
     $(this).siblings(".tag-font-color").prop("disabled", !checked);
   });
-  $(document).on("change", ".tag-font-color", function() {
+  $(document).on("change", ".tag-font-color", function () {
     const index = $(this).closest(".tag-item").data("index");
     updateHighlightTag(index, "fontColor", $(this).val());
   });
 
-  $(document).on("change", ".use-tag-bg-color", function() {
+  $(document).on("change", ".use-tag-bg-color", function () {
     const index = $(this).closest(".tag-item").data("index");
     const checked = $(this).prop("checked");
     updateHighlightTag(index, "useTagBgColor", checked);
     $(this).siblings(".tag-bg-color").prop("disabled", !checked);
   });
-  $(document).on("change", ".tag-bg-color", function() {
+  $(document).on("change", ".tag-bg-color", function () {
     const index = $(this).closest(".tag-item").data("index");
     updateHighlightTag(index, "bgColor", $(this).val());
   });
 
-  $(document).on("input", ".tag-font-size", function() {
+  $(document).on("input", ".tag-font-size", function () {
     const index = $(this).closest(".tag-item").data("index");
     updateHighlightTag(index, "fontSize", parseInt($(this).val()));
   });
