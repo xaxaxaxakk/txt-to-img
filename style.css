@@ -828,6 +828,12 @@ h4:has(.replace-control) {
   font-style: normal;
 }
 @font-face {
+  font-family: "NotoSerifKR";
+  font-weight: normal;
+  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_two@1.0/NotoSerifKR.woff") format("woff");
+  font-style: normal;
+}
+@font-face {
   font-family: "RIDIBatang";
   font-weight: normal;
   src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_twelve@1.0/RIDIBatang.woff') format('woff');
