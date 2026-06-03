@@ -806,37 +806,31 @@ h4:has(.replace-control) {
 @font-face {
   font-family: "Chosunilbo_myungjo";
   src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/Chosunilbo_myungjo.woff') format('woff');
-    font-weight: normal;
-    font-display: swap;
+  font-weight: normal;
+  font-display: swap;
 }
 @font-face {
   font-family: "ChosunSm";
   font-weight: normal;
   src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@1.1/ChosunSm.woff') format('woff');
-    font-style: normal;
+  font-style: normal;
 }
 @font-face {
   font-family: "ChosunGu";
   font-weight: normal;
-  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@1.0/ChosunGu.woff") format("woff");
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@1.0/ChosunGu.woff') format('woff');
   font-style: normal;
 }
 @font-face {
   font-family: "ChosunSg";
   font-weight: normal;
-  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@1.0/ChosunSg.woff") format("woff");
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@1.0/ChosunSg.woff') format('woff');
   font-style: normal;
 }
 @font-face {
   font-family: "RIDIBatang";
   font-weight: normal;
-  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_twelve@1.0/RIDIBatang.woff") format("woff");
-  font-style: normal;
-}
-@font-face {
-  font-family: "NotoSerifKR";
-  font-weight: normal;
-  src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_two@1.0/NotoSerifKR.woff") format("woff");
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_twelve@1.0/RIDIBatang.woff') format('woff');
   font-style: normal;
 }
 @font-face {
