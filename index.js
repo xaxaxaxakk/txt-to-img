@@ -1186,10 +1186,61 @@ function crc32(data) {
 }
 
 // 폰트 패밀리
-function fontFamily(event) {
+async function fontFamily(event) {
   extension_settings[extensionName].fontFamily = event.target.value;
   saveSettings();
+  await ensureFontFamilyLoaded(extension_settings[extensionName].fontFamily);
   refreshPreview();
+}
+
+const fontLoadCache = new Map();
+function getCSSFontFamily(fontFamily) {
+  return `"${String(fontFamily || defaultSettings.fontFamily).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+function getFontLoadDescriptor(fontFamily) {
+  return `1em ${getCSSFontFamily(fontFamily)}`;
+}
+async function ensureFontFamilyLoaded(fontFamily) {
+  if (!fontFamily || fontFamily === "useGlobal" || !document.fonts?.load) return;
+  const descriptor = getFontLoadDescriptor(fontFamily);
+  if (document.fonts.check?.(descriptor)) return;
+
+  if (!fontLoadCache.has(fontFamily)) {
+    const loadPromise = Promise.race([
+      document.fonts.load(descriptor),
+      new Promise((resolve) => setTimeout(resolve, 2500)),
+    ]).catch((error) => {
+      console.warn("[txt-to-img] 폰트 로드 대기 실패:", fontFamily, error);
+    }).finally(() => {
+      fontLoadCache.delete(fontFamily);
+    });
+    fontLoadCache.set(fontFamily, loadPromise);
+  }
+
+  await fontLoadCache.get(fontFamily);
+}
+async function ensurePreviewFontsLoaded() {
+  const settings = extension_settings[extensionName] || {};
+  const families = new Set([settings.fontFamily]);
+
+  (settings.setHighlighterTags || []).forEach((tag) => {
+    if (tag?.fontFamily && tag.fontFamily !== "useGlobal") {
+      families.add(tag.fontFamily);
+    }
+    if (tag?.htmlFontFamily && tag.htmlFontFamily !== "useGlobal") {
+      families.add(tag.htmlFontFamily);
+    }
+  });
+
+  await Promise.all(Array.from(families).map(ensureFontFamilyLoaded));
+}
+function warmupFonts(fonts) {
+  if (!document.fonts?.load || !Array.isArray(fonts)) return;
+  fonts.forEach((font, index) => {
+    setTimeout(() => {
+      ensureFontFamilyLoaded(font.value).catch(() => {});
+    }, index * 80);
+  });
 }
 
 // 폰트 로드
@@ -1204,9 +1255,8 @@ async function loadFonts() {
     });
 
     select.val(extension_settings[extensionName].fontFamily);
-    if (document.fonts?.load) {
-      document.fonts.load(`1em ${extension_settings[extensionName].fontFamily}`).catch(() => {});
-    }
+    await ensureFontFamilyLoaded(extension_settings[extensionName].fontFamily);
+    warmupFonts(fonts);
     refreshPreview();
   } catch (e) {
     console.warn("[txt-to-img] 폰트 로드 실패:", e);
@@ -2089,7 +2139,10 @@ function renderPreviewContent() {
 
   updatePreviewDownloadAllButton(chunks.length);
 }
-const _debouncedRender = debounce(() => renderPreviewContent(), 150);
+const _debouncedRender = debounce(async () => {
+  await ensurePreviewFontsLoaded();
+  renderPreviewContent();
+}, 150);
 function refreshPreview() {
   $(".refresh-preview").removeClass("shown");
 
@@ -2104,7 +2157,7 @@ function refreshPreview() {
 }
 function manualRefresh() {
   if (!extension_settings[extensionName].autoPreview) {
-    renderPreviewContent();
+    ensurePreviewFontsLoaded().then(renderPreviewContent);
   }
 }
 function syncHtmlSwitcherInputUIState() {
@@ -2437,7 +2490,7 @@ function wrappingTexts(text, mode = "word") {
         const fontStyle = span.italic ? "italic" : "normal";
         const fontFamily = span.fontFamily && span.fontFamily !== "useGlobal" ? span.fontFamily : settings.fontFamily;
         const setFontSize = span.fontSize || fontSize;
-        ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${fontFamily}`;
+        ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${getCSSFontFamily(fontFamily)}`;
         ctx.letterSpacing = `${settings.fontSpacing}em`;
 
         let currentLineWidth = 0;
@@ -2446,12 +2499,12 @@ function wrappingTexts(text, mode = "word") {
           const itemFontStyle = item.italic ? "italic" : "normal";
           const itemFontFamily = item.fontFamily || settings.fontFamily;
           const itemFontSize = item.fontSize || fontSize;
-          ctx.font = `${itemFontStyle} ${itemFontWeight} ${itemFontSize}px ${itemFontFamily}`;
+          ctx.font = `${itemFontStyle} ${itemFontWeight} ${itemFontSize}px ${getCSSFontFamily(itemFontFamily)}`;
           ctx.letterSpacing = `${settings.fontSpacing}em`;
           currentLineWidth += ctx.measureText(item.text).width;
         });
 
-        ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${fontFamily}`;
+        ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${getCSSFontFamily(fontFamily)}`;
         ctx.letterSpacing = `${settings.fontSpacing}em`;
         const unitWidth = ctx.measureText(unit).width;
 
@@ -2593,7 +2646,7 @@ function generateTextImage(chunk, index) {
       const fontStyle = span.italic ? "italic" : "normal";
       const fontFamily = span.fontFamily && span.fontFamily !== "useGlobal" ? span.fontFamily : settings.fontFamily;
       const setFontSize = span.fontSize || fontSize;
-      ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${fontFamily}`;
+      ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${getCSSFontFamily(fontFamily)}`;
     }
 
     function renderSpan(span, x, y, drawMode = "both") {
@@ -2913,7 +2966,7 @@ function generateTextImage(chunk, index) {
     const footerText = settings.footerText;
     if (footerText) {
       const footerColor = settings.footerColor || "#000000";
-      ctx.font = "14px Pretendard-Regular";
+      ctx.font = `14px ${getCSSFontFamily("Pretendard-Regular")}`;
       ctx.fillStyle = footerColor;
       ctx.textAlign = "right";
       const footerY = calcHeight - 35;
