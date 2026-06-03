@@ -1,8 +1,15 @@
-const extension_settings = JSON.parse(safeGetItem("txt-to-img") || "{}");
+const extension_settings = safeParseJSON(safeGetItem("txt-to-img"), {});
 const JSZipLocal = "libs/jszip.min.js";
 const JSZipCDN = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
 const FileSaverLocal = "libs/FileSaver.min.js";
 const FileSaverCDN = "https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js";
+const extensionName = "txt-to-img";
+const fallbackExtensionFolderPath = `https://xaxaxaxakk.github.io/${extensionName}`;
+const extensionFolderPath = (() => {
+  const scriptSrc = document.currentScript?.src;
+  if (!scriptSrc) return ".";
+  return new URL(".", scriptSrc).href.replace(/\/$/, "");
+})();
 
 function safeGetItem(key) {
   try {
@@ -23,6 +30,34 @@ function safeRemoveItem(key) {
     localStorage.removeItem(key);
   } catch {}
 }
+function safeParseJSON(value, fallback) {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value);
+  } catch (e) {
+    console.warn("[txt-to-img] 저장된 JSON 파싱 실패:", e);
+    return fallback;
+  }
+}
+function fetchWithTimeout(url, options = {}, timeout = 6000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  return fetch(url, {...options, signal: controller.signal}).finally(() => clearTimeout(timer));
+}
+async function fetchExtensionJSON(fileName) {
+  const localURL = `${extensionFolderPath}/${fileName}`;
+  try {
+    const response = await fetchWithTimeout(localURL);
+    if (response.ok) return response.json();
+    throw new Error(`HTTP ${response.status}`);
+  } catch (localError) {
+    if (extensionFolderPath === fallbackExtensionFolderPath) throw localError;
+    console.warn(`[txt-to-img] ${localURL} 로드 실패, fallback 사용`, localError);
+    const fallbackResponse = await fetchWithTimeout(`${fallbackExtensionFolderPath}/${fileName}`);
+    if (!fallbackResponse.ok) throw new Error(`HTTP ${fallbackResponse.status}`);
+    return fallbackResponse.json();
+  }
+}
 function debounce(fn, delay) {
   let timer;
   return function (...args) {
@@ -31,8 +66,6 @@ function debounce(fn, delay) {
   };
 }
 
-const extensionName = "txt-to-img";
-const extensionFolderPath = `https://xaxaxaxakk.github.io/${extensionName}`;
 const defaultSettings = {
   fontFamily: "Pretendard-Regular",
   fontWeight: "normal",
@@ -221,7 +254,7 @@ function setupRangeValueTooltips() {
 }
 
 async function initSettings() {
-  const savedSettings = JSON.parse(safeGetItem(extensionName) || "{}");
+  const savedSettings = safeParseJSON(safeGetItem(extensionName), {});
   extension_settings[extensionName] = {
     ...defaultSettings,
     ...savedSettings,
@@ -277,7 +310,6 @@ async function initSettings() {
   $("#letter_control").prop("checked", letterCase);
   $("#unit_control").prop("checked", unitControl);
 
-  await Promise.all([loadFonts(), loadBG(), loadBackgroundURLMap()]);
   highlighterTags();
   applyHtmlModeUIState();
   updateFooterLayoutUIState();
@@ -287,6 +319,13 @@ async function initSettings() {
   } else {
     refreshPreview();
   }
+  loadStartupAssets();
+}
+function loadStartupAssets() {
+  Promise.allSettled([loadFonts(), loadBG(), loadBackgroundURLMap()]).then(() => {
+    syncSelectedBackgroundUI();
+    refreshPreview();
+  });
 }
 
 // 프리셋
@@ -1156,20 +1195,18 @@ function fontFamily(event) {
 // 폰트 로드
 async function loadFonts() {
   try {
-    const response = await fetch(`${extensionFolderPath}/font-family.json`);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const fonts = await response.json();
+    const fonts = await fetchExtensionJSON("font-family.json");
     fonts.sort((a, b) => a.label.localeCompare(b.label));
     const select = $("#tti_font_family").empty();
-
-    const fontPromises = fonts.map((font) => document.fonts.load(`1em ${font.value}`).catch(() => {}));
-    await Promise.all(fontPromises);
 
     fonts.forEach((font) => {
       select.append(`<option value="${font.value}">${font.label}</option>`);
     });
 
     select.val(extension_settings[extensionName].fontFamily);
+    if (document.fonts?.load) {
+      document.fonts.load(`1em ${extension_settings[extensionName].fontFamily}`).catch(() => {});
+    }
     refreshPreview();
   } catch (e) {
     console.warn("[txt-to-img] 폰트 로드 실패:", e);
@@ -1286,9 +1323,7 @@ function applyHtmlModeUIState() {
 // 배경이미지 로드
 async function loadBackgroundURLMap() {
   try {
-    const response = await fetch(`${extensionFolderPath}/backgrounds-list-url.json`);
-    if (!response.ok) return;
-    const backgroundURLs = await response.json();
+    const backgroundURLs = await fetchExtensionJSON("backgrounds-list-url.json");
 
     defaultBackgroundUrlMap = new Map();
     defaultBackgroundBasenameMap = new Map();
@@ -1333,9 +1368,7 @@ function resolveBackgroundURLForHTML(backgroundValue) {
 }
 async function loadBG() {
   try {
-    const response = await fetch(`${extensionFolderPath}/backgrounds-list.json`);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const backgrounds = await response.json();
+    const backgrounds = await fetchExtensionJSON("backgrounds-list.json");
     const gallery = $("#background_image_gallery").empty();
     const selectedBackground = getSelectedBackgroundForCurrentMode();
     const galleryHtml = backgrounds
@@ -2168,8 +2201,7 @@ function highlighterTags() {
   applyHtmlModeUIState();
 }
 async function highlighterFonts(fontOption, selectedFont) {
-  const fontFamilyName = await fetch(`${extensionFolderPath}/font-family.json`);
-  const fonts = await fontFamilyName.json();
+  const fonts = await fetchExtensionJSON("font-family.json");
   fonts.sort((a, b) => a.label.localeCompare(b.label));
 
   fontOption.empty();
