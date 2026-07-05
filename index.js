@@ -3462,14 +3462,24 @@ function controlDL(DLbuttons, index) {
 }
 
 // 저장 이미지 형식
-function saveImage(dataUrl, filename) {
+async function saveImage(dataUrl, filename) {
+  if (typeof saveAs === "undefined") {
+    await loadScript(FileSaverLocal, FileSaverCDN);
+  }
+
   const now = new Date();
   const dateString = `[Log] ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}-${now.getHours()}-${now.getMinutes()}`;
   const index = filename.replace(".png", "");
-  const link = document.createElement("a");
-  link.href = dataUrl;
-  link.download = `${dateString} (${index}).png`;
-  link.click();
+
+  const base64ori = dataUrl.split(",")[1];
+  const binary = atob(base64ori);
+  const imgArray = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    imgArray[i] = binary.charCodeAt(i);
+  }
+  const blob = new Blob([imgArray], {type: "image/png"});
+
+  saveAs(blob, `${dateString} (${index}).png`);
 }
 async function copyToClipboard(content) {
   if (navigator.clipboard && window.isSecureContext) {
