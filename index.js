@@ -3578,6 +3578,78 @@ function bindingFunctions() {
     $(".replacer_box").val("");
   });
 }
+
+function organizeDialogueText(rawText) {
+  if (!rawText) return rawText;
+
+  const INVISIBLE_RE = /[\u200B-\u200D\uFEFF\u00A0]/g;
+  const cleanEmpty = (s) => s.replace(INVISIBLE_RE, "").trim();
+
+  const quoteRegex = /"[^"]*"|“[^”]*”|「[^」]*」|『[^』]*』/g;
+  const lines = rawText.split(/\r\n|\n/);
+  const rawSegments = [];
+
+  lines.forEach((line) => {
+    if (!cleanEmpty(line)) {
+      rawSegments.push({type: "blank"});
+      return;
+    }
+
+    let lastIndex = 0;
+    let match;
+    let hasQuote = false;
+    quoteRegex.lastIndex = 0;
+
+    while ((match = quoteRegex.exec(line)) !== null) {
+      hasQuote = true;
+      const before = line.slice(lastIndex, match.index).trim();
+      if (cleanEmpty(before)) rawSegments.push({text: before, type: "narration"});
+      rawSegments.push({text: match[0].trim(), type: "quote"});
+      lastIndex = quoteRegex.lastIndex;
+    }
+
+    if (hasQuote) {
+      const after = line.slice(lastIndex).trim();
+      if (cleanEmpty(after)) rawSegments.push({text: after, type: "narration"});
+    } else {
+      rawSegments.push({text: line.trim(), type: "narration"});
+    }
+  });
+
+  const segments = [];
+  let pendingBlank = false;
+  rawSegments.forEach((seg) => {
+    if (seg.type === "blank") {
+      pendingBlank = true;
+      return;
+    }
+    segments.push({...seg, precededByBlank: pendingBlank});
+    pendingBlank = false;
+  });
+
+  if (!segments.length) return "";
+
+  const resultLines = [segments[0].text];
+  for (let i = 1; i < segments.length; i++) {
+    const prev = segments[i - 1];
+    const cur = segments[i];
+
+    let insertBlank;
+    if (prev.type === "quote" && cur.type === "quote") {
+      insertBlank = false;
+    } else if (prev.type !== cur.type) {
+      insertBlank = true;
+    } else {
+      insertBlank = cur.precededByBlank;
+    }
+
+    if (insertBlank) resultLines.push("");
+    resultLines.push(cur.text);
+  }
+
+  return resultLines.join("\n");
+}
+
 function restoreButtons() {
   let deletedText = "";
   $("#clear_text_btn").on("click", () => {
@@ -3591,6 +3663,12 @@ function restoreButtons() {
       refreshPreview();
       deletedText = "";
     }
+  });
+  $("#organize_text_btn").on("click", () => {
+    const current = $("#text_to_image").val();
+    const organized = organizeDialogueText(current);
+    $("#text_to_image").val(organized);
+    refreshPreview();
   });
 }
 function tabButtons() {

@@ -250,10 +250,15 @@ h5 {
 }
 .text-field-buttons {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 8px;
   width: 100%;
   height: 35px;
+}
+#organize_text_btn {
+  width: 80px;
+  height: 35px;
+  font-size: 12px;
 }
 #clear_text_btn {
   width: 110px;
@@ -270,6 +275,9 @@ h5 {
 }
 #clear_text_btn:hover {
   background: #ff6f61;
+}
+#restore_text_btn {
+  margin-left: auto;
 }
 
 /* 단어 치환 */
