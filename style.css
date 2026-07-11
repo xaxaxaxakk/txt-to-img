@@ -14,7 +14,7 @@ body {
 
 /* 기본 디자인 */
 #text-to-image {
-  max-width: 600px;
+  max-width: 750px;
   margin: 30px auto;
 }
 .text-to-image-converter-settings {
