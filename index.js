@@ -3668,6 +3668,12 @@ function restoreButtons() {
     const current = $("#text_to_image").val();
     const organized = organizeDialogueText(current);
     $("#text_to_image").val(organized);
+
+    $("#tti_html_switcher_list .tti-html-switcher-text").each(function () {
+      const $this = $(this);
+      $this.val(organizeDialogueText($this.val()));
+    });
+
     refreshPreview();
   });
 }
