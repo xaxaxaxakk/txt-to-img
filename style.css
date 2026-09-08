@@ -2213,9 +2213,6 @@ html[data-tti-theme="light"] body {
 }
 
 @media (max-width: 430px) {
-    .tti-preset-actions:not(.tti-web-font-backup) {
-        grid-template-columns: 1fr;
-    }
     .replace-buttons .buttons,
     .text-field-buttons .buttons {
         flex: 1 1 46%;
