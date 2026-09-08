@@ -1939,6 +1939,7 @@ html[data-tti-theme="light"] body {
 .tti-rich-text-editor {
     width: 100%;
     height: min(46dvh, 400px);
+    min-height: min(46dvh, 400px);
     padding: 14px;
     border: 1px solid var(--ui-border-strong) !important;
     border-radius: 12px;
