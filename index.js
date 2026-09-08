@@ -187,8 +187,277 @@ function isHtmlModeEnabled() {
 function getFooterLayoutMode(settings = extension_settings[extensionName]) {
     return settings?.footerLayoutMode === "full" ? "full" : "scroll";
 }
+
+function getWebFonts() {
+    return extension_settings[extensionName]?.webFonts || [];
+}
+function webFontAvailable(family, mode) {
+    return getWebFonts().some((font) => font.family === family && font[mode]);
+}
+async function parseWebFontCSS(source, base = location.href, depth = 0) {
+    if (typeof source !== "string" || source.length > 500000 || depth > 4 || /<\/?(?:style|script|link)\b/i.test(source)) throw new Error("웹폰트 CSS를 붙여넣어 주세요.");
+    const imports = [...source.matchAll(/@import\s+(?:url\(\s*["']?([^\s"')]+)["']?\s*\)|["']([^"']+)["'])[^;]*;/gi)];
+    let imported = [];
+    for (const match of imports) {
+        const url = new URL(match[1] || match[2], base);
+        if (!/^https?:$/.test(url.protocol)) throw new Error("웹폰트 주소는 HTTP 또는 HTTPS여야 합니다.");
+        const response = await fetchWithTimeout(url.href);
+        if (!response.ok) throw new Error("웹폰트 CSS를 가져오지 못했습니다.");
+        imported.push(await parseWebFontCSS(await response.text(), response.url || url.href, depth + 1));
+    }
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(source.replace(/@import\s+(?:url\([^)]*\)|["'][^"']+["'])[^;]*;/gi, ""));
+    const faces = [];
+    const families = new Set(imported.map((item) => item.family));
+    for (const rule of sheet.cssRules) {
+        if (rule.type !== 5) continue;
+        const family = rule.style
+            .getPropertyValue("font-family")
+            .trim()
+            .replace(/^['"]|['"]$/g, "");
+        if (!family || /[<>"'\\;{}\r\n]/.test(family) || !rule.style.getPropertyValue("src")) throw new Error("font-family와 src가 있는 @font-face CSS가 필요합니다.");
+        families.add(family);
+        const src = rule.style.getPropertyValue("src").replace(/url\(\s*(["']?)(.*?)\1\s*\)/gi, (_, quote, value) => {
+            const url = new URL(value, base);
+            if (!/^https?:$/.test(url.protocol) && !/^data:font\//i.test(url.href) && !/^data:application\/(?:font|x-font|octet-stream)/i.test(url.href)) throw new Error("지원하지 않는 폰트 주소입니다.");
+            return 'url("' + url.href.replace(/"/g, "%22") + '")';
+        });
+        rule.style.setProperty("src", src);
+        faces.push(rule.cssText);
+    }
+    if (families.size !== 1) throw new Error("한 번에 한 글꼴의 CSS를 등록해 주세요. @font-face 또는 @import CSS가 필요합니다.");
+    return {family: [...families][0], css: [...imported.map((item) => item.css), ...faces].join("\n")};
+}
+function webFontStyleMarkup() {
+    const css = getWebFonts()
+        .filter((font) => font.html)
+        .map((font) => font.css)
+        .join("\n");
+    return css ? "<style>" + css.replace(/</g, "\\3c ") + "</style>" : "";
+}
+function prependWebFontOptions(select, mode, value = select.value) {
+    select.querySelectorAll("option[data-web-font]").forEach((option) => option.remove());
+    const options = getWebFonts()
+        .filter((font) => font[mode])
+        .map((font) => {
+            const option = new Option(font.name, font.family);
+            option.dataset.webFont = font.id;
+            return option;
+        });
+    select.prepend(...options);
+    select.value = value;
+    if (select.selectedIndex < 0)
+        select.value =
+            select.classList.contains("tag-font-family") || select.classList.contains("tag-html-font-family") ? "useGlobal"
+            : mode === "html" ? defaultSettings.htmlFontFace
+            : defaultSettings.fontFamily;
+}
+function applyWebFonts() {
+    let style = document.getElementById("tti_web_font_styles");
+    if (!style) {
+        style = document.createElement("style");
+        style.id = "tti_web_font_styles";
+        document.head.append(style);
+    }
+    style.textContent = getWebFonts()
+        .map((font) => font.css)
+        .join("\n");
+    const settings = extension_settings[extensionName];
+    document.querySelectorAll("#tti_font_family, .tag-font-family, #tti_html_font_face, .tag-html-font-family").forEach((select) => {
+        const mode = select.matches("#tti_html_font_face, .tag-html-font-family") ? "html" : "image";
+        const key = mode === "html" ? "htmlFontFace" : "fontFamily";
+        prependWebFontOptions(select, mode, select.id ? settings[key] : select.value);
+        if (select.id && select.options.length) settings[key] = select.value;
+    });
+}
+function setupWebFontManager() {
+    if (document.getElementById("tti_web_font_dialog")) return;
+    const dialog = document.createElement("div");
+    dialog.id = "tti_web_font_dialog";
+    dialog.className = "tti-modal-backdrop";
+    dialog.innerHTML = `<form class="tti-modal tti-web-font-form" role="dialog" aria-modal="true" aria-labelledby="tti_web_font_title">
+    <header>
+        <div><small>WEB FONT</small><h3 id="tti_web_font_title">웹폰트 관리</h3></div>
+        <button type="button" class="tti-modal-close" aria-label="닫기"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </header>
+    <div class="tti-web-font-list"></div>
+    <label class="tti-modal-subhead" for="tti_web_font_name">표시할 이름</label>
+    <input type="text" id="tti_web_font_name" name="name" required maxlength="100" placeholder="폰트 이름">
+    <label class="tti-modal-subhead" for="tti_web_font_css">웹폰트 CSS</label>
+    <textarea id="tti_web_font_css" class="tti-web-font-css" name="css" required rows="6" spellcheck="false" placeholder="@font-face { font-family: ...; src: url(...); } 또는 @import url(...);"></textarea>
+    <h4 class="tti-modal-subhead">추가 대상</h4>
+    <div>
+        <label class="tti-option-label"><span>이미지</span><input type="checkbox" name="image" checked><i class="tti-toggle-slider" aria-hidden="true"><b></b></i></label>
+        <label class="tti-option-label"><span>HTML</span><input type="checkbox" name="html" checked><i class="tti-toggle-slider" aria-hidden="true"><b></b></i></label>
+    </div>
+    <h4 class="tti-modal-subhead">백업</h4>
+    <div class="tti-preset-actions tti-web-font-backup">
+        <button type="button" class="buttons" data-action="export"><i class="fa-solid fa-file-export" aria-hidden="true"></i> 저장</button>
+        <button type="button" class="buttons" data-action="import"><i class="fa-solid fa-file-import" aria-hidden="true"></i> 불러오기</button>
+    </div>
+    <p class="tti-section-desc tti-web-font-status" role="status"></p>
+    <footer>
+        <button type="button" class="buttons" data-action="new">새로 입력</button>
+        <button type="submit" class="primary">등록</button>
+    </footer>
+    <input type="file" accept="application/json,.json" hidden>
+</form>`;
+    document.body.append(dialog);
+    const form = dialog.querySelector("form");
+    const status = dialog.querySelector('[role="status"]');
+    let editing = null;
+    let busy = false;
+    const reset = () => {
+        editing = null;
+        form.reset();
+        form.querySelector('[type="submit"]').textContent = "등록";
+        status.textContent = "";
+    };
+    const render = () => {
+        const list = dialog.querySelector(".tti-web-font-list");
+        list.replaceChildren();
+        getWebFonts().forEach((font) => {
+            const row = document.createElement("div");
+            row.className = "tti-field";
+            const label = document.createElement("span");
+            label.textContent = font.name + " · " + [font.image && "이미지", font.html && "HTML"].filter(Boolean).join(" / ");
+            const edit = document.createElement("button");
+            edit.type = "button";
+            edit.className = "buttons";
+            edit.innerHTML = '<i class="fa-solid fa-pen" aria-hidden="true"></i>';
+            edit.title = "수정";
+            edit.setAttribute("aria-label", font.name + " 수정");
+            edit.onclick = () => {
+                if (busy) return;
+                editing = font.id;
+                form.elements.name.value = font.name;
+                form.elements.css.value = font.source || font.css;
+                form.elements.image.checked = font.image;
+                form.elements.html.checked = font.html;
+                form.querySelector('[type="submit"]').textContent = "수정 저장";
+            };
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "buttons clear";
+            remove.innerHTML = '<i class="fa-solid fa-trash" aria-hidden="true"></i>';
+            remove.title = "삭제";
+            remove.setAttribute("aria-label", font.name + " 삭제");
+            remove.onclick = () => {
+                if (busy) return;
+                commit(getWebFonts().filter((item) => item.id !== font.id));
+                if (editing === font.id) reset();
+            };
+            row.append(label, edit, remove);
+            list.append(row);
+        });
+        if (!list.children.length) {
+            const empty = document.createElement("p");
+            empty.className = "tti-section-desc";
+            empty.textContent = "등록한 웹폰트가 없습니다.";
+            list.append(empty);
+        }
+    };
+    const commit = (fonts) => {
+        const previous = getWebFonts();
+        const removed = (family, mode) => previous.some((font) => font.family === family && font[mode]) && !fonts.some((font) => font.family === family && font[mode]);
+        const settings = extension_settings[extensionName];
+        settings.webFonts = fonts;
+        if (removed(settings.fontFamily, "image")) settings.fontFamily = defaultSettings.fontFamily;
+        if (removed(settings.htmlFontFace, "html")) settings.htmlFontFace = defaultSettings.htmlFontFace;
+        (settings.setHighlighterTags || []).forEach((tag) => {
+            if (removed(tag.fontFamily, "image")) tag.fontFamily = "useGlobal";
+            if (removed(tag.htmlFontFamily, "html")) tag.htmlFontFamily = "useGlobal";
+        });
+        applyWebFonts();
+        saveSettings();
+        render();
+        refreshPreview();
+    };
+    form.onsubmit = async (event) => {
+        event.preventDefault();
+        if (busy) return;
+        busy = true;
+        status.textContent = "CSS 확인 중…";
+        try {
+            const name = form.elements.name.value.trim();
+            const source = form.elements.css.value.trim();
+            const image = form.elements.image.checked;
+            const html = form.elements.html.checked;
+            if (!name || (!image && !html)) throw new Error("표시할 이름과 추가 대상을 선택해 주세요.");
+            const parsed = await parseWebFontCSS(source);
+            if (getWebFonts().some((font) => font.id !== editing && font.family === parsed.family)) throw new Error("이미 등록된 글꼴입니다. 기존 항목을 수정해 주세요.");
+            const font = {id: editing || crypto.randomUUID(), name, source, ...parsed, image, html};
+            commit(editing ? getWebFonts().map((item) => (item.id === editing ? font : item)) : [...getWebFonts(), font]);
+            reset();
+            status.textContent = "저장했습니다.";
+        } catch (error) {
+            status.textContent = error.message;
+        } finally {
+            busy = false;
+        }
+    };
+    dialog.querySelector('[data-action="new"]').onclick = () => {
+        if (!busy) reset();
+    };
+    dialog.querySelector('[data-action="export"]').onclick = () => {
+        const url = URL.createObjectURL(new Blob([JSON.stringify({version: 1, webFonts: getWebFonts()}, null, 2)], {type: "application/json"}));
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "web-fonts-backup.json";
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+    const input = dialog.querySelector('[type="file"]');
+    dialog.querySelector('[data-action="import"]').onclick = () => {
+        if (!busy) input.click();
+    };
+    input.onchange = async () => {
+        if (!input.files[0] || busy) return;
+        busy = true;
+        try {
+            if (input.files[0].size > 10000000) throw new Error("백업 파일은 10MB 이하여야 합니다.");
+            const data = JSON.parse(await input.files[0].text());
+            if (data.version !== 1 || !Array.isArray(data.webFonts)) throw new Error("올바른 웹폰트 백업 파일이 아닙니다.");
+            const fonts = [...getWebFonts()];
+            for (const item of data.webFonts) {
+                if (typeof item.name !== "string" || !item.name.trim() || (!item.image && !item.html)) throw new Error("백업의 글꼴 정보가 올바르지 않습니다.");
+                const parsed = await parseWebFontCSS(item.css);
+                const index = fonts.findIndex((font) => font.family === parsed.family);
+                const font = {id: index < 0 ? crypto.randomUUID() : fonts[index].id, name: item.name.trim().slice(0, 100), source: parsed.css, ...parsed, image: !!item.image, html: !!item.html};
+                if (index < 0) fonts.push(font);
+                else fonts[index] = font;
+            }
+            commit(fonts);
+            reset();
+            status.textContent = "백업을 불러왔습니다. 같은 글꼴은 백업 내용으로 갱신했습니다.";
+        } catch (error) {
+            status.textContent = error.message;
+        } finally {
+            busy = false;
+            input.value = "";
+        }
+    };
+    document.querySelectorAll("#tti_font_family, #tti_html_font_face").forEach((select) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "preset-control tti-web-font-control";
+        select.before(wrapper);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "buttons tti-web-font-open";
+        button.innerHTML = '<i class="fa-solid fa-gear" aria-hidden="true"></i>';
+        button.title = "웹폰트 관리";
+        button.setAttribute("aria-label", "웹폰트 관리");
+        wrapper.append(button, select);
+        button.onclick = () => {
+            render();
+            openModal(dialog.id);
+            form.elements.name.focus();
+        };
+    });
+}
+
 function normalizeHtmlFontFace(value) {
-    return HTML_FONT_FACE_OPTIONS.has(value) ? value : defaultSettings.htmlFontFace;
+    return HTML_FONT_FACE_OPTIONS.has(value) || webFontAvailable(value, "html") ? value : defaultSettings.htmlFontFace;
 }
 function getHtmlFontFace(settings = extension_settings[extensionName]) {
     return normalizeHtmlFontFace(settings?.htmlFontFace);
@@ -201,7 +470,7 @@ function getHtmlPreviewFontFamily(settings = extension_settings[extensionName]) 
         "Nanum Gothic": "Pretendard-Regular",
     };
 
-    return overrides[face] ?? (HTML_FONT_FACE_OPTIONS.has(face) ? face : fallback);
+    return webFontAvailable(face, "html") ? getCSSFontFamily(face) : (overrides[face] ?? (HTML_FONT_FACE_OPTIONS.has(face) ? face : fallback));
 }
 function parsePositiveInt(value, fallback) {
     const parsed = parseInt(value, 10);
@@ -384,6 +653,7 @@ function setupRangeValueTooltips() {
 
 async function initSettings() {
     extension_settings[extensionName] = {...defaultSettings, ...extension_settings[extensionName]};
+    applyWebFonts();
     applyExtensionTheme();
     ensureFontSizeSettings();
     ensureHighlightTagNames();
@@ -600,6 +870,7 @@ function deletePreset() {
             ...defaultSettings,
             uiTheme: extension_settings[extensionName].uiTheme,
             presets: extension_settings[extensionName].presets,
+            webFonts: getWebFonts(),
             currentPreset: null,
             dragOnlyFloat: _dragOnlyFloat,
             mesButtonEnabled: _mesButtonEnabled,
@@ -696,6 +967,7 @@ function selectPreset() {
             ...defaultSettings,
             uiTheme: extension_settings[extensionName].uiTheme,
             presets: extension_settings[extensionName].presets,
+            webFonts: getWebFonts(),
             currentPreset: null,
             dragOnlyFloat: _dragOnlyFloat,
             mesButtonEnabled: _mesButtonEnabled,
@@ -1112,7 +1384,7 @@ async function ensureFontFamilyLoaded(fontFamily) {
 }
 async function ensurePreviewFontsLoaded() {
     const settings = extension_settings[extensionName] || {};
-    const families = new Set([settings.fontFamily]);
+    const families = new Set([settings.fontFamily, getHtmlFontFace(settings)]);
 
     (settings.setHighlighterTags || []).forEach((tag) => {
         if (tag?.fontFamily && tag.fontFamily !== "useGlobal") {
@@ -1145,6 +1417,7 @@ async function loadFonts() {
             select.append(`<option value="${font.value}">${font.label}</option>`);
         });
 
+        prependWebFontOptions(select[0], "image", extension_settings[extensionName].fontFamily);
         select.val(extension_settings[extensionName].fontFamily);
         await ensureFontFamilyLoaded(extension_settings[extensionName].fontFamily);
         warmupFonts(fonts);
@@ -2427,6 +2700,7 @@ function setupCustomSelects() {
     refresh();
 }
 function setupCompositeControls() {
+    setupWebFontManager();
     setupCustomSelects();
     $(".stepper-display").attr({role: "button", tabindex: "0", title: "클릭하여 숫자 입력"});
     $(document).on("click keydown", ".stepper-display", function (event) {
@@ -2966,6 +3240,7 @@ function highlighterTags() {
             background: swatchColor || "transparent",
             color: swatchTextColor,
         });
+        prependWebFontOptions(highlightTagItem.find(".tag-html-font-family")[0], "html", tag.htmlFontFamily || "useGlobal");
         highlighterFonts(highlightTagItem.find(".tag-font-family"), tag.fontFamily);
 
         highlightContainer.append(highlightTagItem);
@@ -2993,6 +3268,7 @@ async function highlighterFonts(fontOption, selectedFont) {
     fonts.forEach((font) => {
         fontOption.append(`<option value="${font.value}">${font.label}</option>`);
     });
+    prependWebFontOptions(fontOption[0], "image", selectedFont || "useGlobal");
     if (selectedFont) {
         fontOption.val(selectedFont);
     }
@@ -4193,7 +4469,7 @@ ${switcherItems.map((item) => `    <div class="tti-content tti-panel ${item.pane
     const switcherRuleStyle = hasSwitcher ? [".tti .tti-panels{display:grid !important;min-height:0 !important;margin:0 !important;}", `.tti-switch-input{position:absolute !important;opacity:0 !important;pointer-events:none !important;}`, `.tti-panels{position:relative !important;z-index:3 !important;}`, `.tti-panel{display:none !important;}`, `#${switcherBaseId}:checked ~ .tti-stack .tti-panels .tti-panel-base{display:block !important;}`, `#${switcherBaseId}:checked ~ .tti-overlay .tti-switcher-dots label[for="${switcherBaseId}"]{background:rgba(255,255,255,0.95) !important;transform:scale(1.12) !important;}`, ...switcherItems.map((item) => `#${item.id}:checked ~ .tti-stack .tti-panels .${item.panelClass}{display:block !important;}`), ...switcherItems.map((item) => `#${item.id}:checked ~ .tti-overlay .tti-switcher-dots label[for="${item.id}"]{background:rgba(255,255,255,0.95) !important;transform:scale(1.12) !important;}`)].join("") : "";
     const scopedStyle = `.tti{position:relative !important;}.tti-bg{position:absolute !important;inset:0 !important;z-index:0 !important;}.tti-overlay{position:absolute !important;inset:0 !important;margin:0 !important;padding:0 !important;z-index:2 !important;}.tti-content{position:relative !important;z-index:3 !important;}.tti-footer{position:relative !important;z-index:4 !important;scrollbar-width:none !important;}.tti-footer::-webkit-scrollbar{height:0 !important;}.tti-watermark{z-index:4 !important;}${switcherRuleStyle}`;
 
-    return `<div>
+    return `${webFontStyleMarkup()}<div>
 <style>${scopedStyle}</style>
 <div class="tti" style="${containerInlineStyle}">
 ${backgroundHTML}${switcherRadiosHTML}${overlayHTML}
@@ -4211,6 +4487,11 @@ function generateHTMLPreview(text, index) {
         GangwonEducationModuche: "GangwonEducationModuche",
         OngleipParkDahyeon: "OngleipParkDahyeon",
     };
+    getWebFonts()
+        .filter((font) => font.html)
+        .forEach((font) => {
+            fontFaceMap[font.family] = getCSSFontFamily(font.family);
+        });
     const perFontFaceRules = Object.entries(fontFaceMap)
         .map(([face, family]) => `.html-render-preview .tti-content font[face="${face}"],.html-render-preview .tti-content font[face="${face}"] span[style]{font-family:${family} !important;}`)
         .join("");
