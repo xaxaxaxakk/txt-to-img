@@ -1,3 +1,34 @@
+if (typeof toastr === "undefined") {
+    window.toastr = (function () {
+        let container = null;
+        function getContainer() {
+            if (!container || !document.body.contains(container)) {
+                container = document.createElement("div");
+                container.className = "txt-toast-container";
+                document.body.appendChild(container);
+            }
+            return container;
+        }
+        function show(type, message) {
+            const el = document.createElement("div");
+            el.className = `txt-toast txt-toast-${type}`;
+            el.textContent = message;
+            getContainer().appendChild(el);
+            requestAnimationFrame(() => el.classList.add("show"));
+            setTimeout(() => {
+                el.classList.remove("show");
+                setTimeout(() => el.remove(), 250);
+            }, 4000);
+        }
+        return {
+            success: (msg) => show("success", msg),
+            warning: (msg) => show("warning", msg),
+            error: (msg) => show("error", msg),
+            info: (msg) => show("info", msg),
+        };
+    })();
+}
+
 function debounce(fn, delay) {
     let timer;
     return function (...args) {
@@ -4491,22 +4522,29 @@ function organizeDialogueText(rawText) {
     return resultLines.join("\n");
 }
 function restoreButtons() {
-    let deletedText = "";
+    let lastText = null;
+
+    const saveUndoState = () => {
+        lastText = $("#text_to_image").val();
+    };
+
     $("#clear_text_btn").on("click", () => {
-        deletedText = $("#text_to_image").val();
+        saveUndoState();
         $("#text_to_image").val("");
         syncRichEditorFromSource();
         refreshPreview();
     });
     $("#restore_text_btn").on("click", () => {
-        if (deletedText !== "") {
-            $("#text_to_image").val(deletedText);
+        if (lastText !== null) {
+            const current = $("#text_to_image").val();
+            $("#text_to_image").val(lastText);
             syncRichEditorFromSource();
             refreshPreview();
-            deletedText = "";
+            lastText = current;
         }
     });
     $("#organize_text_btn").on("click", () => {
+        saveUndoState();
         const current = $("#text_to_image").val();
         const organized = organizeDialogueText(current);
         $("#text_to_image").val(organized);
@@ -4518,6 +4556,23 @@ function restoreButtons() {
         });
 
         refreshPreview();
+    });
+    $("#apply_replace_btn").on("click", () => {
+        saveUndoState();
+        const current = $("#text_to_image").val();
+        const replaced = replaceWords(current);
+        $("#text_to_image").val(replaced);
+        syncRichEditorFromSource();
+        refreshPreview();
+    });
+    $(".text-field-copy").on("click", async () => {
+        const current = $("#text_to_image").val();
+        const copied = await copyToClipboard(current);
+        if (copied) {
+            toastr.success("클립보드에 복사되었습니다");
+        } else {
+            toastr.warning("클립보드 복사에 실패했습니다");
+        }
     });
 }
 function tabButtons() {

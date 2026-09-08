@@ -395,6 +395,11 @@
           <button type="button" class="tti-modal-close" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>
         </header>
 
+        <div class="text-field-top-buttons">
+          <button id="restore_text_btn" class="buttons"><i class="fa-solid fa-rotate-right"></i> 되돌리기</button>   
+          <button id="clear_text_btn" class="buttons clear"><i class="fa-solid fa-eraser"></i> 내용 삭제</button>
+        </div>
+
         <div id="tti_rich_text_editor" class="tti-rich-text-editor" contenteditable="true" role="textbox"
           aria-multiline="true" data-placeholder="여기에 텍스트를 입력하세요."></div>
         <textarea id="text_to_image" class="tti-editor-source" aria-hidden="true" tabindex="-1" placeholder="여기에 텍스트를 입력하세요.
@@ -419,8 +424,7 @@
 
         <div class="text-field-buttons">
           <button id="organize_text_btn" class="buttons"><i class="fa-solid fa-align-left"></i> 문단 정리</button>
-          <button id="restore_text_btn" class="buttons"><i class="fa-solid fa-rotate-right"></i> 되돌리기</button>
-          <button id="clear_text_btn" class="buttons clear"><i class="fa-solid fa-eraser"></i> 내용 삭제</button>
+          <button id="apply_replace_btn" class="buttons"><i class="fa-solid fa-marker"></i> 바꾸기</button>   
         </div>
 
         <div class="html-switcher-inputs html-mode-only" data-html-only="html_switcher_inputs">
@@ -433,6 +437,7 @@
         </div>
 
         <footer>
+          <button type="button" class="text-field-copy"><i class="fa-regular fa-clipboard"></i></button>
           <button type="button" class="primary wide tti-modal-close">완료</button>
         </footer>
       </section>
