@@ -206,7 +206,8 @@ function getMetaMetrics(width) {
   };
 }
 function getMetaBlockHeight(width, lineCount) {
-  if (!lineCount) return 0;
+  // Keep the two-line metadata space as vertical breathing room when both labels are hidden.
+  if (!lineCount) lineCount = 2;
   const metrics = getMetaMetrics(width);
   return lineCount * metrics.lineStep + metrics.blockPadding;
 }
@@ -3423,7 +3424,8 @@ function generateTextImage(chunk, index) {
 
     const totalTextHeight = chunk.length * lineHeight;
     // Match silly-reader's alphabetic baseline so line spacing does not push the block toward the watermark.
-    let y = Math.max((calcHeight - totalTextHeight - metaBlockHeight) / 2 + fontSize, 40 + fontSize);
+    const visibleMetaHeight = metaLines.length ? metaBlockHeight : 0;
+    let y = Math.max((calcHeight - totalTextHeight - visibleMetaHeight) / 2 + fontSize, 40 + fontSize);
     const setAlign = settings.fontAlign || "left";
 
     const lineBreak = settings.lineBreak || "byWord";
