@@ -2315,6 +2315,8 @@ function setupPreviewCarousel() {
     });
 }
 function renderPreviewContent() {
+    const mobileScroll = document.querySelector(".tti-mobile-ready .tti-mobile-scroll");
+    const mobileScrollTop = mobileScroll?.scrollTop;
     const chunks = getPreviewChunks();
     const keepIndex = previewIndex;
     const $container = $("#image_preview_container").empty();
@@ -2325,6 +2327,12 @@ function renderPreviewContent() {
 
     updatePreviewDownloadAllButton(chunks.length);
     setPreviewIndex(keepIndex);
+    if (mobileScroll && mobileScrollTop !== undefined) {
+        mobileScroll.scrollTop = mobileScrollTop;
+        requestAnimationFrame(() => {
+            mobileScroll.scrollTop = mobileScrollTop;
+        });
+    }
 }
 const _debouncedRender = debounce(async () => {
     if (isPreviewEditing()) {
@@ -2557,10 +2565,17 @@ function setupMetaUI() {
         refreshPreview();
     });
     $(document).on("change", "#use_watermark", function () {
+        const mobileScroll = this.closest(".tti-mobile-scroll");
+        const mobileScrollTop = mobileScroll?.scrollTop;
         extension_settings[extensionName].useWatermark = $(this).prop("checked");
         syncMetaUIState();
         saveSettings();
         refreshPreview();
+        if (mobileScroll && mobileScrollTop !== undefined) {
+            requestAnimationFrame(() => {
+                mobileScroll.scrollTop = mobileScrollTop;
+            });
+        }
     });
 }
 

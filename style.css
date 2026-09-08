@@ -115,7 +115,7 @@ html[data-tti-theme="light"] body {
 .tti-editor-title {
     margin: 0;
     color: var(--ui-text) !important;
-    font-size: 16px;
+    font-size: 16px !important;
     font-weight: 800;
     text-align: center;
 }
@@ -144,7 +144,7 @@ html[data-tti-theme="light"] body {
     padding: 0;
     border: 0;
     background: transparent;
-    font-size: 16px;
+    font-size: 16px !important;
 }
 #tti_theme_toggle:hover {
     background: var(--ui-hover);
@@ -238,7 +238,7 @@ html[data-tti-theme="light"] body {
     border-radius: 999px;
     background: var(--ui-surface-raised);
     color: var(--ui-text-soft) !important;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 700;
     cursor: pointer;
 }
@@ -266,7 +266,7 @@ html[data-tti-theme="light"] body {
     width: 100%;
     min-height: 200px;
     color: var(--ui-text-muted);
-    font-size: 13px;
+    font-size: 13px !important;
     content: "미리보기가 없습니다";
     place-items: center;
 }
@@ -321,7 +321,7 @@ html[data-tti-theme="light"] body {
     border-radius: 999px;
     background: var(--ui-surface-raised);
     color: var(--ui-text-muted);
-    font-size: 11px;
+    font-size: 11px !important;
     transform: translateX(-50%);
     font-variant-numeric: tabular-nums;
 }
@@ -357,7 +357,7 @@ html[data-tti-theme="light"] body {
     border-radius: 999px;
     background: rgba(20, 20, 24, 0.72);
     color: #fff !important;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 700;
     opacity: 0.82;
     cursor: pointer;
@@ -562,7 +562,7 @@ html[data-tti-theme="light"] body {
 .tti-section-desc {
     margin: -4px 0 14px;
     color: var(--ui-text-muted);
-    font-size: 12px;
+    font-size: 12px !important;
     line-height: 1.7;
 }
 .tti-section-desc b {
@@ -571,13 +571,14 @@ html[data-tti-theme="light"] body {
 
 /* ---------- 토글 리스트 ---------- */
 .tti-option-label {
+    position: relative;
     display: flex;
     justify-content: space-between;
     align-items: center;
     min-height: 54px;
     margin: 0;
     color: var(--ui-text) !important;
-    font-size: 13px;
+    font-size: 13px !important;
     cursor: pointer;
     gap: 14px;
     border-bottom: 1px solid var(--ui-border);
@@ -587,6 +588,9 @@ html[data-tti-theme="light"] body {
 }
 .tti-option-label > input[type="checkbox"] {
     position: absolute;
+    top: 50%;
+    right: 13px;
+    transform: translateY(-50%);
     opacity: 0;
     pointer-events: none;
 }
@@ -637,7 +641,7 @@ html[data-tti-theme="light"] body {
     border-radius: 12px;
     background: var(--ui-accent);
     color: var(--ui-on-accent) !important;
-    font-size: 14px;
+    font-size: 14px !important;
     font-weight: 800;
     cursor: pointer;
     transition: 0.15s ease;
@@ -652,7 +656,7 @@ html[data-tti-theme="light"] body {
 }
 .tti-primary-btn em {
     margin-left: auto;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 700;
     opacity: 0.7;
     font-style: normal;
@@ -668,7 +672,7 @@ html[data-tti-theme="light"] body {
     border-radius: 12px;
     background: var(--ui-surface) !important;
     color: var(--ui-text-soft) !important;
-    font-size: 13px;
+    font-size: 13px !important;
     font-weight: 800;
     cursor: pointer;
     transition: 0.15s ease;
@@ -688,7 +692,7 @@ html[data-tti-theme="light"] body {
     border-radius: 11px;
     background: var(--ui-surface) !important;
     color: var(--ui-text-soft) !important;
-    font-size: 13px;
+    font-size: 13px !important;
     font-weight: 700;
     cursor: pointer;
     gap: 8px;
@@ -742,7 +746,7 @@ html[data-tti-theme="light"] body {
     border-radius: 10px;
     background: var(--ui-surface);
     color: var(--ui-text-muted) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     font-weight: 700;
     cursor: pointer;
     transition: 0.15s ease;
@@ -757,7 +761,7 @@ html[data-tti-theme="light"] body {
 
 .how_to_use_box {
     color: var(--ui-text-soft) !important;
-    font-size: 12.5px;
+    font-size: 12.5px !important;
     line-height: 1.85;
 }
 .how_to_use_box > span {
@@ -789,7 +793,7 @@ html[data-tti-theme="light"] body {
     border-radius: 14px;
     background: var(--ui-surface);
     color: var(--ui-text-muted) !important;
-    font-size: 18px;
+    font-size: 18px !important;
     cursor: pointer;
     place-items: center;
 }
@@ -847,7 +851,7 @@ html[data-tti-theme="light"] body {
     border-radius: 50%;
     background: rgba(20, 20, 24, 0.72);
     color: #fff !important;
-    font-size: 13px;
+    font-size: 13px !important;
     line-height: 1;
     opacity: 0;
     transition: 0.15s ease;
@@ -869,7 +873,7 @@ html[data-tti-theme="light"] body {
     border-radius: 10px;
     background: var(--ui-surface) !important;
     color: var(--ui-text) !important;
-    font-size: 13px;
+    font-size: 13px !important;
     outline: 0;
 }
 .text-to-image-converter-settings select:focus,
@@ -908,7 +912,7 @@ html[data-tti-theme="light"] body {
 .tti-field > span:first-child {
     flex: 0 0 auto;
     color: var(--ui-text-soft) !important;
-    font-size: 13px;
+    font-size: 13px !important;
 }
 .tti-field > select,
 .tti-field > input[type="text"],
@@ -952,7 +956,7 @@ html[data-tti-theme="light"] body {
     border-radius: 10px;
     background: var(--ui-surface) !important;
     color: var(--ui-text-soft) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     font-weight: 700;
     cursor: pointer;
     transition: 0.15s ease;
@@ -1020,7 +1024,7 @@ html[data-tti-theme="light"] body {
     border-radius: 11px;
     background: transparent !important;
     color: var(--ui-text-muted) !important;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 700;
     cursor: pointer;
     transition: 0.15s ease;
@@ -1028,7 +1032,7 @@ html[data-tti-theme="light"] body {
     gap: 4px;
 }
 .tab-btn i {
-    font-size: 15px;
+    font-size: 15px !important;
 }
 .tab-btn:hover {
     color: var(--ui-text-soft) !important;
@@ -1071,13 +1075,13 @@ html[data-tti-theme="light"] body {
 .option-stepper .stepper-display {
     min-width: 46px;
     color: var(--ui-accent) !important;
-    font-size: 17px;
+    font-size: 17px !important;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
 }
 .option-stepper > div:first-of-type > span {
     color: var(--ui-text-soft) !important;
-    font-size: 13px;
+    font-size: 13px !important;
 }
 .option-stepper .stepper-actions {
     display: flex !important;
@@ -1096,7 +1100,7 @@ html[data-tti-theme="light"] body {
     border-radius: 9px;
     background: var(--ui-surface) !important;
     color: var(--ui-text) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     cursor: pointer;
     transition: 0.12s ease;
     place-items: center;
@@ -1132,7 +1136,7 @@ html[data-tti-theme="light"] body {
     border: 0 !important;
     background: transparent !important;
     color: var(--ui-text-muted) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     cursor: pointer;
     gap: 9px;
 }
@@ -1142,7 +1146,7 @@ html[data-tti-theme="light"] body {
     height: 36px;
     border: 1px solid var(--ui-border-strong);
     border-radius: 6px;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 700;
     place-items: center;
 }
@@ -1200,7 +1204,7 @@ html[data-tti-theme="light"] body {
     flex: 1;
     margin: 0;
     color: var(--ui-text-soft) !important;
-    font-size: 13px;
+    font-size: 13px !important;
     cursor: pointer;
 }
 .tti-color-spacer {
@@ -1239,7 +1243,7 @@ html[data-tti-theme="light"] body {
     height: 30px;
     border: 1px solid var(--ui-border-strong);
     border-radius: 8px;
-    font-size: 13px;
+    font-size: 13px !important;
     font-weight: 800;
     place-items: center;
 }
@@ -1273,7 +1277,7 @@ html[data-tti-theme="light"] body {
     border-radius: 999px;
     background: var(--ui-surface-raised);
     color: var(--ui-text-muted) !important;
-    font-size: 11px;
+    font-size: 11px !important;
     cursor: pointer;
     gap: 6px;
 }
@@ -1306,7 +1310,7 @@ html[data-tti-theme="light"] body {
     border-radius: 10px;
     background: transparent !important;
     color: var(--ui-text-soft) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     font-weight: 700;
     cursor: pointer;
     gap: 7px;
@@ -1337,7 +1341,7 @@ html[data-tti-theme="light"] body {
     border-radius: 8px;
     background: var(--ui-surface);
     color: var(--ui-text-muted) !important;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 800;
     cursor: pointer;
     place-items: center;
@@ -1384,7 +1388,7 @@ html[data-tti-theme="light"] body {
 }
 .replacement-rule label small {
     color: var(--ui-text-muted) !important;
-    font-size: 10px;
+    font-size: 10px !important;
 }
 .replacement-rule input[type="text"] {
     height: 36px !important;
@@ -1410,7 +1414,7 @@ html[data-tti-theme="light"] body {
     display: none;
     min-height: 92px;
     color: var(--ui-text-muted);
-    font-size: 13px;
+    font-size: 13px !important;
     place-items: center;
 }
 .replacement-rule-list:empty + .replacement-empty {
@@ -1487,7 +1491,7 @@ html[data-tti-theme="light"] body {
     align-items: center;
     padding-bottom: 12px;
     color: var(--ui-text-soft);
-    font-size: 13px;
+    font-size: 13px !important;
     font-weight: 800;
     gap: 12px;
     border-bottom: 1px solid var(--ui-border);
@@ -1504,7 +1508,7 @@ html[data-tti-theme="light"] body {
 }
 .tti-meta-label {
     color: var(--ui-text-soft) !important;
-    font-size: 13px;
+    font-size: 13px !important;
 }
 .tti-segment {
     display: grid;
@@ -1520,7 +1524,7 @@ html[data-tti-theme="light"] body {
     border-radius: 7px;
     background: transparent !important;
     color: var(--ui-text-muted) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     font-weight: 700;
     cursor: pointer;
 }
@@ -1666,7 +1670,7 @@ html[data-tti-theme="light"] body {
     display: none;
 }
 .tti-replace-modal .rule-index {
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 800;
     grid-area: number;
 }
@@ -1685,7 +1689,7 @@ html[data-tti-theme="light"] body {
     height: 37px;
     border: 1px solid var(--ui-border-strong) !important;
     background: var(--ui-surface-raised) !important;
-    font-size: 10px;
+    font-size: 10px !important;
     font-weight: 800;
     grid-area: toggle;
 }
@@ -1718,14 +1722,14 @@ html[data-tti-theme="light"] body {
 }
 .tti-modal > header small {
     color: var(--ui-accent) !important;
-    font-size: 10px;
+    font-size: 10px !important;
     font-weight: 850;
     letter-spacing: 0.13em;
 }
 .tti-modal > header h3 {
     margin: 3px 0 0 !important;
     color: var(--ui-text) !important;
-    font-size: 18px;
+    font-size: 18px !important;
 }
 .tti-modal > header > button {
     display: grid;
@@ -1762,7 +1766,7 @@ html[data-tti-theme="light"] body {
     border-radius: 11px;
     background: var(--ui-accent) !important;
     color: var(--ui-on-accent) !important;
-    font-size: 14px;
+    font-size: 14px !important;
     font-weight: 800;
     cursor: pointer;
 }
@@ -1773,7 +1777,7 @@ html[data-tti-theme="light"] body {
     border-radius: 11px;
     background-color: var(--ui-surface) !important;
     color: var(--ui-text) !important;
-    font-size: 14px;
+    font-size: 14px !important;
     cursor: pointer;
     transition: border-color 0.15s ease;
     aspect-ratio: 1 / 1;
@@ -1785,7 +1789,7 @@ html[data-tti-theme="light"] body {
     display: inline-flex;
     align-items: center;
     color: var(--ui-text-muted) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     text-decoration: none;
     gap: 6px;
     white-space: nowrap;
@@ -1813,13 +1817,13 @@ html[data-tti-theme="light"] body {
 }
 .tti-preset-current small {
     color: var(--ui-text-muted) !important;
-    font-size: 10px;
+    font-size: 10px !important;
     font-weight: 800;
     letter-spacing: 0.06em;
 }
 .tti-preset-current b {
     color: var(--ui-text) !important;
-    font-size: 15px;
+    font-size: 15px !important;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1851,7 +1855,7 @@ html[data-tti-theme="light"] body {
     flex: 0 0 auto;
     align-items: center;
     color: var(--ui-text-muted) !important;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 800;
     gap: 6px;
 }
@@ -1874,7 +1878,7 @@ html[data-tti-theme="light"] body {
     border-radius: 999px;
     background: var(--ui-surface-raised) !important;
     color: var(--ui-text-soft) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     font-weight: 700;
     cursor: pointer;
     transition: 0.15s ease;
@@ -1892,7 +1896,7 @@ html[data-tti-theme="light"] body {
 }
 .tti-pen-empty {
     color: var(--ui-text-muted);
-    font-size: 12px;
+    font-size: 12px !important;
     line-height: 32px;
     white-space: nowrap;
 }
@@ -2020,7 +2024,7 @@ html[data-tti-theme="light"] body {
     border-radius: 9px;
     background: transparent !important;
     color: var(--ui-text) !important;
-    font-size: 13px;
+    font-size: 13px !important;
     font-weight: 700;
     cursor: pointer;
     gap: 5px;
@@ -2104,7 +2108,7 @@ html[data-tti-theme="light"] body {
     align-items: center;
     margin-bottom: 10px;
     color: var(--ui-text-muted) !important;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 800;
     letter-spacing: 0.04em;
 }
@@ -2140,7 +2144,7 @@ html[data-tti-theme="light"] body {
 }
 .html-switcher-inputs-empty {
     color: var(--ui-text-muted);
-    font-size: 12px;
+    font-size: 12px !important;
 }
 .html-switcher-inputs.has-items .html-switcher-inputs-empty {
     display: none;
@@ -2226,7 +2230,7 @@ html[data-tti-theme="light"] body {
     border-radius: 7px;
     background: rgba(18, 20, 24, 0.92);
     color: #fff;
-    font-size: 11px;
+    font-size: 11px !important;
     line-height: 1;
     opacity: 0;
     transition: opacity 0.12s ease;
@@ -2281,7 +2285,7 @@ html[data-tti-theme="light"] body {
     border-radius: 10px;
     background: var(--ui-surface-raised) !important;
     color: var(--ui-text-soft) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     cursor: pointer;
     place-items: center;
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
@@ -2351,7 +2355,7 @@ html[data-tti-theme="light"] body {
     border-radius: 9px;
     background: var(--ui-surface) !important;
     color: var(--ui-text-soft) !important;
-    font-size: 12px;
+    font-size: 12px !important;
     cursor: pointer;
 }
 .tti-selection-submenu-header {
@@ -2380,7 +2384,7 @@ html[data-tti-theme="light"] body {
 .tti-selection-empty {
     padding: 10px 6px;
     color: var(--ui-text-muted);
-    font-size: 12px;
+    font-size: 12px !important;
 }
 .tti-selection-action:hover,
 .tti-selection-preset:hover,
@@ -2803,7 +2807,7 @@ html[data-tti-theme="light"] body {
     margin-left: auto;
     padding: 1px 8px;
     border-radius: 8px;
-    font-size: 11px;
+    font-size: 11px !important;
     font-weight: 700;
     line-height: 1.6;
 }
@@ -2835,7 +2839,7 @@ html[data-tti-theme="light"] body {
     padding: 10px 18px;
     border-radius: 999px;
     color: #fff;
-    font-size: 14px;
+    font-size: 14px !important;
     opacity: 0;
     transition:
         opacity 0.25s ease,
@@ -2893,7 +2897,7 @@ html[data-tti-theme="light"] body {
 .tti-web-font-name {
     min-width: 0;
     color: var(--ui-text-soft) !important;
-    font-size: 13px;
+    font-size: 13px !important;
     overflow-wrap: anywhere;
 }
 .tti-web-font-type {

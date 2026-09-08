@@ -1,132 +1,226 @@
-.tti-mobile-bar, .tti-mobile-sheet-header { display: none; }
-.tti-mobile-scroll { display: contents; }
+.tti-mobile-bar,
+.tti-mobile-sheet-header {
+    display: none;
+}
+.tti-mobile-scroll {
+    display: contents;
+}
 
 @media (max-width: 1000px) {
-  .tti-mobile-ready {
-    grid-template-rows: 48px minmax(0, 1fr) auto;
-  }
-  .tti-mobile-ready .tti-editor-body {
-    position: relative;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr);
-    overflow: hidden;
-  }
-  .tti-mobile-ready[data-mobile-sheet="half"] .tti-editor-controls {
-    height: 48%;
-  }
-  .tti-mobile-ready[data-mobile-sheet="expanded"] .tti-editor-controls {
-    height: 82%;
-  }
-  .tti-mobile-ready .tti-preview-pane {
-    min-height: 0;
-    overflow: hidden;
-    padding: 6px 8px;
-    border: 0;
-    scrollbar-gutter: auto;
-  }
-  .tti-mobile-ready .tti-preview-pane h4 {
-    flex: 0 0 auto;
-    min-height: 28px;
-    margin: 0 0 4px !important;
-    padding: 0 4px;
-    font-size: 11px;
-  }
-  .tti-mobile-ready .tti-preview-stage { padding: 0 32px 30px; overflow: hidden; }
-  .tti-mobile-ready .image-preview { min-height: 0; }
-  .tti-mobile-ready .image-preview-item img {
-    max-width: 100%;
-    max-height: var(--tti-mobile-preview-height, 60dvh);
-    width: auto;
-    height: auto;
-  }
-  .tti-mobile-ready .html-render-preview {
-    max-height: max(0px, calc(var(--tti-mobile-preview-height, 60dvh) - 44px));
-  }
-  .tti-mobile-ready .image-preview:empty::after { min-height: 0; }
-  .tti-mobile-ready .tti-preview-arrow { width: 32px; height: 44px; border-radius: 12px; }
-  .tti-mobile-ready .tti-preview-arrow.previous { left: 0; }
-  .tti-mobile-ready .tti-preview-arrow.next { right: 0; }
-  .tti-mobile-ready .tti-editor-controls {
-    position: absolute;
-    inset: auto 0 0;
-    z-index: 2;
-    height: 0;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
-    padding: 0;
-    border: 1px solid var(--ui-border);
-    border-bottom: 0;
-    border-radius: 20px 20px 0 0;
-    box-shadow: 0 -6px 24px #00000010;
-    scrollbar-gutter: auto;
-  }
-  .tti-mobile-ready[data-mobile-sheet="closed"] .tti-editor-controls { visibility: hidden; }
-  .tti-mobile-sheet-header { display: block; flex: 0 0 auto; }
-  .tti-mobile-handle {
-    display: grid;
-    place-items: center;
-    width: 100%;
-    height: 24px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    touch-action: none;
-    cursor: ns-resize;
-  }
-  .tti-mobile-handle span { width: 36px; height: 4px; border-radius: 10px; background: var(--ui-border-strong); }
-  .tti-mobile-sheet-heading { display: flex; align-items: center; justify-content: space-between; padding: 0 14px 6px; font-size: 14px; }
-  .tti-mobile-sheet-heading button {
-    min-width: 44px; min-height: 36px; border: 0; border-radius: 10px;
-    background: var(--ui-surface); color: var(--ui-text-soft); margin-left: 4px; font: inherit; font-size: 12px;
-  }
-  .tti-mobile-ready .tti-mobile-scroll {
-    display: block;
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding-bottom: 20px;
-    flex: 1;
-  }
-  .tti-mobile-ready .tti-mobile-scroll > .tti-primary-actions,
-  .tti-mobile-ready .tti-mobile-scroll > .preset-section,
-  .tti-mobile-ready .tti-mobile-scroll > .background-picker,
-  .tti-mobile-ready .tti-mobile-scroll > .tab-container { display: none; }
-  .tti-mobile-ready[data-mobile-category="background"] .tti-mobile-scroll > .background-picker { display: grid; }
-  .tti-mobile-ready .tti-primary-button-row { display: none; }
-  #tti_text_modal_backdrop #tti_open_replace_modal {
-    flex: 1 1 46%; min-width: 0; min-height: 44px; width: auto;
-    justify-content: center; padding: 8px 12px; font-size: 12px;
-  }
-  #tti_text_modal_backdrop #tti_text_length_badge {
-    display: block; margin-top: 4px; color: var(--ui-text-muted);
-    font-size: 12px; font-style: normal; font-weight: 400;
-  }
-  .tti-mobile-ready[data-mobile-category="other"] .tti-mobile-scroll > .tti-primary-actions,
-  .tti-mobile-ready[data-mobile-category="other"] .tti-mobile-scroll > .preset-section { display: block; }
-  .tti-mobile-ready[data-mobile-category="other"] .tab-container { display: grid; grid-template-columns: repeat(2, 1fr); }
-  .tti-mobile-ready[data-mobile-category="other"] .tab-btn[data-tab="image-style"],
-  .tti-mobile-ready[data-mobile-category="other"] .tab-btn[data-tab="text-style"],
-  .tti-mobile-ready[data-mobile-category="other"] .tab-btn[data-tab="background"] { display: none; }
-  .tti-mobile-bar {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 4px;
-    padding: 6px max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
-    background: var(--ui-panel);
-    border-top: 1px solid var(--ui-border);
-  }
-  .tti-mobile-bar button {
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
-    min-width: 0; min-height: 48px; padding: 6px 2px; border: 0; border-radius: 12px;
-    background: transparent; color: var(--ui-text-soft); font: inherit; font-size: 11px; cursor: pointer;
-  }
-  .tti-mobile-bar button i { font-size: 17px; }
-  .tti-mobile-bar button[aria-expanded="true"] { background: var(--ui-hover); color: var(--ui-accent); }
-  .tti-mobile-bar button[data-mobile-tool="save"] { background: var(--ui-accent); color: var(--ui-on-accent); }
-  .tti-mobile-bar button:disabled { opacity: .4; cursor: default; }
-  .tti-mobile-bar button:focus-visible, .tti-mobile-sheet-header button:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: -2px; }
-  #tti_text_modal_backdrop .tti-bottom-sheet { max-height: 92dvh; }
+    .tti-mobile-ready {
+        grid-template-rows: 48px minmax(0, 1fr) auto;
+    }
+    .tti-mobile-ready .tti-editor-body {
+        display: grid;
+        position: relative;
+        overflow: hidden;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr);
+    }
+    .tti-mobile-ready[data-mobile-sheet="half"] .tti-editor-controls {
+        height: 48%;
+    }
+    .tti-mobile-ready[data-mobile-sheet="expanded"] .tti-editor-controls {
+        height: 82%;
+    }
+    .tti-mobile-ready .tti-preview-pane {
+        min-height: 0;
+        padding: 6px 8px;
+        border: 0;
+        overflow: hidden;
+        scrollbar-gutter: auto;
+    }
+    .tti-mobile-ready .tti-preview-pane h4 {
+        flex: 0 0 auto;
+        min-height: 28px;
+        margin: 0 0 4px !important;
+        padding: 0 4px;
+        font-size: 11px !important;
+    }
+    .tti-mobile-ready .tti-preview-stage {
+        padding: 0 32px 30px;
+        overflow: hidden;
+    }
+    .tti-mobile-ready .image-preview {
+        min-height: 0;
+    }
+    .tti-mobile-ready .image-preview-item img {
+        width: auto;
+        height: auto;
+        max-width: 100%;
+        max-height: var(--tti-mobile-preview-height, 60dvh);
+    }
+    .tti-mobile-ready .html-render-preview {
+        max-height: max(0px, calc(var(--tti-mobile-preview-height, 60dvh) - 44px));
+    }
+    .tti-mobile-ready .image-preview:empty::after {
+        min-height: 0;
+    }
+    .tti-mobile-ready .tti-preview-arrow {
+        width: 32px;
+        height: 44px;
+        border-radius: 12px;
+    }
+    .tti-mobile-ready .tti-preview-arrow.previous {
+        left: 0;
+    }
+    .tti-mobile-ready .tti-preview-arrow.next {
+        right: 0;
+    }
+    .tti-mobile-ready .tti-editor-controls {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        z-index: 2;
+        height: 0;
+        min-height: 0;
+        padding: 0;
+        border: 1px solid var(--ui-border);
+        border-radius: 20px 20px 0 0;
+        overflow: hidden;
+        inset: auto 0 0;
+        border-bottom: 0;
+        box-shadow: 0 -6px 24px #00000010;
+        scrollbar-gutter: auto;
+    }
+    .tti-mobile-ready[data-mobile-sheet="closed"] .tti-editor-controls {
+        visibility: hidden;
+    }
+    .tti-mobile-sheet-header {
+        display: block;
+        flex: 0 0 auto;
+    }
+    .tti-mobile-handle {
+        display: grid;
+        width: 100%;
+        height: 24px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        cursor: ns-resize;
+        place-items: center;
+        touch-action: none;
+    }
+    .tti-mobile-handle span {
+        width: 36px;
+        height: 4px;
+        border-radius: 10px;
+        background: var(--ui-border-strong);
+    }
+    .tti-mobile-sheet-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 14px 6px;
+        font-size: 14px !important;
+    }
+    .tti-mobile-sheet-heading button {
+        min-width: 44px;
+        min-height: 36px;
+        margin-left: 4px;
+        border: 0;
+        border-radius: 10px;
+        background: var(--ui-surface);
+        color: var(--ui-text-soft);
+        font-size: 12px !important;
+        font: inherit;
+    }
+    .tti-mobile-ready .tti-mobile-scroll {
+        display: block;
+        flex: 1;
+        min-height: 0;
+        padding-bottom: 20px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+    .tti-mobile-ready .tti-mobile-scroll > .tti-primary-actions,
+    .tti-mobile-ready .tti-mobile-scroll > .preset-section,
+    .tti-mobile-ready .tti-mobile-scroll > .background-picker,
+    .tti-mobile-ready .tti-mobile-scroll > .tab-container {
+        display: none;
+    }
+    .tti-mobile-ready[data-mobile-category="background"] .tti-mobile-scroll > .background-picker {
+        display: grid;
+    }
+    .tti-mobile-ready .tti-primary-button-row {
+        display: none;
+    }
+    #tti_text_modal_backdrop #tti_open_replace_modal {
+        flex: 1 1 46%;
+        justify-content: center;
+        width: auto;
+        min-width: 0;
+        min-height: 44px;
+        padding: 8px 12px;
+        font-size: 12px !important;
+    }
+    #tti_text_modal_backdrop #tti_text_length_badge {
+        display: block;
+        margin-top: 4px;
+        color: var(--ui-text-muted);
+        font-size: 12px !important;
+        font-weight: 400;
+        font-style: normal;
+    }
+    .tti-mobile-ready[data-mobile-category="other"] .tti-mobile-scroll > .tti-primary-actions,
+    .tti-mobile-ready[data-mobile-category="other"] .tti-mobile-scroll > .preset-section {
+        display: block;
+    }
+    .tti-mobile-ready[data-mobile-category="other"] .tab-container {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .tti-mobile-ready[data-mobile-category="other"] .tab-btn[data-tab="image-style"],
+    .tti-mobile-ready[data-mobile-category="other"] .tab-btn[data-tab="text-style"],
+    .tti-mobile-ready[data-mobile-category="other"] .tab-btn[data-tab="background"] {
+        display: none;
+    }
+    .tti-mobile-bar {
+        display: grid;
+        padding: 6px max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+        background: var(--ui-panel);
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 4px;
+        border-top: 1px solid var(--ui-border);
+    }
+    .tti-mobile-bar button {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-width: 0;
+        min-height: 48px;
+        padding: 6px 2px;
+        border: 0;
+        border-radius: 12px;
+        background: transparent;
+        color: var(--ui-text-soft);
+        font-size: 11px !important;
+        cursor: pointer;
+        gap: 5px;
+        font: inherit;
+    }
+    .tti-mobile-bar button i {
+        font-size: 17px !important;
+    }
+    .tti-mobile-bar button[aria-expanded="true"] {
+        background: var(--ui-hover);
+        color: var(--ui-accent);
+    }
+    .tti-mobile-bar button[data-mobile-tool="save"] {
+        background: var(--ui-accent);
+        color: var(--ui-on-accent);
+    }
+    .tti-mobile-bar button:disabled {
+        opacity: 0.4;
+        cursor: default;
+    }
+    .tti-mobile-bar button:focus-visible,
+    .tti-mobile-sheet-header button:focus-visible {
+        outline: 2px solid var(--ui-accent);
+        outline-offset: -2px;
+    }
+    #tti_text_modal_backdrop .tti-bottom-sheet {
+        max-height: 92dvh;
+    }
 }
