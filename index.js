@@ -275,12 +275,32 @@ function setupWebFontManager() {
     const dialog = document.createElement("div");
     dialog.id = "tti_web_font_dialog";
     dialog.className = "tti-modal-backdrop";
-    dialog.innerHTML = `<form class="tti-modal tti-web-font-form" role="dialog" aria-modal="true" aria-labelledby="tti_web_font_title">
+    dialog.innerHTML = `<div class="tti-modal tti-web-font-manager" role="dialog" aria-modal="true" aria-labelledby="tti_web_font_title">
     <header>
         <div><small>WEB FONT</small><h3 id="tti_web_font_title">웹폰트 관리</h3></div>
         <button type="button" class="tti-modal-close" aria-label="닫기"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
     </header>
     <div class="tti-web-font-list"></div>
+    <h4 class="tti-modal-subhead">백업</h4>
+    <div class="tti-preset-actions tti-web-font-backup">
+        <button type="button" class="buttons" data-action="export"><i class="fa-solid fa-file-export" aria-hidden="true"></i> 저장</button>
+        <button type="button" class="buttons" data-action="import"><i class="fa-solid fa-file-import" aria-hidden="true"></i> 불러오기</button>
+    </div>
+    <p class="tti-section-desc tti-web-font-status" role="status"></p>
+    <footer>
+        <button type="button" class="primary" data-action="add"><i class="fa-solid fa-plus" aria-hidden="true"></i> 웹폰트 추가</button>
+    </footer>
+    <input type="file" accept="application/json,.json" hidden>
+</div>`;
+    document.body.append(dialog);
+    const editorDialog = document.createElement("div");
+    editorDialog.id = "tti_web_font_editor_dialog";
+    editorDialog.className = "tti-modal-backdrop";
+    editorDialog.innerHTML = `<form class="tti-modal tti-web-font-form" role="dialog" aria-modal="true" aria-labelledby="tti_web_font_editor_title">
+    <header>
+        <div><small>WEB FONT</small><h3 id="tti_web_font_editor_title">웹폰트 추가</h3></div>
+        <button type="button" class="tti-modal-close" aria-label="닫기"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </header>
     <label class="tti-modal-subhead" for="tti_web_font_name">표시할 이름</label>
     <input type="text" id="tti_web_font_name" name="name" required maxlength="100" placeholder="폰트 이름">
     <label class="tti-modal-subhead" for="tti_web_font_css">웹폰트 CSS</label>
@@ -290,28 +310,21 @@ function setupWebFontManager() {
         <label class="tti-option-label"><span>이미지</span><input type="checkbox" name="image" checked><i class="tti-toggle-slider" aria-hidden="true"><b></b></i></label>
         <label class="tti-option-label"><span>HTML</span><input type="checkbox" name="html" checked><i class="tti-toggle-slider" aria-hidden="true"><b></b></i></label>
     </div>
-    <h4 class="tti-modal-subhead">백업</h4>
-    <div class="tti-preset-actions tti-web-font-backup">
-        <button type="button" class="buttons" data-action="export"><i class="fa-solid fa-file-export" aria-hidden="true"></i> 저장</button>
-        <button type="button" class="buttons" data-action="import"><i class="fa-solid fa-file-import" aria-hidden="true"></i> 불러오기</button>
-    </div>
     <p class="tti-section-desc tti-web-font-status" role="status"></p>
-    <footer>
-        <button type="button" class="buttons" data-action="new">새로 입력</button>
-        <button type="submit" class="primary">등록</button>
-    </footer>
-    <input type="file" accept="application/json,.json" hidden>
+    <footer><button type="submit" class="primary">등록</button></footer>
 </form>`;
-    document.body.append(dialog);
-    const form = dialog.querySelector("form");
-    const status = dialog.querySelector('[role="status"]');
+    document.body.append(editorDialog);
+    const form = editorDialog.querySelector("form");
+    const managerStatus = dialog.querySelector('[role="status"]');
+    const editorStatus = editorDialog.querySelector('[role="status"]');
     let editing = null;
     let busy = false;
     const reset = () => {
         editing = null;
         form.reset();
+        editorDialog.querySelector("h3").textContent = "웹폰트 추가";
         form.querySelector('[type="submit"]').textContent = "등록";
-        status.textContent = "";
+        editorStatus.textContent = "";
     };
     const render = () => {
         const list = dialog.querySelector(".tti-web-font-list");
@@ -319,8 +332,14 @@ function setupWebFontManager() {
         getWebFonts().forEach((font) => {
             const row = document.createElement("div");
             row.className = "tti-field";
-            const label = document.createElement("span");
-            label.textContent = font.name + " · " + [font.image && "이미지", font.html && "HTML"].filter(Boolean).join(" / ");
+            const label = document.createElement("div");
+            label.className = "tti-web-font-label";
+            const name = document.createElement("span");
+            name.className = "tti-web-font-name";
+            name.textContent = font.name;
+            label.append(name);
+            if (font.image) label.insertAdjacentHTML("beforeend", '<span class="tti-web-font-type" title="이미지" aria-label="이미지"><i class="fa-solid fa-image" aria-hidden="true"></i></span>');
+            if (font.html) label.insertAdjacentHTML("beforeend", '<span class="tti-web-font-type" title="HTML" aria-label="HTML"><i class="fa-solid fa-code" aria-hidden="true"></i></span>');
             const edit = document.createElement("button");
             edit.type = "button";
             edit.className = "buttons";
@@ -334,7 +353,11 @@ function setupWebFontManager() {
                 form.elements.css.value = font.source || font.css;
                 form.elements.image.checked = font.image;
                 form.elements.html.checked = font.html;
+                editorDialog.querySelector("h3").textContent = "웹폰트 수정";
                 form.querySelector('[type="submit"]').textContent = "수정 저장";
+                editorStatus.textContent = "";
+                openModal(editorDialog.id);
+                form.elements.name.focus();
             };
             const remove = document.createElement("button");
             remove.type = "button";
@@ -377,7 +400,7 @@ function setupWebFontManager() {
         event.preventDefault();
         if (busy) return;
         busy = true;
-        status.textContent = "CSS 확인 중…";
+        editorStatus.textContent = "CSS 확인 중…";
         try {
             const name = form.elements.name.value.trim();
             const source = form.elements.css.value.trim();
@@ -389,15 +412,19 @@ function setupWebFontManager() {
             const font = {id: editing || crypto.randomUUID(), name, source, ...parsed, image, html};
             commit(editing ? getWebFonts().map((item) => (item.id === editing ? font : item)) : [...getWebFonts(), font]);
             reset();
-            status.textContent = "저장했습니다.";
+            managerStatus.textContent = "저장했습니다.";
+            closeModal($(editorDialog));
         } catch (error) {
-            status.textContent = error.message;
+            editorStatus.textContent = error.message;
         } finally {
             busy = false;
         }
     };
-    dialog.querySelector('[data-action="new"]').onclick = () => {
-        if (!busy) reset();
+    dialog.querySelector('[data-action="add"]').onclick = () => {
+        if (busy) return;
+        reset();
+        openModal(editorDialog.id);
+        form.elements.name.focus();
     };
     dialog.querySelector('[data-action="export"]').onclick = () => {
         const url = URL.createObjectURL(new Blob([JSON.stringify({version: 1, webFonts: getWebFonts()}, null, 2)], {type: "application/json"}));
@@ -429,9 +456,9 @@ function setupWebFontManager() {
             }
             commit(fonts);
             reset();
-            status.textContent = "백업을 불러왔습니다. 같은 글꼴은 백업 내용으로 갱신했습니다.";
+            managerStatus.textContent = "백업을 불러왔습니다. 같은 글꼴은 백업 내용으로 갱신했습니다.";
         } catch (error) {
-            status.textContent = error.message;
+            managerStatus.textContent = error.message;
         } finally {
             busy = false;
             input.value = "";
@@ -451,7 +478,6 @@ function setupWebFontManager() {
         button.onclick = () => {
             render();
             openModal(dialog.id);
-            form.elements.name.focus();
         };
     });
 }

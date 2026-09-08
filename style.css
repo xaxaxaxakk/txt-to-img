@@ -762,7 +762,11 @@ html[data-tti-theme="light"] body {
 }
 .how_to_use_box > span {
     display: grid;
-    gap: 10px;
+    gap: 15px;
+    & > span:not(:last-child) {
+        padding-bottom: 15px;
+        border-bottom: 1px dashed var(--ui-border);
+    }
 }
 .how_to_use_box b {
     color: var(--ui-text) !important;
@@ -1767,11 +1771,12 @@ html[data-tti-theme="light"] body {
     min-height: 44px;
     border: 1px solid var(--ui-border) !important;
     border-radius: 11px;
+    background-color: var(--ui-surface) !important;
     color: var(--ui-text) !important;
     font-size: 14px;
-    aspect-ratio: 1 / 1;
     cursor: pointer;
     transition: border-color 0.15s ease;
+    aspect-ratio: 1 / 1;
 }
 .tti-modal > footer button.text-field-copy:hover {
     border-color: var(--ui-accent) !important;
@@ -2815,14 +2820,14 @@ html[data-tti-theme="light"] body {
 
 /* 토스트 */
 .txt-toast-container {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 99999;
     display: flex;
     flex-direction: column;
     align-items: center;
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    z-index: 99999;
+    transform: translateX(-50%);
     gap: 8px;
     pointer-events: none;
 }
@@ -2831,12 +2836,12 @@ html[data-tti-theme="light"] body {
     border-radius: 999px;
     color: #fff;
     font-size: 14px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     opacity: 0;
-    transform: translateY(-10px);
     transition:
         opacity 0.25s ease,
         transform 0.25s ease;
+    transform: translateY(-10px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     white-space: nowrap;
 }
 .txt-toast.show {
@@ -2873,22 +2878,47 @@ html[data-tti-theme="light"] body {
     flex-shrink: 0;
 }
 .tti-web-font-list {
-    max-height: 180px;
+    max-height: min(52dvh, 360px);
     overflow: auto;
 }
 .tti-web-font-list .tti-field {
     gap: 5px;
 }
-.tti-web-font-list .tti-field > span {
+.tti-web-font-label {
     flex: 1;
+    justify-content: flex-start;
     min-width: 0;
+    overflow: hidden;
+}
+.tti-web-font-name {
+    min-width: 0;
+    color: var(--ui-text-soft) !important;
+    font-size: 13px;
     overflow-wrap: anywhere;
 }
+.tti-web-font-type {
+    display: inline-grid;
+    flex: 0 0 24px;
+    width: 24px;
+    height: 22px;
+    border-radius: 6px;
+    background: var(--ui-hover);
+    color: var(--ui-accent) !important;
+    font-size: 11px !important;
+    place-items: center;
+}
+.tti-web-font-list .tti-field {
+    border-bottom-style: dashed;
+}
+.tti-web-font-list > *:last-child {
+    border-bottom: 0 !important;
+}
 .tti-web-font-list .tti-field .buttons {
-    height: 34px !important;
-    min-height: 34px !important;
-    aspect-ratio: 1 / 1 !important;
+    height: 30px !important;
+    min-height: 30px !important;
     padding: unset;
+    font-size: 11px !important;
+    aspect-ratio: 1 / 1 !important;
 }
 .tti-web-font-backup {
     margin-top: 0;
