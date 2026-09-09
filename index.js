@@ -535,8 +535,8 @@ function getMetaMetrics(width) {
     return {
         fontSize: Math.round(28 * scale),
         lineStep: Math.round(42 * scale),
-        gapBefore: Math.round(21 * scale),
-        blockPadding: Math.round(26 * scale),
+        gapBefore: Math.round(24 * scale),
+        blockPadding: Math.round(30 * scale),
         watermarkSize: Math.round(42 * scale),
         watermarkInset: Math.round(45 * scale),
     };
@@ -3548,7 +3548,7 @@ function wrappingTexts(text, mode = "word") {
 
     const fullSize = settings.imageRatio === "full";
     const metaReserve = getMetaBlockHeight(width, getMetaLines(settings).length);
-    const maxLines = fullSize ? Infinity : Math.floor((height - 120 - lineHeight - metaReserve) / lineHeight);
+    const maxLines = fullSize ? Infinity : Math.floor((height - 180 - lineHeight - metaReserve) / lineHeight);
 
     const pages = [];
     let currentPage = [];
@@ -3754,7 +3754,7 @@ function generateTextImage(chunk, index) {
     const metaMetrics = getMetaMetrics(width);
     const metaBlockHeight = getMetaBlockHeight(width, metaLines.length);
     let metaStartY = 0;
-    const calcHeight = isFullSize ? Math.max(700, chunk.length * lineHeight + 200 + metaBlockHeight) : height;
+    const calcHeight = isFullSize ? Math.max(700, chunk.length * lineHeight + 220 + metaBlockHeight) : height;
 
     const renderScale = getRenderScale(width, calcHeight);
     const canvas = document.createElement("canvas");
@@ -3771,7 +3771,7 @@ function generateTextImage(chunk, index) {
 
         const totalTextHeight = chunk.length * lineHeight;
         const visibleMetaHeight = metaLines.length ? metaBlockHeight : 0;
-        let y = Math.max((calcHeight - totalTextHeight - visibleMetaHeight) / 2 + fontSize, 60 + fontSize);
+        let y = Math.max((calcHeight - totalTextHeight - visibleMetaHeight) / 2 + fontSize, 90 + fontSize);
         const setAlign = settings.fontAlign || "left";
 
         const lineBreak = settings.lineBreak || "byWord";
