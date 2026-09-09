@@ -1888,27 +1888,18 @@ function getCanvasSize() {
     const ratio = extension_settings[extensionName].imageRatio;
     switch (ratio) {
         case "square":
-            return {width: 700, height: 700};
+            return {width: 800, height: 800};
         case "rectangular":
-            return {width: 700, height: 1100};
+            return {width: 800, height: Math.round(800 * 1100 / 700)};
         case "longer":
-            return {width: 700, height: 2000};
+            return {width: 800, height: Math.round(800 * 2000 / 700)};
         case "full":
-            return {width: 700, height: null};
+            return {width: 800, height: null};
         default:
-            return {width: 700, height: 700};
+            return {width: 800, height: 800};
     }
 }
 
-function getRenderScale(width, height) {
-    const MAX_AREA = 16000000;
-    const MAX_SIDE = 8192;
-    let scale = 2;
-    while (scale > 1 && (width * scale * height * scale > MAX_AREA || Math.max(width, height) * scale > MAX_SIDE)) {
-        scale -= 0.5;
-    }
-    return scale;
-}
 function aspectRatio(event) {
     extension_settings[extensionName].imageRatio = event.target.value;
     debouncedSaveSettings();
@@ -3754,14 +3745,12 @@ function generateTextImage(chunk, index) {
     const metaMetrics = getMetaMetrics(width);
     const metaBlockHeight = getMetaBlockHeight(width, metaLines.length);
     let metaStartY = 0;
-    const calcHeight = isFullSize ? Math.max(700, chunk.length * lineHeight + 220 + metaBlockHeight) : height;
+    const calcHeight = isFullSize ? Math.ceil(Math.max(width, chunk.length * lineHeight + 220 + metaBlockHeight)) : height;
 
-    const renderScale = getRenderScale(width, calcHeight);
     const canvas = document.createElement("canvas");
-    canvas.width = Math.round(width * renderScale);
-    canvas.height = Math.round(calcHeight * renderScale);
+    canvas.width = width;
+    canvas.height = calcHeight;
     const ctx = canvas.getContext("2d");
-    ctx.scale(renderScale, renderScale);
     ctx.textRendering = "geometricPrecision";
     ctx.lineJoin = "round";
     ctx.miterLimit = 2;
@@ -3999,13 +3988,12 @@ function generateTextImage(chunk, index) {
             } else {
                 const scale = width / img.width;
                 const tempCanvas = document.createElement("canvas");
-                tempCanvas.width = Math.round(width * renderScale);
-                tempCanvas.height = Math.round(img.height * scale * renderScale);
+                tempCanvas.width = width;
+                tempCanvas.height = Math.round(img.height * scale);
                 const tempCtx = tempCanvas.getContext("2d");
                 tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
 
                 const pattern = ctx.createPattern(tempCanvas, "repeat");
-                pattern.setTransform?.(new DOMMatrix().scale(1 / renderScale));
                 ctx.fillStyle = pattern;
                 ctx.fillRect(0, 0, width, calcHeight);
             }
@@ -4018,10 +4006,9 @@ function generateTextImage(chunk, index) {
             const offsetY = fillMode === "mix-top" ? 0 : calcHeight - drawHeight;
 
             const tempCanvas = document.createElement("canvas");
-            tempCanvas.width = Math.round(width * renderScale);
-            tempCanvas.height = Math.round(calcHeight * renderScale);
+            tempCanvas.width = width;
+            tempCanvas.height = calcHeight;
             const tempCtx = tempCanvas.getContext("2d");
-            tempCtx.scale(renderScale, renderScale);
             tempCtx.drawImage(img, 0, offsetY, drawWidth, drawHeight);
 
             const gradientHeight = Math.min(drawHeight * 0.4, calcHeight * 0.3);
@@ -4059,7 +4046,7 @@ function generateTextImage(chunk, index) {
         }
 
         let filterEffects = [];
-        if (settings.bgBlur > 0) filterEffects.push(`blur(${settings.bgBlur * renderScale}px)`);
+        if (settings.bgBlur > 0) filterEffects.push(`blur(${settings.bgBlur}px)`);
         if (settings.bgBrightness !== undefined) filterEffects.push(`brightness(${settings.bgBrightness}%)`);
         if (settings.bgHue !== undefined) filterEffects.push(`hue-rotate(${settings.bgHue}deg)`);
 
