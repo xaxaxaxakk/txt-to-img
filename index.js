@@ -535,8 +535,8 @@ function getMetaMetrics(width) {
     return {
         fontSize: Math.round(28 * scale),
         lineStep: Math.round(42 * scale),
-        gapBefore: Math.round(18 * scale),
-        blockPadding: Math.round(24 * scale),
+        gapBefore: Math.round(21 * scale),
+        blockPadding: Math.round(26 * scale),
         watermarkSize: Math.round(42 * scale),
         watermarkInset: Math.round(45 * scale),
     };
@@ -3548,7 +3548,7 @@ function wrappingTexts(text, mode = "word") {
 
     const fullSize = settings.imageRatio === "full";
     const metaReserve = getMetaBlockHeight(width, getMetaLines(settings).length);
-    const maxLines = fullSize ? Infinity : Math.floor((height - 80 - lineHeight - metaReserve) / lineHeight);
+    const maxLines = fullSize ? Infinity : Math.floor((height - 120 - lineHeight - metaReserve) / lineHeight);
 
     const pages = [];
     let currentPage = [];
@@ -3754,7 +3754,7 @@ function generateTextImage(chunk, index) {
     const metaMetrics = getMetaMetrics(width);
     const metaBlockHeight = getMetaBlockHeight(width, metaLines.length);
     let metaStartY = 0;
-    const calcHeight = isFullSize ? Math.max(700, chunk.length * lineHeight + 160 + metaBlockHeight) : height;
+    const calcHeight = isFullSize ? Math.max(700, chunk.length * lineHeight + 200 + metaBlockHeight) : height;
 
     const renderScale = getRenderScale(width, calcHeight);
     const canvas = document.createElement("canvas");
@@ -3771,7 +3771,7 @@ function generateTextImage(chunk, index) {
 
         const totalTextHeight = chunk.length * lineHeight;
         const visibleMetaHeight = metaLines.length ? metaBlockHeight : 0;
-        let y = Math.max((calcHeight - totalTextHeight - visibleMetaHeight) / 2 + fontSize, 40 + fontSize);
+        let y = Math.max((calcHeight - totalTextHeight - visibleMetaHeight) / 2 + fontSize, 60 + fontSize);
         const setAlign = settings.fontAlign || "left";
 
         const lineBreak = settings.lineBreak || "byWord";
@@ -4469,7 +4469,7 @@ function createHTMLSnippet(text, index) {
             `
   <span class="tti-watermark" style="${watermarkStyle}">${WATERMARK_MARK}</span>`
         :   "";
-    const footerInlineStyle = ["position:relative !important", "flex:0 0 auto !important", "display:flex !important", "flex-direction:column !important", "gap:2px !important", "width:100% !important", "box-sizing:border-box !important", "margin-left:0 !important", "margin-right:0 !important", "padding:0 !important", "margin-top:18px !important", "z-index:3 !important"].join(";");
+    const footerInlineStyle = ["position:relative !important", "flex:0 0 auto !important", "display:flex !important", "flex-direction:column !important", "gap:2px !important", "width:100% !important", "box-sizing:border-box !important", "padding:0 !important", "margin:18px 0 14px 0 !important", "z-index:3 !important"].join(";");
     const stackInlineStyle = ["grid-area:1 / 1 !important", "position:relative !important", "display:flex !important", "flex-direction:column !important", "justify-content:center !important", "justify-content:safe center !important", "box-sizing:border-box !important", "width:100% !important", "min-height:0 !important", "margin:0 !important", "padding:0 !important", "z-index:3 !important"].join(";");
     const footerHTML =
         hasMeta ?
