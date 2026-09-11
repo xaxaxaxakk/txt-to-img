@@ -115,8 +115,8 @@ const defaultSettings = {
     fontFamily: "Pretendard-Regular",
     fontWeight: "normal",
     htmlFontFace: "Ridibatang",
-    fontSize: 24,
-    fontSizeImage: 24,
+    fontSize: 32,
+    fontSizeImage: 32,
     fontSizeHtml: 14,
     fontSpacing: 0,
     fontLineHeight: 1.5,
@@ -530,21 +530,31 @@ function resolveMetaText(mode, customValue) {
 }
 const WATERMARK_MARK = "READER.";
 const SHARE_REFERENCE_WIDTH = 1080;
+const SHARE_LAYOUT = {
+    paddingTop: 130,
+    paddingBottom: 130,
+    paddingBottomMeta: 160,
+    metaGap: 24,
+};
 function getMetaMetrics(width) {
     const scale = width / SHARE_REFERENCE_WIDTH;
     return {
         fontSize: Math.round(28 * scale),
         lineStep: Math.round(42 * scale),
-        gapBefore: Math.round(24 * scale),
-        blockPadding: Math.round(30 * scale),
         watermarkSize: Math.round(42 * scale),
         watermarkInset: Math.round(45 * scale),
+        paddingTop: Math.round(SHARE_LAYOUT.paddingTop * scale),
+        paddingBottom: Math.round(SHARE_LAYOUT.paddingBottom * scale),
+        paddingBottomMeta: Math.round(SHARE_LAYOUT.paddingBottomMeta * scale),
+        metaGap: Math.round(SHARE_LAYOUT.metaGap * scale),
     };
 }
-function getMetaBlockHeight(width, lineCount) {
-    if (!lineCount) lineCount = 2;
+function getVerticalReserve(width, metaLineCount, fontSize) {
     const metrics = getMetaMetrics(width);
-    return lineCount * metrics.lineStep + metrics.blockPadding;
+    const metaGap = fontSize + metrics.metaGap;
+    const metaHeight = metaLineCount ? metaGap + metaLineCount * metrics.lineStep : 0;
+    const bottom = metaLineCount ? metrics.paddingBottomMeta : metrics.paddingBottom;
+    return {top: metrics.paddingTop, metaGap, metaHeight, bottom, total: metrics.paddingTop + metaHeight + bottom};
 }
 function isWatermarkEnabled(settings = extension_settings[extensionName]) {
     return !!settings?.useWatermark;
@@ -1886,17 +1896,18 @@ function selectCanvasBG(event) {
 }
 function getCanvasSize() {
     const ratio = extension_settings[extensionName].imageRatio;
+    const width = SHARE_REFERENCE_WIDTH;
     switch (ratio) {
         case "square":
-            return {width: 800, height: 800};
+            return {width, height: width};
         case "rectangular":
-            return {width: 800, height: Math.round(800 * 1100 / 700)};
+            return {width, height: Math.round(width * 1100 / 700)};
         case "longer":
-            return {width: 800, height: Math.round(800 * 2000 / 700)};
+            return {width, height: Math.round(width * 2000 / 700)};
         case "full":
-            return {width: 800, height: null};
+            return {width, height: null};
         default:
-            return {width: 800, height: 800};
+            return {width, height: width};
     }
 }
 
@@ -3538,8 +3549,8 @@ function wrappingTexts(text, mode = "word") {
     const lineHeight = fontSize * parseFloat(settings.fontLineHeight);
 
     const fullSize = settings.imageRatio === "full";
-    const metaReserve = getMetaBlockHeight(width, getMetaLines(settings).length);
-    const maxLines = fullSize ? Infinity : Math.floor((height - 180 - lineHeight - metaReserve) / lineHeight);
+    const reserve = getVerticalReserve(width, getMetaLines(settings).length, fontSize);
+    const maxLines = fullSize ? Infinity : Math.max(1, Math.floor((height - reserve.total) / lineHeight));
 
     const pages = [];
     let currentPage = [];
@@ -3743,9 +3754,9 @@ function generateTextImage(chunk, index) {
     const isFullSize = settings.imageRatio === "full";
     const metaLines = getMetaLines(settings);
     const metaMetrics = getMetaMetrics(width);
-    const metaBlockHeight = getMetaBlockHeight(width, metaLines.length);
+    const reserve = getVerticalReserve(width, metaLines.length, fontSize);
     let metaStartY = 0;
-    const calcHeight = isFullSize ? Math.ceil(Math.max(width, chunk.length * lineHeight + 220 + metaBlockHeight)) : height;
+    const calcHeight = isFullSize ? Math.ceil(Math.max(width, chunk.length * lineHeight + reserve.total)) : height;
 
     const canvas = document.createElement("canvas");
     canvas.width = width;
@@ -3759,8 +3770,8 @@ function generateTextImage(chunk, index) {
         const strokeWidth = parseFloat(settings.strokeWidth) || 0;
 
         const totalTextHeight = chunk.length * lineHeight;
-        const visibleMetaHeight = metaLines.length ? metaBlockHeight : 0;
-        let y = Math.max((calcHeight - totalTextHeight - visibleMetaHeight) / 2 + fontSize, 90 + fontSize);
+        const spare = Math.max(0, calcHeight - reserve.total - totalTextHeight);
+        let y = reserve.top + spare / 2 + fontSize;
         const setAlign = settings.fontAlign || "left";
 
         const lineBreak = settings.lineBreak || "byWord";
@@ -3963,7 +3974,7 @@ function generateTextImage(chunk, index) {
             }
         }
 
-        metaStartY = y;
+        metaStartY = y - fontSize;
     };
 
     const textWallpaper = (img) => {
@@ -4106,7 +4117,7 @@ function generateTextImage(chunk, index) {
         ctx.textBaseline = "alphabetic";
 
         if (metaLines.length) {
-            let y = metaStartY + metaMetrics.gapBefore;
+            let y = metaStartY + reserve.metaGap + metaMetrics.fontSize;
             ctx.font = `${metaMetrics.fontSize}px ${getCSSFontFamily("Pretendard-Regular")}`;
             ctx.textAlign = "left";
             ctx.fillStyle = textColor;
