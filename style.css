@@ -621,6 +621,14 @@ html[data-tti-theme="light"] body {
     left: 23px;
     background: var(--ui-on-accent);
 }
+.tti-option-label.tti-field-toggle {
+    min-height: 52px;
+}
+.tti-option-label.tti-field-toggle > span:first-child {
+    flex: 0 0 auto;
+    color: var(--ui-text-soft) !important;
+    font-size: 13px !important;
+}
 
 /* ---------- 주요 액션 ---------- */
 .tti-primary-actions {
