@@ -175,12 +175,52 @@ const defaultSettings = {
     extMenuShortcut: false,
     mesButtonEnabled: true,
     autoOrganize: false,
+    layoutTemplate: "default",
+    sillybooksTheme: "light",
+    templateStash: null,
 };
 let defaultBackgroundUrlMap = new Map();
 let defaultBackgroundBasenameMap = new Map();
 const CUSTOM_BG_STORAGE_IMAGE_KEY = "textToImageCustomBgsImage";
 const CUSTOM_BG_STORAGE_HTML_KEY = "textToImageCustomBgsHTML";
 const HTML_FONT_FACE_OPTIONS = new Set(["Ridibatang", "Nanum Gothic", "OngleipParkDahyeon", "GangwonEducationModuche"]);
+
+const TEMPLATE_STASH_KEYS = ["fontFamily", "htmlFontFace", "fontColor", "backgroundColor", "chatTitleMode", "charNameMode", "useQuotesColor", "quotesFontColor", "useItalicColor", "italicFontColor", "blockquoteFontColor", "blockquoteBgColor", "blockquoteBorderColor"];
+const SILLYBOOKS_THEMES = {
+    light: {fontColor: "#25272b", backgroundColor: "#fcfcfc", quotesFontColor: "#46536a", italicFontColor: "#727984"},
+    beige: {fontColor: "#403b36", backgroundColor: "#fffdf9", quotesFontColor: "#785948", italicFontColor: "#746a62"},
+    dark: {fontColor: "#e0e0e0", backgroundColor: "#1d2026", quotesFontColor: "#f0d8d8", italicFontColor: "#aeb2ba"},
+};
+const SILLYBOOKS_DEFAULTS = {
+    fontFamily: "RIDIBatang",
+    htmlFontFace: "Ridibatang",
+    chatTitleMode: "custom",
+    charNameMode: "custom",
+    ...SILLYBOOKS_THEMES.light,
+};
+function getSillybooksTheme(settings = extension_settings[extensionName]) {
+    return Object.prototype.hasOwnProperty.call(SILLYBOOKS_THEMES, settings?.sillybooksTheme) ? settings.sillybooksTheme : "light";
+}
+function getSillybooksThemeValues(theme) {
+    const colors = SILLYBOOKS_THEMES[theme] || SILLYBOOKS_THEMES.light;
+    return {
+        ...colors,
+        useQuotesColor: true,
+        useItalicColor: true,
+        blockquoteFontColor: colors.fontColor,
+        blockquoteBgColor: colors.backgroundColor,
+        blockquoteBorderColor: colors.italicFontColor,
+    };
+}
+function getLayoutTemplate(settings = extension_settings[extensionName]) {
+    return settings?.layoutTemplate === "sillybooks" ? "sillybooks" : "default";
+}
+function isSillybooksTemplate(settings = extension_settings[extensionName]) {
+    return getLayoutTemplate(settings) === "sillybooks";
+}
+function getImageRatio(settings = extension_settings[extensionName]) {
+    return isSillybooksTemplate(settings) ? "full" : settings?.imageRatio;
+}
 
 function isHtmlModeEnabled() {
     return !!extension_settings[extensionName]?.htmlMode;
@@ -754,6 +794,7 @@ async function initSettings() {
     renderReplaceRules();
     syncMetaUIState();
     applyHtmlModeUIState();
+    applyTemplateUIState();
     updateFooterLayoutUIState();
     syncSteppers();
     syncRatioButtons();
@@ -978,6 +1019,7 @@ function deletePreset() {
         renderReplaceRules();
         syncMetaUIState();
         applyHtmlModeUIState();
+        applyTemplateUIState();
         loadCustomBG();
         updateFooterLayoutUIState();
         syncSteppers();
@@ -1071,6 +1113,7 @@ function selectPreset() {
         renderReplaceRules();
         syncMetaUIState();
         applyHtmlModeUIState();
+        applyTemplateUIState();
         loadCustomBG();
         updateFooterLayoutUIState();
         syncSteppers();
@@ -1271,6 +1314,10 @@ function applyPreset(presetName) {
         extension_settings[extensionName].blockquoteBorderColor = defaultSettings.blockquoteBorderColor;
         $("#tti_blockquote_border_color").val(defaultSettings.blockquoteBorderColor);
     }
+    if (!Object.prototype.hasOwnProperty.call(preset, "layoutTemplate")) {
+        extension_settings[extensionName].layoutTemplate = defaultSettings.layoutTemplate;
+        extension_settings[extensionName].templateStash = null;
+    }
     if (!Object.prototype.hasOwnProperty.call(preset, "htmlFontFace")) {
         extension_settings[extensionName].htmlFontFace = defaultSettings.htmlFontFace;
         $("#tti_html_font_face").val(defaultSettings.htmlFontFace);
@@ -1298,6 +1345,7 @@ function applyPreset(presetName) {
     highlighterTags();
     syncMetaUIState();
     applyHtmlModeUIState();
+    applyTemplateUIState();
     updateFooterLayoutUIState();
     syncSteppers();
     syncRatioButtons();
@@ -1902,7 +1950,7 @@ function selectCanvasBG(event) {
     refreshPreview();
 }
 function getCanvasSize() {
-    const ratio = extension_settings[extensionName].imageRatio;
+    const ratio = getImageRatio();
     const width = SHARE_REFERENCE_WIDTH;
     switch (ratio) {
         case "square":
@@ -2262,6 +2310,78 @@ function htmlMode(event) {
     loadCustomBG();
     syncSelectedBackgroundUI();
     refreshPreview();
+}
+function applyTemplateUIState() {
+    const sillybooks = isSillybooksTemplate();
+    $("#sillybooks_toggle").prop("checked", sillybooks);
+    $("[data-sb-hide]").toggleClass("sb-mode-hidden", sillybooks);
+    $("[data-sb-only]").toggleClass("sb-mode-only", !sillybooks);
+    const theme = getSillybooksTheme();
+    $(".tti-segment[data-sb-theme]").toggleClass("disabled", !sillybooks);
+    $(".tti-segment[data-sb-theme] button").each(function () {
+        $(this).toggleClass("active", $(this).data("theme") === theme).prop("disabled", !sillybooks);
+    });
+    if (sillybooks && $(".tab-btn.active").is("[data-sb-hide]")) {
+        $(".tab-btn").first().trigger("click");
+    }
+}
+function syncTemplateInputs() {
+    const settings = extension_settings[extensionName];
+    $("#tti_font_family").val(currentCustomFont ? oriFontFamily : settings.fontFamily);
+    settings.htmlFontFace = normalizeHtmlFontFace(settings.htmlFontFace);
+    $("#tti_html_font_face").val(settings.htmlFontFace);
+    $("#tti_font_color").val(settings.fontColor);
+    $("#background_color").val(settings.backgroundColor);
+    $("#use_quotes_color").prop("checked", !!settings.useQuotesColor);
+    $("#tti_quotes_font_color").val(settings.quotesFontColor);
+    $("#use_italic_color").prop("checked", !!settings.useItalicColor);
+    $("#tti_italic_font_color").val(settings.italicFontColor);
+    $("#tti_blockquote_font_color").val(settings.blockquoteFontColor || defaultSettings.blockquoteFontColor);
+    $("#tti_blockquote_bg_color").val(settings.blockquoteBgColor || defaultSettings.blockquoteBgColor);
+    $("#tti_blockquote_border_color").val(settings.blockquoteBorderColor || defaultSettings.blockquoteBorderColor);
+    settings.chatTitleMode = normalizeMetaMode(settings.chatTitleMode);
+    settings.charNameMode = normalizeMetaMode(settings.charNameMode);
+    syncMetaUIState();
+}
+async function setLayoutTemplate(nextTemplate) {
+    const settings = extension_settings[extensionName];
+    const current = getLayoutTemplate(settings);
+    const next = nextTemplate === "sillybooks" ? "sillybooks" : "default";
+    if (current !== next) {
+        const stash = settings.templateStash && typeof settings.templateStash === "object" ? settings.templateStash : {};
+        const fallback = next === "sillybooks" ? {...SILLYBOOKS_DEFAULTS, ...getSillybooksThemeValues(getSillybooksTheme(settings))} : defaultSettings;
+        const outgoing = {};
+        TEMPLATE_STASH_KEYS.forEach((key) => {
+            outgoing[key] = key === "fontFamily" && currentCustomFont ? oriFontFamily : settings[key];
+            const value = stash[next]?.[key] ?? fallback[key];
+            if (key === "fontFamily" && currentCustomFont) {
+                oriFontFamily = value;
+            } else {
+                settings[key] = value;
+            }
+        });
+        settings.templateStash = {...stash, [current]: outgoing};
+        settings.layoutTemplate = next;
+        syncTemplateInputs();
+    }
+    applyTemplateUIState();
+    saveSettings();
+    await ensurePreviewFontsLoaded();
+    refreshPreview();
+}
+function setSillybooksTheme(theme) {
+    const settings = extension_settings[extensionName];
+    settings.sillybooksTheme = Object.prototype.hasOwnProperty.call(SILLYBOOKS_THEMES, theme) ? theme : "light";
+    if (isSillybooksTemplate(settings)) {
+        Object.assign(settings, getSillybooksThemeValues(settings.sillybooksTheme));
+        syncTemplateInputs();
+    }
+    applyTemplateUIState();
+    saveSettings();
+    refreshPreview();
+}
+function sillybooksTemplate(event) {
+    setLayoutTemplate(event.target.checked ? "sillybooks" : "default");
 }
 function getPreviewChunks() {
     const text = $("#text_to_image").val() || "";
@@ -3561,7 +3681,7 @@ function wrappingTexts(text, mode = "word") {
     const lineHeight = fontSize * parseFloat(settings.fontLineHeight);
     const indentSize = settings.textIndent ? fontSize : 0;
 
-    const fullSize = settings.imageRatio === "full";
+    const fullSize = getImageRatio(settings) === "full";
     const reserve = getVerticalReserve(width, getMetaLines(settings).length, fontSize);
     const maxLines = fullSize ? Infinity : Math.max(1, Math.floor((height - reserve.total) / lineHeight));
 
@@ -3768,12 +3888,17 @@ function generateTextImage(chunk, index) {
     const useSecondBgColor = settings.useSecondBackgroundColor;
     const secondBgColor = settings.secondBackgroundColor;
 
-    const isFullSize = settings.imageRatio === "full";
-    const metaLines = getMetaLines(settings);
+    const sillybooks = isSillybooksTemplate(settings);
+    const isFullSize = getImageRatio(settings) === "full";
+    const metaLines = sillybooks ? [] : getMetaLines(settings);
     const metaMetrics = getMetaMetrics(width);
-    const reserve = getVerticalReserve(width, metaLines.length, fontSize);
+    const sbHeader = sillybooks ? layoutSillybooksHeader(width, fontSize, settings) : null;
+    const reserve = sbHeader ? {top: sbHeader.bodyTop, total: sbHeader.bodyTop + sbHeader.paddingBottom} : getVerticalReserve(width, metaLines.length, fontSize);
     let metaStartY = 0;
-    const calcHeight = isFullSize ? Math.ceil(Math.max(width, chunk.length * lineHeight + reserve.total)) : height;
+    const calcHeight =
+        sbHeader ? Math.ceil(chunk.length * lineHeight + reserve.total)
+        : isFullSize ? Math.ceil(Math.max(width, chunk.length * lineHeight + reserve.total))
+        : height;
 
     const canvas = document.createElement("canvas");
     canvas.width = width;
@@ -4167,7 +4292,14 @@ function generateTextImage(chunk, index) {
         .text("Download")
         .on("click", () => saveImage(canvas.toDataURL("image/png"), `${index + 1}.png`));
 
-    if (useBgColor && !bgImage) {
+    if (sbHeader) {
+        ctx.fillStyle = settings.backgroundColor || SILLYBOOKS_DEFAULTS.backgroundColor;
+        ctx.fillRect(0, 0, width, calcHeight);
+        drawSillybooksHeader(ctx, sbHeader, settings);
+        drawText();
+        drawFooter();
+        $img.attr("src", canvas.toDataURL("image/png"));
+    } else if (useBgColor && !bgImage) {
         if (useSecondBgColor) {
             const gradient = ctx.createLinearGradient(0, 0, width, calcHeight);
             addSmoothGradientStops(gradient, bgColor, secondBgColor);
@@ -4204,10 +4336,88 @@ function generateTextImage(chunk, index) {
         $img.attr("src", canvas.toDataURL("image/png"));
     }
 
-    if (settings.imageRatio === "rectangular") $img.addClass("rectangular");
+    if (getImageRatio(settings) === "rectangular") $img.addClass("rectangular");
     if (isFullSize) $img.addClass("full");
     $preview.append($img, $downloadBtn);
     return $preview;
+}
+function wrapCanvasText(ctx, text, maxWidth) {
+    const lines = [];
+    let current = "";
+    String(text)
+        .split(/(\s+)/)
+        .forEach((token) => {
+            if (!token) return;
+            const candidate = current + token;
+            if (!current.trim() || ctx.measureText(candidate.trimEnd()).width <= maxWidth) {
+                current = candidate;
+                return;
+            }
+            lines.push(current.trimEnd());
+            current = token.trimStart();
+        });
+    if (current.trim()) lines.push(current.trimEnd());
+    return lines.flatMap((line) => {
+        if (ctx.measureText(line).width <= maxWidth) return [line];
+        const parts = [];
+        let part = "";
+        Array.from(line).forEach((char) => {
+            if (part && ctx.measureText(part + char).width > maxWidth) {
+                parts.push(part);
+                part = char;
+            } else {
+                part += char;
+            }
+        });
+        if (part) parts.push(part);
+        return parts;
+    });
+}
+function getSillybooksHeaderTexts(settings = extension_settings[extensionName]) {
+    return {
+        title: resolveMetaText(settings?.chatTitleMode, settings?.chatTitleCustom),
+        name: resolveMetaText(settings?.charNameMode, settings?.charNameCustom),
+    };
+}
+function layoutSillybooksHeader(width, fontSize, settings) {
+    const scale = width / SHARE_REFERENCE_WIDTH;
+    const paddingTop = Math.round(150 * scale);
+    const paddingBottom = Math.round(160 * scale);
+    const {title, name} = getSillybooksHeaderTexts(settings);
+    const family = getCSSFontFamily(settings.fontFamily);
+    const titleSize = Math.round(fontSize * 1.55);
+    const nameSize = Math.round(fontSize * 0.78);
+    const titleStep = Math.round(titleSize * 1.3);
+    const measure = document.createElement("canvas").getContext("2d");
+    measure.font = `bold ${titleSize}px ${family}`;
+    const titleLines = title ? wrapCanvasText(measure, title, width * 0.8) : [];
+    let y = paddingTop;
+    const titleTop = y;
+    y += titleLines.length * titleStep;
+    if (titleLines.length && name) y += Math.round(fontSize * 0.35);
+    const nameTop = y;
+    if (name) y += Math.round(nameSize * 1.4);
+    if (titleLines.length || name) y += fontSize * 2;
+    return {family, titleSize, nameSize, titleStep, titleLines, titleTop, name, nameTop, bodyTop: y, paddingBottom};
+}
+function drawSillybooksHeader(ctx, header, settings) {
+    const x = ctx.canvas.width * 0.1;
+    const color = settings.fontColor || SILLYBOOKS_DEFAULTS.fontColor;
+    ctx.save();
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = color;
+    ctx.letterSpacing = "0em";
+    ctx.font = `bold ${header.titleSize}px ${header.family}`;
+    header.titleLines.forEach((line, index) => {
+        ctx.fillText(line, x, header.titleTop + index * header.titleStep + (header.titleStep - header.titleSize) / 2);
+    });
+    if (header.name) {
+        ctx.font = `${header.nameSize}px ${header.family}`;
+        ctx.globalAlpha = 0.56;
+        ctx.fillText(header.name, x, header.nameTop);
+    }
+    ctx.restore();
 }
 function escapeHTML(text = "") {
     return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -4329,8 +4539,11 @@ function buildSpanStyle(span, settings) {
     const decorations = [];
     const strokeWidth = getSpanStrokeWidth(span, settings);
     const textColor = getSpanColor(span, settings);
+    const baseColor = span.isBlockquote ? settings.blockquoteFontColor || defaultSettings.blockquoteFontColor : settings.fontColor || "#000000";
+    const inheritColor = textColor === baseColor;
 
-    style.push(`color:${textColor} !important`);
+    style.push(`color:${inheritColor ? "inherit" : textColor} !important`);
+    if (!inheritColor) style.push(`-webkit-text-fill-color:${textColor} !important`);
     style.push("line-height:inherit !important");
     style.push("letter-spacing:inherit !important");
     style.push("font-size:inherit !important");
@@ -4340,6 +4553,7 @@ function buildSpanStyle(span, settings) {
     if (span.strikethrough) decorations.push("line-through");
     if (decorations.length) {
         style.push(`text-decoration:${decorations.join(" ")} !important`);
+        if (!inheritColor) style.push(`text-decoration-color:${textColor} !important`);
     }
     if (span.bgColor) {
         style.push(`background-color:${span.bgColor} !important`);
@@ -4354,7 +4568,7 @@ function buildSpanStyle(span, settings) {
         style.push(`font-size:${span.fontSize}px !important`);
     }
     if (strokeWidth > 0) {
-        style.push(`-webkit-text-stroke:${strokeWidth}px ${textColor} !important`);
+        style.push(`-webkit-text-stroke:${strokeWidth}px ${inheritColor ? "currentColor" : textColor} !important`);
     }
     return style.join("; ");
 }
@@ -4410,7 +4624,7 @@ function renderMarkdownHTML(text, settings) {
             const borderColor = settings.blockquoteBorderColor || defaultSettings.blockquoteBorderColor;
             const bgColor = toRGBA(settings.blockquoteBgColor || defaultSettings.blockquoteBgColor, 0.3);
             const quoteHTML = quoteLines.map((quoteLine) => `<div style="margin:0 !important;">${renderLineHTML(quoteLine, true)}</div>`).join("");
-            htmlLines.push(`<div class="blockquote" style="width:auto !important;color:${fontColor} !important;border-radius:5px !important;border-left:5px solid ${borderColor} !important;padding:8px !important;background:${bgColor} !important;-webkit-backdrop-filter:blur(10px) !important;backdrop-filter:blur(10px) !important;margin:8px 0 !important;"><div style="display:flex !important;flex-direction:column !important;gap:0 !important;margin:0 !important;">${quoteHTML}</div></div>`);
+            htmlLines.push(`<div class="blockquote" style="width:auto !important;color:${fontColor} !important;-webkit-text-fill-color:${fontColor} !important;border-radius:5px !important;border-left:5px solid ${borderColor} !important;padding:8px !important;background:${bgColor} !important;-webkit-backdrop-filter:blur(10px) !important;backdrop-filter:blur(10px) !important;margin:8px 0 !important;"><div style="display:flex !important;flex-direction:column !important;gap:0 !important;margin:0 !important;">${quoteHTML}</div></div>`);
             i = j - 1;
             continue;
         }
@@ -4421,8 +4635,9 @@ function renderMarkdownHTML(text, settings) {
 }
 function createHTMLSnippet(text, index) {
     const settings = extension_settings[extensionName];
+    const sillybooks = isSillybooksTemplate(settings);
     const htmlSelectedBackground = settings.selectedBackgroundImageHtml || settings.selectedBackgroundImage;
-    const bgURL = resolveBackgroundURLForHTML(htmlSelectedBackground);
+    const bgURL = sillybooks ? "" : resolveBackgroundURLForHTML(htmlSelectedBackground);
     const markdownHTML = renderMarkdownHTML(replaceWords(text), settings);
     const switcherTexts = getHtmlSwitcherTexts();
     const switcherRenderedHTML = switcherTexts.map((itemText) => renderMarkdownHTML(replaceWords(itemText), settings));
@@ -4432,8 +4647,8 @@ function createHTMLSnippet(text, index) {
     const backgroundColor = settings.backgroundColor || "#ffffff";
     const secondColor = settings.secondBackgroundColor || backgroundColor;
     const smoothGradient = buildSmoothGradientCSS(backgroundColor, secondColor);
-    const useBgColor = !!settings.useBackgroundColor;
-    const useSecondBgColor = !!settings.useSecondBackgroundColor;
+    const useBgColor = sillybooks || !!settings.useBackgroundColor;
+    const useSecondBgColor = !sillybooks && !!settings.useSecondBackgroundColor;
     const escapedURL = bgURL ? escapeCSSURL(bgURL) : "";
     const colorBackground =
         useBgColor ?
@@ -4455,10 +4670,10 @@ function createHTMLSnippet(text, index) {
     filterEffects.push(`brightness(${settings.bgBrightness ?? 100}%)`);
     filterEffects.push(`hue-rotate(${settings.bgHue ?? 0}deg)`);
     if (settings.bgGrayscale > 0) filterEffects.push(`grayscale(${settings.bgGrayscale}%)`);
-    const bgFilter = filterEffects.join(" ");
+    const bgFilter = sillybooks ? "none" : filterEffects.join(" ");
 
-    const overlayOpacity = Math.min(1, Math.max(0, Number(settings.overlayOpacity) || 0));
-    const blurStrength = Math.max(0, Number(settings.bgBlur) || 0);
+    const overlayOpacity = sillybooks ? 0 : Math.min(1, Math.max(0, Number(settings.overlayOpacity) || 0));
+    const blurStrength = sillybooks ? 0 : Math.max(0, Number(settings.bgBlur) || 0);
     const lineBreakByChar = (settings.lineBreak || "byWord") === "byChar";
     const globalStrokeWidth = mapHtmlStrokeWidth(settings.strokeWidth);
     const globalTextColor = settings.fontColor || "#000000";
@@ -4466,33 +4681,42 @@ function createHTMLSnippet(text, index) {
     const footerLayoutMode = getFooterLayoutMode(settings);
     const footerWidthPx = parsePositiveInt(settings.footerWidth, defaultSettings.footerWidth);
     const footerHeightPx = parsePositiveInt(settings.footerHeight, defaultSettings.footerHeight);
-    const metaLines = getMetaLines(settings);
+    const metaLines = sillybooks ? [] : getMetaLines(settings);
     const showWatermark = isWatermarkEnabled(settings);
     const hasMeta = metaLines.length > 0;
     const hasFooter = hasMeta || showWatermark;
     const isScrollFooterLayout = footerLayoutMode === "scroll";
     const contentMaxHeightValue = "none";
-    const containerInlineStyle = ["background:transparent !important", "box-sizing:border-box !important", "width:100% !important", `max-width:${footerWidthPx}px !important`, "display:grid !important", "grid-template-rows:minmax(0,1fr) !important", isScrollFooterLayout ? `aspect-ratio:${footerWidthPx} / ${Math.max(footerWidthPx, footerHeightPx)} !important` : "aspect-ratio:auto !important", isScrollFooterLayout ? "min-height:0 !important" : `min-height:min(${footerWidthPx}px, 100vw) !important`, "height:auto !important", "max-height:none !important", "margin:0 auto !important", "padding:24px !important", "border-radius:5px !important", "overflow:hidden !important", "isolation:isolate !important"].join(";");
+    const containerInlineStyle = ["background:transparent !important", "box-sizing:border-box !important", "width:100% !important", `max-width:${footerWidthPx}px !important`, "display:grid !important", "grid-template-rows:minmax(0,1fr) !important", isScrollFooterLayout ? `aspect-ratio:${footerWidthPx} / ${Math.max(footerWidthPx, footerHeightPx)} !important` : "aspect-ratio:auto !important", isScrollFooterLayout || sillybooks ? "min-height:0 !important" : `min-height:min(${footerWidthPx}px, 100vw) !important`, "height:auto !important", "max-height:none !important", "margin:0 auto !important", sillybooks ? "padding:30px 28px !important" : "padding:24px !important", "border-radius:5px !important", "overflow:hidden !important", "isolation:isolate !important"].join(";");
     const bgInlineStyle = ["border-radius:5px !important", `background:${useBgColor ? colorBackground : "transparent"} !important`, `background-image:${bgLayerImage} !important`, "background-size:cover !important", "background-position:center !important", "background-repeat:no-repeat !important", `filter:${bgFilter || "none"} !important`].join(";");
     const overlayInlineStyle = ["border-radius:5px !important", `background:${toRGBA(settings.overlayColor || "#ffffff", overlayOpacity)} !important`, `-webkit-backdrop-filter:blur(${blurStrength}px) !important`, `backdrop-filter:blur(${blurStrength}px) !important`, "pointer-events:none !important"].join(";");
     const switcherDotsWrapStyle = ["display:flex !important", "justify-content:flex-end !important", "margin:6px 10px 0 0 !important", "gap:6px !important", "z-index:1 !important", "pointer-events:auto !important"].join(";");
     const switcherDotStyle = ["display:block !important", "width:15px !important", "height:10px !important", "border-radius:999px !important", "background:rgba(255,255,255,0.55) !important", "border:1px solid rgba(0,0,0,0.18) !important", "cursor:pointer !important", "transition:transform .15s ease, background-color .15s ease !important"].join(";");
-    const contentInlineStyle = ["grid-area:1 / 1 !important", `min-height:${isScrollFooterLayout ? "0" : "min-content"} !important`, "box-sizing:border-box !important", "width:100% !important", "margin-left:0 !important", "margin-right:0 !important", "padding:0 !important", `max-height:${contentMaxHeightValue} !important`, `overflow-y:${isScrollFooterLayout ? "auto" : "visible"} !important`, `color:${globalTextColor} !important`, `font-size:${htmlFontSize}px !important`, "font-weight:400 !important", `letter-spacing:${settings.fontSpacing || 0}em !important`, `line-height:${settings.fontLineHeight || 1.5} !important`, `text-align:${settings.fontAlign || "left"} !important`, "white-space:pre-wrap !important", `word-break:${lineBreakByChar ? "break-all" : "break-word"} !important`, "overflow-wrap:anywhere !important", "margin-bottom:0 !important", `-webkit-text-stroke:${globalStrokeWidth}px ${globalTextColor} !important`].join(";");
+    const contentInlineStyle = ["grid-area:1 / 1 !important", ...(sillybooks ? ["flex:1 1 auto !important"] : []), `min-height:${isScrollFooterLayout ? "0" : "min-content"} !important`, "box-sizing:border-box !important", "width:100% !important", "margin-left:0 !important", "margin-right:0 !important", "padding:0 !important", `max-height:${contentMaxHeightValue} !important`, `overflow-y:${isScrollFooterLayout ? "auto" : "visible"} !important`, `color:${globalTextColor} !important`, `font-size:${htmlFontSize}px !important`, "font-weight:400 !important", `letter-spacing:${settings.fontSpacing || 0}em !important`, `line-height:${settings.fontLineHeight || 1.5} !important`, `text-align:${settings.fontAlign || "left"} !important`, "white-space:pre-wrap !important", `word-break:${lineBreakByChar ? "break-all" : "break-word"} !important`, "overflow-wrap:anywhere !important", "margin-bottom:0 !important", `-webkit-text-stroke:${globalStrokeWidth}px ${globalTextColor} !important`, `-webkit-text-fill-color:${globalTextColor} !important`].join(";");
     const htmlFontFace = getHtmlFontFace(settings);
-    const metaLineStyle = ["display:block !important", "margin:0 !important", `color:${globalTextColor} !important`, `font-size:${Math.max(10, Math.round((htmlFontSize * 28) / 38))}px !important`, "line-height:1.6 !important", "text-align:left !important"].join(";");
+    const metaLineStyle = ["display:block !important", "margin:0 !important", `color:${globalTextColor} !important`, `-webkit-text-fill-color:${globalTextColor} !important`, `font-size:${Math.max(10, Math.round((htmlFontSize * 28) / 38))}px !important`, "line-height:1.6 !important", "text-align:left !important"].join(";");
     const metaLinesHTML = metaLines.map((line) => `<span style="${metaLineStyle}opacity:${line.alpha} !important"><font face="${htmlFontFace}">${escapeHTML(line.text)}</font></span>`).join("");
-    const watermarkStyle = ["position:relative !important", "right:0px !important", "left:auto !important", "display:block !important", "width:100% !important", "margin:0 !important", "text-align:right !important", "bottom:0px !important", `color:${globalTextColor} !important`, "opacity:0.32 !important", "font-family:Paperozi, Pretendard-Regular, sans-serif !important", `font-size:${Math.round((htmlFontSize * 42) / 38)}px !important`, "font-weight:900 !important", "letter-spacing:-0.01em !important", "line-height:1 !important"].join(";");
+    const watermarkStyle = ["position:relative !important", "right:0px !important", "left:auto !important", "display:block !important", "width:100% !important", "margin:30px 0 0 0 !important", "text-align:right !important", "bottom:0px !important", `color:${globalTextColor} !important`, `-webkit-text-fill-color:${globalTextColor} !important`, "opacity:0.32 !important", "font-family:Paperozi, Pretendard-Regular, sans-serif !important", `font-size:${Math.round((htmlFontSize * 42) / 38)}px !important`, "font-weight:900 !important", "letter-spacing:-0.01em !important", "line-height:1 !important"].join(";");
     const watermarkHTML =
         showWatermark ?
             `
   <span class="tti-watermark" style="${watermarkStyle}">${WATERMARK_MARK}</span>`
         :   "";
     const footerInlineStyle = ["position:relative !important", "flex:0 0 auto !important", "display:flex !important", "flex-direction:column !important", "gap:2px !important", "width:100% !important", "box-sizing:border-box !important", "padding:0 !important", "margin:18px 0 14px 0 !important", "z-index:3 !important"].join(";");
-    const stackInlineStyle = ["grid-area:1 / 1 !important", "position:relative !important", "display:flex !important", "flex-direction:column !important", "justify-content:center !important", "justify-content:safe center !important", "box-sizing:border-box !important", "width:100% !important", "min-height:0 !important", "margin:0 !important", "padding:0 !important", "z-index:3 !important"].join(";");
+    const stackInlineStyle = ["grid-area:1 / 1 !important", "position:relative !important", "display:flex !important", "flex-direction:column !important", ...(sillybooks ? ["justify-content:flex-start !important"] : ["justify-content:center !important", "justify-content:safe center !important"]), "box-sizing:border-box !important", "width:100% !important", "min-height:0 !important", "margin:0 !important", "padding:0 !important", "z-index:3 !important"].join(";");
     const footerHTML =
         hasMeta ?
             `
     <div class="tti-footer" style="${footerInlineStyle}">${metaLinesHTML}</div>`
+        :   "";
+    const sbTexts = sillybooks ? getSillybooksHeaderTexts(settings) : {title: "", name: ""};
+    const sbHeadStyle = ["position:relative !important", "flex:0 0 auto !important", "display:block !important", "box-sizing:border-box !important", "width:100% !important", "margin:0 0 2em 0 !important", "padding:0 !important", `color:${globalTextColor} !important`, `-webkit-text-fill-color:${globalTextColor} !important`, `font-size:${htmlFontSize}px !important`, "text-align:left !important", "white-space:normal !important", "word-break:keep-all !important", "overflow-wrap:anywhere !important", "-webkit-text-stroke:0 !important", "z-index:3 !important"].join(";");
+    const sbTitleStyle = ["display:block !important", "margin:0 !important", "font-size:1.55em !important", "font-weight:700 !important", "line-height:1.3 !important", "letter-spacing:0 !important"].join(";");
+    const sbNameStyle = ["display:block !important", `margin:${sbTexts.title ? "0.35em" : "0"} 0 0 0 !important`, "font-size:0.78em !important", "line-height:1.4 !important", "opacity:0.56 !important"].join(";");
+    const sbHeadHTML =
+        sbTexts.title || sbTexts.name ?
+            `
+    <div class="tti-sb-head" style="${sbHeadStyle}">${sbTexts.title ? `<span style="${sbTitleStyle}"><font face="${htmlFontFace}">${escapeHTML(sbTexts.title)}</font></span>` : ""}${sbTexts.name ? `<span style="${sbNameStyle}"><font face="${htmlFontFace}">${escapeHTML(sbTexts.name)}</font></span>` : ""}</div>`
         :   "";
     const shouldRenderBg = escapedURL || useBgColor;
     const backgroundHTML =
@@ -4519,7 +4743,7 @@ ${switcherItems.map((item) => `  <input type="radio" class="tti-switch-input" na
     const contentHTML =
         hasSwitcher ?
             `
-    <div class="tti-panels" style="margin-top: 10px;">
+    <div class="tti-panels" style="margin-top:10px !important;">
       <div class="tti-content tti-panel tti-panel-base" style="${contentInlineStyle}">${markdownHTML}</div>
 ${switcherItems.map((item) => `    <div class="tti-content tti-panel ${item.panelClass}" style="${contentInlineStyle}">${item.html}</div>`).join("\n")}
     </div>`
@@ -4532,7 +4756,7 @@ ${switcherItems.map((item) => `    <div class="tti-content tti-panel ${item.pane
 <style>${scopedStyle}</style>
 <div class="tti" style="${containerInlineStyle}">
 ${backgroundHTML}${switcherRadiosHTML}${overlayHTML}
-  <div class="tti-stack" style="${stackInlineStyle}">${contentHTML}${footerHTML}
+  <div class="tti-stack" style="${stackInlineStyle}">${sbHeadHTML}${contentHTML}${footerHTML}
   </div>${watermarkHTML}
 </div>
 </div>`;
@@ -4554,7 +4778,7 @@ function generateHTMLPreview(text, index) {
     const perFontFaceRules = Object.entries(fontFaceMap)
         .map(([face, family]) => `.html-render-preview .tti-content font[face="${face}"],.html-render-preview .tti-content font[face="${face}"] span[style]{font-family:${family} !important;}`)
         .join("");
-    const previewOnlyStyle = `<style>.html-render-preview .tti-content,.html-render-preview .tti-content span[style],.html-render-preview .tti-footer,.html-render-preview .tti-footer *{font-family:${previewFontFamily} !important;}${perFontFaceRules}</style>`;
+    const previewOnlyStyle = `<style>.html-render-preview .tti-content,.html-render-preview .tti-content span[style],.html-render-preview .tti-footer,.html-render-preview .tti-footer *,.html-render-preview .tti-sb-head,.html-render-preview .tti-sb-head *{font-family:${previewFontFamily} !important;}${perFontFaceRules}</style>`;
 
     const $preview = $("<div>").addClass("image-preview-item html-preview-item");
     const $rendered = $("<div>")
@@ -4778,6 +5002,11 @@ function bindingFunctions() {
     $("#upload-local-font").on("click", addLocalFont);
     $("#delete-local-font").on("click", deleteLocalFont);
     $("#preview_toggle").on("change", autoPreview);
+    $("#sillybooks_toggle").on("change", sillybooksTemplate);
+    $(document).on("click", ".tti-segment[data-sb-theme] button", function () {
+        if (!isSillybooksTemplate()) return;
+        setSillybooksTheme($(this).data("theme"));
+    });
     $("#html_toggle").on("change", htmlMode);
     $(".refresh-preview").on("click", manualRefresh);
     $("#letter_control").on("change", letterCase);

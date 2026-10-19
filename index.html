@@ -76,7 +76,7 @@
           </section>
 
           <!-- 배경 피커 -->
-          <section class="background-picker">
+          <section class="background-picker" data-sb-hide>
             <label for="bg_image_upload" class="background-camera" title="이미지 업로드" data-html-hide="upload_file">
               <i class="fa-solid fa-camera-retro"></i>
             </label>
@@ -102,11 +102,23 @@
           </section>
 
           <!-- 탭 -->
+          <section class="tti-control-section tti-sb-section">
+            <div class="tti-mode-switches tti-sb-row">
+              <input type="checkbox" id="sillybooks_toggle" name="sillybooks_toggle" />
+              <label for="sillybooks_toggle" class="tti-html-switch" title="제목·캐릭터 이름·본문 순서의 단색 페이지로 만듭니다"><span><i class="fa-solid fa-book-open"></i>실리북스</span><i class="tti-toggle-slider"><b></b></i></label>
+              <div class="tti-segment tti-sb-theme" data-sb-theme>
+                <button type="button" data-theme="light">라이트</button>
+                <button type="button" data-theme="beige">베이지</button>
+                <button type="button" data-theme="dark">다크</button>
+              </div>
+            </div>
+          </section>
+
           <nav class="tab-container" role="tablist">
             <button class="tab-btn" data-tab="text-style"><i class="fa-solid fa-font"></i><span>글자</span></button>
             <button class="tab-btn" data-tab="custom-highlighter"><i class="fa-solid fa-highlighter"></i><span>형광펜</span></button>
             <button class="tab-btn" data-tab="background"><i class="fa-solid fa-image"></i><span>배경</span></button>
-            <button class="tab-btn" data-tab="image-style"><i class="fa-solid fa-droplet"></i><span>보정</span></button>
+            <button class="tab-btn" data-tab="image-style" data-sb-hide><i class="fa-solid fa-droplet"></i><span>보정</span></button>
             <button class="tab-btn" data-tab="footer"><i class="fa-solid fa-tags"></i><span>표시</span></button>
           </nav>
 
@@ -224,7 +236,7 @@
 
           <!-- ---------- 배경 ---------- -->
           <div id="background" class="tab-content">
-            <section class="tti-control-section" data-html-hide="ratio">
+            <section class="tti-control-section" data-html-hide="ratio" data-sb-hide>
               <h3>비율</h3>
               <div class="ratio-control">
                 <button type="button" class="tti-ratio-btn" data-ratio="square"><span>1:1</span>정사각형</button>
@@ -241,7 +253,7 @@
             </section>
 
             <section class="tti-control-section">
-              <div class="tti-field" data-html-hide="fill_mode">
+              <div class="tti-field" data-html-hide="fill_mode" data-sb-hide>
                 <span>타입</span>
                 <select id="tti_fill_mode">
                   <option value="cover">채우기</option>
@@ -253,18 +265,18 @@
               <div class="tti-field">
                 <span>배경 색상</span>
                 <div class="tti-inline-color">
-                  <input type="checkbox" id="use_background_color" />
+                  <input type="checkbox" id="use_background_color" data-sb-hide />
                   <input type="color" id="background_color" />
                 </div>
               </div>
-              <div class="tti-field">
+              <div class="tti-field" data-sb-hide>
                 <span>보조 색상</span>
                 <div class="tti-inline-color">
                   <input type="checkbox" id="use_second_background_color" />
                   <input type="color" id="second_background_color" />
                 </div>
               </div>
-              <div class="tti-field" data-html-only="bg_url">
+              <div class="tti-field" data-html-only="bg_url" data-sb-hide>
                 <span>이미지 URL</span>
                 <div class="custom-bg-upload">
                   <input type="text" id="bg_image_url" placeholder="https://…" />
@@ -276,7 +288,7 @@
 
           <!-- ---------- 보정 ---------- -->
           <div id="image-style" class="tab-content">
-            <section class="tti-control-section tti-stepper-section">
+            <section class="tti-control-section tti-stepper-section" data-sb-hide>
               <h3>배경 편집</h3>
               <div class="option-stepper" data-target="bg_brightness">
                 <input type="range" id="bg_brightness" min="40" max="180" step="5" hidden />
@@ -320,7 +332,7 @@
               </div>
             </section>
 
-            <section class="tti-control-section tti-stepper-section">
+            <section class="tti-control-section tti-stepper-section" data-sb-hide>
               <h3>오버레이</h3>
               <div class="overlay-color-picker">
                 <button type="button" class="overlay-color black" data-color="#000000" aria-label="검은색 오버레이"></button>
@@ -342,7 +354,8 @@
           <div id="footer" class="tab-content">
             <section class="tti-control-section tti-meta-section">
               <h3>이미지 정보 표시</h3>
-              <p class="tti-section-desc">본문 아래에 채팅 제목과 캐릭터 이름을 표시합니다.</p>
+              <p class="tti-section-desc" data-sb-hide>본문 아래에 채팅 제목과 캐릭터 이름을 표시합니다.</p>
+              <p class="tti-section-desc sb-mode-only" data-sb-only>본문 위에 채팅 제목과 캐릭터 이름을 표시합니다.</p>
               <div class="tti-meta-row">
                 <span class="tti-meta-label">채팅 제목</span>
                 <div class="tti-segment" data-meta="chat_title">

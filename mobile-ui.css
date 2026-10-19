@@ -135,6 +135,7 @@
     }
     .tti-mobile-ready .tti-mobile-scroll > .tti-primary-actions,
     .tti-mobile-ready .tti-mobile-scroll > .preset-section,
+    .tti-mobile-ready .tti-mobile-scroll > .tti-sb-section,
     .tti-mobile-ready .tti-mobile-scroll > .background-picker,
     .tti-mobile-ready .tti-mobile-scroll > .tab-container {
         display: none;
@@ -163,7 +164,8 @@
         font-style: normal;
     }
     .tti-mobile-ready[data-mobile-category="other"] .tti-mobile-scroll > .tti-primary-actions,
-    .tti-mobile-ready[data-mobile-category="other"] .tti-mobile-scroll > .preset-section {
+    .tti-mobile-ready[data-mobile-category="other"] .tti-mobile-scroll > .preset-section,
+    .tti-mobile-ready[data-mobile-category="other"] .tti-mobile-scroll > .tti-sb-section {
         display: block;
     }
     .tti-mobile-ready[data-mobile-category="other"] .tab-container {
