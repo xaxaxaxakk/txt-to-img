@@ -1,3 +1,8 @@
+import {setupMobileEditor} from "./mobile-ui.js";
+import {escapeRegExp, replaceWordsWithRules} from "./replace-words.js";
+import {generateTextImage as renderTextImageCanvas, revokePreviewObjectURLs, wrappingTexts as wrapTextChunks} from "./canvas-renderer.js";
+import {createHTMLSnippet as buildHTMLSnippet, generateHTMLPreview as buildHTMLPreview} from "./html-export.js";
+
 if (typeof toastr === "undefined") {
     window.toastr = (function () {
         let container = null;
@@ -99,7 +104,7 @@ const FileSaverCDN = "https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/
 const extensionName = "txt-to-img";
 const fallbackExtensionFolderPath = `https://xaxaxaxakk.github.io/${extensionName}`;
 const extensionFolderPath = (() => {
-    const scriptSrc = document.currentScript?.src;
+    const scriptSrc = import.meta.url;
     if (!scriptSrc) return ".";
     return new URL(".", scriptSrc).href.replace(/\/$/, "");
 })();
@@ -1488,15 +1493,6 @@ async function ensurePreviewFontsLoaded() {
 
     await Promise.all(Array.from(families).map(ensureFontFamilyLoaded));
 }
-function warmupFonts(fonts) {
-    if (!document.fonts?.load || !Array.isArray(fonts)) return;
-    fonts.forEach((font, index) => {
-        setTimeout(() => {
-            ensureFontFamilyLoaded(font.value).catch(() => {});
-        }, index * 80);
-    });
-}
-
 // 폰트 로드
 async function loadFonts() {
     try {
@@ -1511,7 +1507,6 @@ async function loadFonts() {
         prependWebFontOptions(select[0], "image", extension_settings[extensionName].fontFamily);
         select.val(extension_settings[extensionName].fontFamily);
         await ensureFontFamilyLoaded(extension_settings[extensionName].fontFamily);
-        warmupFonts(fonts);
         refreshPreview();
     } catch (e) {
         console.warn("[txt-to-img] 폰트 로드 실패:", e);
@@ -1981,162 +1976,19 @@ function bgFillMode(event) {
 function letterCase(event) {
     extension_settings[extensionName].letterCase = event.target.checked;
     debouncedSaveSettings();
+    refreshPreview();
 }
 function unitControl(event) {
     extension_settings[extensionName].unitControl = event.target.checked;
     debouncedSaveSettings();
+    refreshPreview();
 }
 function replaceWords(inputText) {
-    const letterCase = extension_settings[extensionName].letterCase;
-    const unitControl = extension_settings[extensionName].unitControl;
-
-    const wordGroup = getReplaceRules()
-        .filter((rule) => rule.enabled)
-        .map((rule) => ({original: String(rule.original || "").trim(), replacement: rule.replacement}))
-        .filter((group) => group.original);
-
-    if (wordGroup.length === 0) {
-        return String(inputText ?? "");
-    }
-
-    const applyWordReplacement = (inputText) => {
-        let text = String(inputText ?? "");
-        const originalTemp = wordGroup.map((_, index) => `__REPLACE_${Date.now()}_${index}__`);
-
-        for (let i = 0; i < wordGroup.length; i++) {
-            const {original} = wordGroup[i];
-            const temp = originalTemp[i];
-            const oriMulWord = original
-                .split("||")
-                .map((word) => word.trim())
-                .filter((word) => word);
-
-            for (const origWord of oriMulWord) {
-                const containsKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(origWord);
-                if (containsKorean) {
-                    text = findKoreanWord(text, origWord, temp, unitControl);
-                } else {
-                    text = replaceString(text, origWord, temp, letterCase, unitControl);
-                }
-            }
-        }
-
-        for (let i = 0; i < wordGroup.length; i++) {
-            const {replacement} = wordGroup[i];
-            const temp = originalTemp[i];
-            const replacementText = replacement !== undefined ? replacement : "";
-            const regex = new RegExp(`${escapeRegExp(temp)}(은|는|이|가|을|를|과|와|이랑|랑|으로|로|아|야)?`, "g");
-
-            text = text.replace(regex, (match, particle) => {
-                if (!particle) {
-                    return replacementText;
-                }
-
-                let newParticle = particle;
-                const hasEndConsonant = hasConsonantLetter(replacementText);
-
-                if (particle === "는" && hasEndConsonant) newParticle = "은";
-                else if (particle === "은" && !hasEndConsonant) newParticle = "는";
-                else if (particle === "가" && hasEndConsonant) newParticle = "이";
-                else if (particle === "이" && !hasEndConsonant) newParticle = "가";
-                else if (particle === "를" && hasEndConsonant) newParticle = "을";
-                else if (particle === "을" && !hasEndConsonant) newParticle = "를";
-                else if (particle === "아" && !hasEndConsonant) newParticle = "야";
-                else if (particle === "야" && hasEndConsonant) newParticle = "아";
-                else if (particle === "와" && hasEndConsonant) newParticle = "과";
-                else if (particle === "과" && !hasEndConsonant) newParticle = "와";
-                else if (particle === "랑" && hasEndConsonant) newParticle = "이랑";
-                else if (particle === "이랑" && !hasEndConsonant) newParticle = "랑";
-                else if (particle === "로" && hasEndConsonant) newParticle = "으로";
-                else if (particle === "으로" && !hasEndConsonant) newParticle = "로";
-
-                return replacementText + newParticle;
-            });
-        }
-
-        return text;
-    };
-
-    return applyWordReplacement(inputText);
-}
-function replaceString(text, original, replacement, letterCase, unitControl) {
-    const specialChar = /[\s\.,;:!?\(\)\[\]{}"'<>\/\\\-_=\+\*&\^%\$#@~`|]/;
-    let result = "";
-
-    for (let i = 0; i < text.length; i++) {
-        if (i <= text.length - original.length && (letterCase ? text.slice(i, i + original.length) === original : text.slice(i, i + original.length).toLowerCase() === original.toLowerCase())) {
-            const isStartBoundary = i === 0 || specialChar.test(text[i - 1]);
-            const endPos = i + original.length;
-            const nextChar = text[endPos] || "";
-            const containSymbols = /[^\wa-zA-Z]/.test(original);
-
-            if (unitControl) {
-                const isEndBoundary = endPos === text.length || specialChar.test(nextChar) || !/[a-zA-Z0-9]/.test(nextChar);
-
-                if (containSymbols || (isStartBoundary && isEndBoundary)) {
-                    result += replacement;
-                    i = endPos - 1;
-                    continue;
-                }
-            } else {
-                result += replacement;
-                i = endPos - 1;
-                continue;
-            }
-        }
-
-        result += text[i];
-    }
-
-    return result;
-}
-function findKoreanWord(text, originalWord, replacementWord, unitControl) {
-    const specialChar = /[\s\.,;:!?\(\)\[\]{}"'<>\/\\\-_=\+\*&\^%\$#@~`|]/;
-    let result = "";
-
-    for (let i = 0; i < text.length; i++) {
-        if (i <= text.length - originalWord.length && text.slice(i, i + originalWord.length) === originalWord) {
-            const endPos = i + originalWord.length;
-
-            if (unitControl) {
-                const isStartBoundary = i === 0 || specialChar.test(text[i - 1]);
-                const nextChar = text[endPos] || "";
-                const isEndBoundary = endPos === text.length || specialChar.test(nextChar) || !/[가-힣0-9]/.test(nextChar);
-
-                if (isStartBoundary && isEndBoundary) {
-                    result += replacementWord;
-                    i = endPos - 1;
-                    continue;
-                }
-            } else {
-                result += replacementWord;
-                i = endPos - 1;
-                continue;
-            }
-        }
-        result += text[i];
-    }
-    return result;
-}
-function hasConsonantLetter(word) {
-    if (!word || word.length === 0) return false;
-    const lastChar = word.charAt(word.length - 1);
-    if (/[가-힣]/.test(lastChar)) {
-        const charCode = lastChar.charCodeAt(0) - 44032;
-        return charCode % 28 !== 0;
-    }
-    const hasJong = /[0136-8０１３６-８L-NRl-nrＬ-ＮＲㄱ-ㅎ\uFFA1-\uFFBE\u3165-\u3186\u1100-\u115E\u11A8-\u11FF]/;
-    if (hasJong.test(lastChar)) {
-        return true;
-    }
-    const noJong = /[2459２４５９A-KO-QS-Za-ko-qs-zＡ-ＫＯ-ＱＳ-Ｚㅏ-ㅣ\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC\u3187-\u318E\u1161-\u11A7]/;
-    if (noJong.test(lastChar)) {
-        return false;
-    }
-    return false;
-}
-function escapeRegExp(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const settings = extension_settings[extensionName];
+    return replaceWordsWithRules(inputText, getReplaceRules(), {
+        letterCase: !!settings.letterCase,
+        unitControl: !!settings.unitControl,
+    });
 }
 
 // 텍스트 커스텀
@@ -2413,6 +2265,37 @@ let previewIndex = 0;
 function previewItemCount() {
     return $("#image_preview_container .image-preview-item").length;
 }
+function updateTallPreviewLayout() {
+    const stage = document.querySelector(".tti-preview-stage");
+    const preview = document.getElementById("image_preview_container");
+    if (!stage || !preview) return;
+    const isMobile = matchMedia("(max-width: 1000px)").matches;
+    const stageWidth = Math.min(430, Math.max(0, preview.clientWidth));
+    const rawHeight = Math.max(0, stage.clientHeight - (isMobile ? 30 : 34));
+    const stageHeight = isMobile ? rawHeight : Math.min(Math.round(window.innerHeight * 0.64), 660, rawHeight || 660);
+    const squareWidth = Math.min(stageWidth, stageHeight);
+
+    preview.querySelectorAll(".image-preview-item:not(.html-preview-item)").forEach((item) => {
+        const img = item.querySelector("img");
+        const w = Number(item.dataset.imgWidth) || img?.naturalWidth || 0;
+        const h = Number(item.dataset.imgHeight) || img?.naturalHeight || 0;
+        if (!w || !h || !squareWidth || !stageHeight) {
+            item.classList.remove("is-tall-scroll");
+            item.style.removeProperty("--tti-scroll-width");
+            item.style.removeProperty("--tti-scroll-height");
+            return;
+        }
+        const isTall = h > w && squareWidth * (h / w) > stageHeight * 1.12;
+        item.classList.toggle("is-tall-scroll", isTall);
+        if (isTall) {
+            item.style.setProperty("--tti-scroll-width", `${Math.round(squareWidth)}px`);
+            item.style.setProperty("--tti-scroll-height", `${Math.round(stageHeight)}px`);
+        } else {
+            item.style.removeProperty("--tti-scroll-width");
+            item.style.removeProperty("--tti-scroll-height");
+        }
+    });
+}
 function setPreviewIndex(index) {
     const total = previewItemCount();
     const $stage = $(".tti-preview-stage");
@@ -2429,34 +2312,57 @@ function setPreviewIndex(index) {
     $(".tti-preview-count").text(total > 1 ? `${previewIndex + 1} / ${total}` : "");
     $(".tti-preview-arrow.previous").prop("disabled", previewIndex === 0);
     $(".tti-preview-arrow.next").prop("disabled", previewIndex === total - 1);
+    updateTallPreviewLayout();
 }
 function setupPreviewCarousel() {
     $(document).on("click", ".tti-preview-arrow.previous", () => setPreviewIndex(previewIndex - 1));
     $(document).on("click", ".tti-preview-arrow.next", () => setPreviewIndex(previewIndex + 1));
 
+    const stageEl = document.querySelector(".tti-preview-stage");
+    if (stageEl) {
+        new ResizeObserver(updateTallPreviewLayout).observe(stageEl);
+    }
+    window.addEventListener("resize", updateTallPreviewLayout);
+
     let swipeStartX = null;
+    let swipeStartY = null;
     const stageSelector = ".tti-preview-stage";
     $(document).on("pointerdown", stageSelector, function (event) {
         if ($(event.target).closest(".tti-preview-arrow, .download-btn, .html-render-preview").length) return;
         swipeStartX = event.clientX;
+        swipeStartY = event.clientY;
     });
-    $(document).on("pointerup pointercancel", stageSelector, function (event) {
-        if (swipeStartX === null) return;
-        const delta = event.clientX - swipeStartX;
+    $(document).on("pointercancel", stageSelector, function () {
         swipeStartX = null;
-        if (Math.abs(delta) < 45) return;
-        setPreviewIndex(previewIndex + (delta < 0 ? 1 : -1));
+        swipeStartY = null;
+    });
+    $(document).on("pointerup", stageSelector, function (event) {
+        if (swipeStartX === null) return;
+        const dx = event.clientX - swipeStartX;
+        const dy = event.clientY - swipeStartY;
+        swipeStartX = null;
+        swipeStartY = null;
+        if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+        setPreviewIndex(previewIndex + (dx < 0 ? 1 : -1));
     });
 }
+let previewRenderGeneration = 0;
+let lastPreviewReadyPromise = Promise.resolve();
 function renderPreviewContent() {
     const mobileScroll = document.querySelector(".tti-mobile-ready .tti-mobile-scroll");
     const mobileScrollTop = mobileScroll?.scrollTop;
     const chunks = getPreviewChunks();
     const keepIndex = previewIndex;
+    const generation = ++previewRenderGeneration;
+    revokePreviewObjectURLs();
     const $container = $("#image_preview_container").empty();
+    const readyPromises = [];
 
     chunks.forEach((chunk, i) => {
-        $container.append(isHtmlModeEnabled() ? generateHTMLPreview(chunk, i) : generateTextImage(chunk, i));
+        const $item = isHtmlModeEnabled() ? generateHTMLPreview(chunk, i) : generateTextImage(chunk, i, generation);
+        const ready = $item.data("ttiReady");
+        if (ready) readyPromises.push(ready);
+        $container.append($item);
     });
 
     updatePreviewDownloadAllButton(chunks.length);
@@ -2467,6 +2373,8 @@ function renderPreviewContent() {
             mobileScroll.scrollTop = mobileScrollTop;
         });
     }
+    lastPreviewReadyPromise = Promise.all(readyPromises);
+    return lastPreviewReadyPromise;
 }
 const _debouncedRender = debounce(async () => {
     if (isPreviewEditing()) {
@@ -2524,6 +2432,7 @@ function refreshPreview() {
 
         $refreshNotice.addClass("shown");
         if ($previewContainer.children().length > 0) {
+            revokePreviewObjectURLs();
             $previewContainer.empty();
             setPreviewIndex(0);
         }
@@ -2776,6 +2685,7 @@ function setupCustomSelects() {
     const selector = ".text-to-image-converter-settings select, .tti-modal-backdrop select";
     const menu = $('<div class="tti-select-menu" role="listbox" hidden></div>').appendTo(document.body)[0];
     let active = null;
+    let openedAt = 0;
     function close() {
         menu.hidden = true;
         active?.nextElementSibling?.setAttribute("aria-expanded", "false");
@@ -2819,6 +2729,7 @@ function setupCustomSelects() {
                             menu.append(item);
                         });
                     button.setAttribute("aria-expanded", "true");
+                    openedAt = performance.now();
                     menu.hidden = false;
                     const rect = button.getBoundingClientRect();
                     const below = innerHeight - rect.bottom - 8;
@@ -2863,14 +2774,17 @@ function setupCustomSelects() {
     document.addEventListener(
         "scroll",
         (e) => {
-            if (!menu.contains(e.target)) close();
+            if (!menu.hidden && performance.now() - openedAt > 120 && !menu.contains(e.target)) close();
         },
         true,
     );
     window.addEventListener("resize", close);
-    new MutationObserver((records) => {
+    const selectObserver = new MutationObserver((records) => {
         if (records.some((r) => r.target instanceof Element && (r.target.matches("select,option,optgroup") || Array.from(r.addedNodes).some((n) => n instanceof Element && (n.matches("select") || n.querySelector("select")))))) refresh();
-    }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ["disabled", "class", "selected", "hidden"]});
+    });
+    document.querySelectorAll(".text-to-image-converter-settings, .tti-modal-backdrop").forEach((rootNode) => {
+        selectObserver.observe(rootNode, {subtree: true, childList: true, attributes: true, attributeFilter: ["disabled", "class", "selected", "hidden"]});
+    });
     $(document).on("change click", ".text-to-image-converter-settings, .tti-modal-backdrop", () => queueMicrotask(refresh));
     refresh();
 }
@@ -2921,7 +2835,33 @@ function setupCompositeControls() {
         const $input = $(this).closest(".tti-color-input-group").find('input[type="color"]');
         if (!$input.prop("disabled")) $input.val($(this).data("color")).trigger("input").trigger("change");
     });
+    let stepperDelay = null;
+    let stepperInterval = null;
+    let stepperHandledPointer = false;
+    const stopStepperRepeat = () => {
+        clearTimeout(stepperDelay);
+        clearInterval(stepperInterval);
+        stepperDelay = null;
+        stepperInterval = null;
+    };
+    $(document).on("pointerdown", ".option-stepper .stepper-btn", function (event) {
+        if (event.button !== 0) return;
+        stopStepperRepeat();
+        stepperHandledPointer = true;
+        const $stepper = $(this).closest(".option-stepper");
+        const dir = Number($(this).data("dir"));
+        stepStepper($stepper, dir);
+        stepperDelay = setTimeout(() => {
+            stepperInterval = setInterval(() => stepStepper($stepper, dir), 75);
+        }, 380);
+    });
+    $(document).on("pointerup pointercancel pointerleave", ".option-stepper .stepper-btn", stopStepperRepeat);
+    $(window).on("blur", stopStepperRepeat);
     $(document).on("click", ".option-stepper .stepper-btn", function () {
+        if (stepperHandledPointer) {
+            stepperHandledPointer = false;
+            return;
+        }
         stepStepper($(this).closest(".option-stepper"), Number($(this).data("dir")));
     });
     $(document).on("change", ".option-stepper input[type='range']", syncSteppers);
@@ -3037,7 +2977,8 @@ function ensureFloatingHighlightTags() {
         htmlFontFamily: "useGlobal",
         fontColor: item.bg === "#000000" ? "#ffffff" : "#000000",
         bgColor: item.bg,
-        fontSize: isHtmlModeEnabled() ? 14 : 24,
+        fontSize: isHtmlModeEnabled() ? 14 : 38,
+        useTagFontSize: false,
         strokeWidth: "inherit",
         useTagFontColor: item.bg === "#000000",
         useTagBgColor: true,
@@ -3143,30 +3084,19 @@ function selectionTouchesHighlight(range) {
     const editor = document.getElementById("tti_rich_text_editor");
     return !!editor && Array.from(editor.querySelectorAll(".tti-editor-highlight")).some((span) => range.intersectsNode(span));
 }
+let pressingHighlightMenu = false;
+
 function showFloatingHighlightMenu(range) {
     if (!richRangeIsValid(range)) return;
     savedRichEditorRange = range.cloneRange();
-    const rect = range.getBoundingClientRect();
-    if (!rect.width && !rect.height) return;
-    const $menu = $("#tti_editor_highlight_menu");
     const touchesHighlight = selectionTouchesHighlight(range);
-    $("#tti_highlight_apply").toggle(!touchesHighlight);
     $("#tti_highlight_remove").toggle(touchesHighlight);
-    $menu.addClass("is-visible");
-    const menuRect = $menu[0].getBoundingClientRect();
-    const useTop = rect.top >= menuRect.height + 16;
-    const halfWidth = menuRect.width / 2;
-    const x = Math.max(halfWidth + 8, Math.min(window.innerWidth - halfWidth - 8, rect.left + rect.width / 2));
-    $menu
-        .toggleClass("placement-top", useTop)
-        .toggleClass("placement-bottom", !useTop)
-        .css({left: `${x}px`, top: `${useTop ? rect.top - 8 : rect.bottom + 8}px`})
-        .addClass("is-visible");
+    $("#tti_editor_highlight_menu").addClass("has-selection");
 }
 function hideFloatingHighlightMenu() {
     savedRichEditorRange = null;
-    $("#tti_editor_highlight_menu").removeClass("is-visible palette-open");
-    $("#tti_highlight_color").attr("aria-expanded", "false");
+    $("#tti_editor_highlight_menu").removeClass("has-selection");
+    $("#tti_highlight_remove").hide();
 }
 function splitEditorHighlightAtMarker(marker) {
     let wrapper = marker.parentElement?.closest(".tti-editor-highlight");
@@ -3239,7 +3169,6 @@ function renderFloatingHighlightPalette() {
             .css("--palette-color", getHighlightSwatch(tag))
             .appendTo($palette);
     });
-    $("#tti_highlight_color").css("--palette-color", getHighlightSwatch(getHighlightTag(recentHighlightTagName)));
 }
 function setupRichTextHighlighter() {
     setupPreviewEditDeferral();
@@ -3248,20 +3177,33 @@ function setupRichTextHighlighter() {
         applyExtensionTheme();
         saveSettings();
     });
-    $("#tti_editor_highlight_menu").appendTo("#tti_text_modal_backdrop");
-    document.getElementById("tti_rich_text_editor")?.addEventListener("scroll", hideFloatingHighlightMenu, {passive: true});
-    document.querySelector(".tti-bottom-sheet")?.addEventListener("scroll", hideFloatingHighlightMenu, {passive: true});
-    window.addEventListener("resize", hideFloatingHighlightMenu);
     $(document).on("input", "#tti_rich_text_editor", syncSourceFromRichEditor);
-    $(document).on("pointerup keyup", "#tti_rich_text_editor", function () {
-        window.setTimeout(() => {
-            const selection = window.getSelection();
-            const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
-            if (richRangeIsValid(range)) showFloatingHighlightMenu(range);
-            else hideFloatingHighlightMenu();
-        }, 0);
+    const syncHighlightFromSelection = () => {
+        if (pressingHighlightMenu || !$("#tti_text_modal_backdrop").hasClass("open")) return;
+        const selection = window.getSelection();
+        const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+        if (richRangeIsValid(range)) showFloatingHighlightMenu(range);
+        else hideFloatingHighlightMenu();
+    };
+    let highlightSelectionFrame = null;
+    document.addEventListener("selectionchange", () => {
+        if (!$("#tti_text_modal_backdrop").hasClass("open")) return;
+        if (highlightSelectionFrame !== null) return;
+        highlightSelectionFrame = requestAnimationFrame(() => {
+            highlightSelectionFrame = null;
+            syncHighlightFromSelection();
+        });
     });
-    $(document).on("pointerdown", "#tti_editor_highlight_menu", (event) => event.preventDefault());
+    $(document).on("pointerup keyup", "#tti_rich_text_editor", function () {
+        window.setTimeout(syncHighlightFromSelection, 0);
+    });
+    $(document).on("pointerdown", "#tti_editor_highlight_menu", (event) => {
+        pressingHighlightMenu = true;
+        event.preventDefault();
+    });
+    $(document).on("pointerup pointercancel", () => {
+        pressingHighlightMenu = false;
+    });
     $(document).on("mousedown", "#tti_editor_highlight_menu", (event) => event.preventDefault());
     $(document).on("paste", "#tti_rich_text_editor", function (event) {
         event.preventDefault();
@@ -3285,19 +3227,14 @@ function setupRichTextHighlighter() {
         selection?.addRange(range);
         showFloatingHighlightMenu(range);
     });
-    $(document).on("click", "#tti_highlight_apply", () => applyFloatingHighlight());
     $(document).on("click", "#tti_highlight_remove", removeFloatingHighlight);
-    $(document).on("click", "#tti_highlight_color", function () {
-        const open = !$("#tti_editor_highlight_menu").hasClass("palette-open");
-        $("#tti_editor_highlight_menu").toggleClass("palette-open", open);
-        $(this).attr("aria-expanded", String(open));
-    });
     $(document).on("click", "#tti_highlight_palette button", function () {
         applyFloatingHighlight($(this).data("tag"));
     });
     $(document).on("pointerdown", function (event) {
         if (!$(event.target).closest("#tti_rich_text_editor, #tti_editor_highlight_menu").length) hideFloatingHighlightMenu();
     });
+    $("#tti_highlight_remove").hide();
 }
 function openModal(id) {
     $(`#${id}`).addClass("open");
@@ -3360,21 +3297,19 @@ function highlighterTags() {
     highlightContainer.empty();
     const highlightTags = extension_settings[extensionName].setHighlighterTags || [];
     highlightTags.forEach((tag, index) => {
-        const swatchColor =
-            tag.useTagBgColor ? tag.bgColor
-            : tag.useTagFontColor ? tag.fontColor
-            : "transparent";
-        const swatchTextColor = tag.useTagFontColor ? tag.fontColor : "inherit";
+        const useCustomSize = !!tag.useTagFontSize;
+        const sizeValue = parseInt(tag.fontSize, 10) || (isHtmlModeEnabled() ? 14 : 38);
         const highlightTagItem = $(`
       <div class="tag-item" data-index="${index}">
         <div class="tag-card-preview"><span></span></div>
         <button type="button" class="buttons tti-manage-pen">관리</button>
         <div class="tag-item-left">
-          <div class="tag-item-head">
-            <span class="tag-swatch">가</span>
+          <div class="tti-field">
+            <span>이름</span>
             <input type="text" class="tag-name" placeholder="펜 이름 (예: 강조)" />
           </div>
-          <div class="tag-item-row">
+          <div class="tti-field">
+            <span>글꼴</span>
             <select class="tag-font-family" data-html-hide="tag_font_family">
               <option value="useGlobal" ${!tag.fontFamily || tag.fontFamily === "useGlobal" ? "selected" : ""}>전역 폰트 사용</option>
             </select>
@@ -3385,36 +3320,46 @@ function highlighterTags() {
               <option value="GangwonEducationModuche" ${tag.htmlFontFamily === "GangwonEducationModuche" ? "selected" : ""}>강원교육모두체</option>
               <option value="OngleipParkDahyeon" ${tag.htmlFontFamily === "OngleipParkDahyeon" ? "selected" : ""}>온글잎 박다현체</option>
             </select>
-            <input type="number" class="tag-font-size" value="${tag.fontSize}" min="12" max="50" title="글자 크기" />
+          </div>
+          <div class="tti-field">
+            <span>두께</span>
             <select class="tag-stroke-width" title="두께">
-              <option value="inherit" ${!tag.strokeWidth || tag.strokeWidth === "inherit" ? "selected" : ""}>전역</option>
+              <option value="inherit" ${!tag.strokeWidth || tag.strokeWidth === "inherit" ? "selected" : ""}>현재 두께</option>
               <option value="0" ${tag.strokeWidth === "0" ? "selected" : ""}>기본</option>
               <option value="0.8" ${tag.strokeWidth === "0.8" ? "selected" : ""}>세미 볼드</option>
               <option value="1.5" ${tag.strokeWidth === "1.5" ? "selected" : ""}>볼드</option>
             </select>
           </div>
-          <div class="tag-item-row">
-            <label class="tag-color-chip">
+          <div class="tti-field">
+            <span>크기</span>
+            <div class="tag-size-control">
+              <div class="tti-segment tag-size-mode">
+                <button type="button" data-size-mode="global" class="${!useCustomSize ? "active" : ""}">전역</button>
+                <button type="button" data-size-mode="custom" class="${useCustomSize ? "active" : ""}">개별</button>
+              </div>
+              <input type="number" class="tag-font-size" value="${sizeValue}" min="10" max="80" title="글자 크기" ${!useCustomSize ? "hidden" : ""} />
+            </div>
+          </div>
+          <div class="tti-field">
+            <span>글자색</span>
+            <div class="tti-inline-color">
               <input type="checkbox" class="use-tag-font-color" ${tag.useTagFontColor ? "checked" : ""} />
-              글자색
               <input type="color" class="tag-font-color" value="${tag.fontColor}" ${!tag.useTagFontColor ? "disabled" : ""} />
-            </label>
-            <label class="tag-color-chip">
+            </div>
+          </div>
+          <div class="tti-field">
+            <span>형광색</span>
+            <div class="tti-inline-color">
               <input type="checkbox" class="use-tag-bg-color" ${tag.useTagBgColor ? "checked" : ""} />
-              형광색
               <input type="color" class="tag-bg-color" value="${tag.bgColor}" ${!tag.useTagBgColor ? "disabled" : ""} />
-            </label>
+            </div>
           </div>
         </div>
-        <button class="delete-tag-btn buttons clear" title="삭제"><i class="fa-solid fa-trash"></i></button>
+        <button type="button" class="delete-tag-btn buttons clear"><i class="fa-solid fa-trash"></i> 형광펜 삭제</button>
       </div>
     `);
 
         highlightTagItem.find(".tag-name").val(tag.label || tag.name || "");
-        highlightTagItem.find(".tag-swatch").css({
-            background: swatchColor || "transparent",
-            color: swatchTextColor,
-        });
         prependWebFontOptions(highlightTagItem.find(".tag-html-font-family")[0], "html", tag.htmlFontFamily || "useGlobal");
         highlighterFonts(highlightTagItem.find(".tag-font-family"), tag.fontFamily);
 
@@ -3461,7 +3406,8 @@ function addHighlightTag() {
         htmlFontFamily: "useGlobal",
         fontColor: palette.bg === "#000000" ? "#ffffff" : "#000000",
         bgColor: palette.bg,
-        fontSize: isHtmlModeEnabled() ? 14 : 24,
+        fontSize: isHtmlModeEnabled() ? 14 : 38,
+        useTagFontSize: false,
         strokeWidth: "inherit",
         useTagFontColor: palette.bg === "#000000",
         useTagBgColor: true,
@@ -3480,6 +3426,7 @@ function ensureHighlightTagNames() {
         if (!tag || typeof tag !== "object") return;
         if (!tag.name) tag.name = nextHighlightTagName();
         if (tag.label === undefined) tag.label = tag.name;
+        if (tag.useTagFontSize === undefined) tag.useTagFontSize = false;
     });
 }
 function deleteHighlightTag(index) {
@@ -3533,1284 +3480,112 @@ function syncTagSwatch($item) {
     renderPenBar();
 }
 
-// 마크다운
-function enableMarkdown(text, options = {}) {
-    const {allowHeading = true} = options;
-    const spans = [];
-    let currentText = "";
-    let bold = false;
-    let italic = false;
-    let strikethrough = false;
-    let underline = false;
-    let i = 0;
-    let headingSizeBonus = 0;
-    let sourceText = text;
-
-    if (allowHeading) {
-        const headingMatch = text.match(/^\s*(#{1,3})\s+(.+)$/);
-        if (headingMatch) {
-            const hashCount = headingMatch[1].length;
-            const baseHeadingBonus = (4 - hashCount) * 2;
-            headingSizeBonus = isHtmlModeEnabled() ? baseHeadingBonus : baseHeadingBonus + 1;
-            sourceText = headingMatch[2];
-        }
-    }
-
-    const setHighlighterTags = extension_settings[extensionName].setHighlighterTags || [];
-    const tagMap = {};
-    const quotePairs = {'"': '"', "“": "”", "「": "」", "『": "』"};
-    setHighlighterTags.forEach((tag) => {
-        if (tag.name) tagMap[tag.name.toLowerCase()] = tag;
-    });
-
-    while (i < sourceText.length) {
-        if (sourceText[i] === "<") {
-            let tagMatch = sourceText.slice(i).match(/^<(\w+)>/);
-            if (tagMatch && tagMap[tagMatch[1].toLowerCase()]) {
-                const tagName = tagMatch[1].toLowerCase();
-                const tagSet = tagMap[tagName];
-                const closeTag = `</${tagName}>`;
-                const closeIndex = sourceText.indexOf(closeTag, i + tagMatch[0].length);
-
-                if (closeIndex !== -1) {
-                    if (currentText) {
-                        spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null});
-                        currentText = "";
-                    }
-                    const tagContent = sourceText.slice(i + tagMatch[0].length, closeIndex);
-                    const innerContents = enableMarkdown(tagContent, {allowHeading: false});
-
-                    innerContents.forEach((innerContent) => {
-                        if (innerContent.fontFamily || innerContent.fontSize) {
-                            spans.push(innerContent);
-                        } else {
-                            spans.push({
-                                text: innerContent.text,
-                                bold: innerContent.bold,
-                                italic: innerContent.italic,
-                                strikethrough: innerContent.strikethrough,
-                                underline: innerContent.underline,
-                                fontColor: tagSet.useTagFontColor ? tagSet.fontColor : innerContent.fontColor || null,
-                                bgColor: tagSet.useTagBgColor ? tagSet.bgColor : innerContent.bgColor || null,
-                                fontFamily: tagSet.fontFamily || null,
-                                htmlFontFamily: tagSet.htmlFontFamily || null,
-                                fontSize: tagSet.fontSize,
-                                strokeWidth: tagSet.strokeWidth || null,
-                            });
-                        }
-                    });
-
-                    i = closeIndex + closeTag.length;
-                    continue;
-                }
-            }
-        }
-
-        if (quotePairs[sourceText[i]]) {
-            const openChar = sourceText[i];
-            const closeChar = quotePairs[openChar];
-            const closeIndex = sourceText.indexOf(closeChar, i + 1);
-            if (closeIndex !== -1) {
-                if (currentText) {
-                    spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
-                    currentText = "";
-                }
-                const innerText = sourceText.slice(i + 1, closeIndex);
-                const innerSpans = enableMarkdown(innerText, {allowHeading: false});
-
-                spans.push({text: openChar, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null, quote: true});
-                innerSpans.forEach((innerSpan) => spans.push({...innerSpan, quote: true}));
-                spans.push({text: closeChar, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null, quote: true});
-
-                i = closeIndex + 1;
-                continue;
-            }
-        }
-        if (sourceText.slice(i, i + 3) === "***") {
-            if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
-            bold = !bold;
-            italic = !italic;
-            currentText = "";
-            i += 3;
-        } else if (sourceText.slice(i, i + 2) === "**") {
-            if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
-            bold = !bold;
-            currentText = "";
-            i += 2;
-        } else if (sourceText.slice(i, i + 2) === "__") {
-            if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
-            underline = !underline;
-            currentText = "";
-            i += 2;
-        } else if (sourceText.slice(i, i + 2) === "~~") {
-            if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
-            strikethrough = !strikethrough;
-            currentText = "";
-            i += 2;
-        } else if (sourceText[i] === "*" && (i + 1 >= sourceText.length || sourceText[i + 1] !== "*")) {
-            if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
-            italic = !italic;
-            currentText = "";
-            i++;
-        } else {
-            currentText += sourceText[i];
-            i++;
-        }
-    }
-
-    if (currentText) spans.push({text: currentText, bold, italic, strikethrough, underline, fontColor: null, bgColor: null, fontFamily: null});
-    if (headingSizeBonus > 0) {
-        const globalFontSize = getActiveFontSize(extension_settings[extensionName]);
-        return spans.map((span) => ({
-            ...span,
-            fontSize: (parseInt(span.fontSize, 10) || globalFontSize) + headingSizeBonus,
-        }));
-    }
-    return spans;
-}
-
-// 텍스트 정리
-function wrappingTexts(text, mode = "word") {
-    const settings = extension_settings[extensionName];
-
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    const {width, height} = getCanvasSize();
-    const maxWidth = width * 0.8;
-    const fontSize = getActiveFontSize(settings);
-    const lineHeight = fontSize * parseFloat(settings.fontLineHeight);
-    const indentSize = settings.textIndent ? fontSize : 0;
-
-    const fullSize = getImageRatio(settings) === "full";
-    const reserve = getVerticalReserve(width, getMetaLines(settings).length, fontSize);
-    const maxLines = fullSize ? Infinity : Math.max(1, Math.floor((height - reserve.total) / lineHeight));
-
-    const pages = [];
-    let currentPage = [];
-    let lineCount = 0;
-
-    const lines = text.split(/\n/);
-
-    lines.forEach((lineText) => {
-        const trimmedLine = lineText.trim();
-        const isHrLine = /^-{3,}$/.test(trimmedLine) || /^<hr\s*\/?>$/i.test(trimmedLine);
-        const parsedLineText = lineText;
-        const isBlank = lineText.trim() === "";
-
-        if (isHrLine) {
-            if (!fullSize && lineCount >= maxLines && currentPage.length > 0) {
-                pages.push(currentPage);
-                currentPage = [];
-                lineCount = 0;
-            }
-
-            if (mode === "word") {
-                currentPage.push([{text: "", isHr: true}]);
-            } else {
-                currentPage.push({
-                    spans: [{text: "", isHr: true}],
-                    softBreak: false,
-                });
-            }
-            lineCount++;
-            return;
-        }
-
-        if (isBlank) {
-            if (!fullSize && lineCount >= maxLines) {
-                pages.push(currentPage);
-                currentPage = [];
-                lineCount = 0;
-            } else {
-                if (mode === "word") {
-                    currentPage.push([{text: "", bold: false, italic: false, strikethrough: false, underline: false, fontColor: null, bgColor: null}]);
-                } else {
-                    currentPage.push({
-                        spans: [{text: "", bold: false, italic: false, strikethrough: false, underline: false}],
-                        softBreak: false,
-                    });
-                }
-                lineCount++;
-            }
-            return;
-        }
-
-        const wrapLine = [];
-        const spans = enableMarkdown(parsedLineText);
-        const lineMaxWidth = maxWidth;
-        let currentLine = [];
-
-        spans.forEach((span) => {
-            const units = mode === "word" ? span.text.match(/\S+\s*|\s+/g) || [] : Array.from(span.text);
-
-            units.forEach((unit) => {
-                if (mode === "char" && (unit === " " || unit === "\t") && currentLine.length === 0) return;
-
-                const fontWeight = span.bold ? "bold" : settings.fontWeight;
-                const fontStyle = span.italic ? "italic" : "normal";
-                const fontFamily = span.fontFamily && span.fontFamily !== "useGlobal" ? span.fontFamily : settings.fontFamily;
-                const setFontSize = span.fontSize || fontSize;
-                ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${getCSSFontFamily(fontFamily)}`;
-                ctx.letterSpacing = `${settings.fontSpacing}em`;
-
-                let currentLineWidth = 0;
-                currentLine.forEach((item) => {
-                    const itemFontWeight = item.bold ? "bold" : settings.fontWeight;
-                    const itemFontStyle = item.italic ? "italic" : "normal";
-                    const itemFontFamily = item.fontFamily || settings.fontFamily;
-                    const itemFontSize = item.fontSize || fontSize;
-                    ctx.font = `${itemFontStyle} ${itemFontWeight} ${itemFontSize}px ${getCSSFontFamily(itemFontFamily)}`;
-                    ctx.letterSpacing = `${settings.fontSpacing}em`;
-                    currentLineWidth += ctx.measureText(item.text).width;
-                });
-
-                ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${getCSSFontFamily(fontFamily)}`;
-                ctx.letterSpacing = `${settings.fontSpacing}em`;
-                const unitWidth = ctx.measureText(unit).width;
-
-                const availableWidth = lineMaxWidth - (wrapLine.length === 0 ? indentSize : 0);
-
-                if (currentLineWidth + unitWidth <= availableWidth) {
-                    currentLine.push({
-                        text: unit,
-                        bold: span.bold,
-                        italic: span.italic,
-                        strikethrough: span.strikethrough,
-                        underline: span.underline,
-                        fontColor: span.fontColor,
-                        bgColor: span.bgColor,
-                        fontFamily: span.fontFamily,
-                        fontSize: span.fontSize,
-                        strokeWidth: span.strokeWidth,
-                        quote: span.quote,
-                    });
-                } else {
-                    if (currentLine.length) {
-                        if (mode === "word") {
-                            wrapLine.push(currentLine);
-                        } else {
-                            wrapLine.push({
-                                spans: currentLine,
-                                softBreak: true,
-                            });
-                        }
-                    }
-
-                    currentLine = [
-                        {
-                            text: unit.trimStart(),
-                            bold: span.bold,
-                            italic: span.italic,
-                            strikethrough: span.strikethrough,
-                            underline: span.underline,
-                            fontColor: span.fontColor,
-                            bgColor: span.bgColor,
-                            fontFamily: span.fontFamily,
-                            fontSize: span.fontSize,
-                            strokeWidth: span.strokeWidth,
-                            quote: span.quote,
-                        },
-                    ];
-                }
-            });
-        });
-
-        if (currentLine.length) {
-            if (mode === "word") {
-                wrapLine.push(currentLine);
-            } else {
-                wrapLine.push({
-                    spans: currentLine,
-                    softBreak: true,
-                });
-            }
-        }
-
-        if (mode === "char" && wrapLine.length > 0) {
-            wrapLine.forEach((line, idx) => {
-                const isLast = idx === wrapLine.length - 1;
-                if (line.softBreak && !isLast) {
-                    line.spans = trimLineEdges(line.spans);
-                }
-            });
-            wrapLine[wrapLine.length - 1].softBreak = false;
-        }
-
-        if (wrapLine.length) wrapLine[0].paraStart = true;
-
-        if (!fullSize && lineCount + wrapLine.length > maxLines && currentPage.length > 0) {
-            pages.push(currentPage);
-            currentPage = [];
-            lineCount = 0;
-        }
-
-        currentPage = currentPage.concat(wrapLine);
-        lineCount += wrapLine.length;
-    });
-
-    if (currentPage.length) pages.push(currentPage);
-
-    return pages
-        .map((page) => {
-            while (page.length && isBlankLine(page[0], mode)) page.shift();
-            while (page.length && isBlankLine(page[page.length - 1], mode)) page.pop();
-            return page;
-        })
-        .filter((page) => page.length > 0);
-}
-function trimLineEdges(spans) {
-    let first = 0;
-    let last = spans.length - 1;
-
-    while (first <= last && spans[first].text.trim() === "") first++;
-    while (last >= first && spans[last].text.trim() === "") last--;
-
-    return spans.slice(first, last + 1);
-}
-function isBlankLine(line, mode) {
-    if (mode === "word") {
-        return line.every((span) => span.text.trim() === "");
-    } else {
-        return line.spans.every((span) => span.text.trim() === "");
-    }
-}
-
-// 텍스트를 이미지로
-function generateTextImage(chunk, index) {
-    const {width, height} = getCanvasSize();
-    const settings = extension_settings[extensionName];
-
-    const fontSize = getActiveFontSize(settings);
-    const lineHeight = fontSize * parseFloat(settings.fontLineHeight);
-    const bgImage = settings.selectedBackgroundImage;
-    const useBgColor = settings.useBackgroundColor;
-    const bgColor = settings.backgroundColor;
-    const useSecondBgColor = settings.useSecondBackgroundColor;
-    const secondBgColor = settings.secondBackgroundColor;
-
-    const sillybooks = isSillybooksTemplate(settings);
-    const isFullSize = getImageRatio(settings) === "full";
-    const metaLines = sillybooks ? [] : getMetaLines(settings);
-    const metaMetrics = getMetaMetrics(width);
-    const sbHeader = sillybooks ? layoutSillybooksHeader(width, fontSize, settings) : null;
-    const reserve = sbHeader ? {top: sbHeader.bodyTop, total: sbHeader.bodyTop + sbHeader.paddingBottom} : getVerticalReserve(width, metaLines.length, fontSize);
-    let metaStartY = 0;
-    const calcHeight =
-        sbHeader ? Math.ceil(chunk.length * lineHeight + reserve.total)
-        : isFullSize ? Math.ceil(Math.max(width, chunk.length * lineHeight + reserve.total))
-        : height;
-
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = calcHeight;
-    const ctx = canvas.getContext("2d");
-    ctx.textRendering = "geometricPrecision";
-    ctx.lineJoin = "round";
-    ctx.miterLimit = 2;
-
-    const drawText = () => {
-        const strokeWidth = parseFloat(settings.strokeWidth) || 0;
-
-        const totalTextHeight = chunk.length * lineHeight;
-        const spare = Math.max(0, calcHeight - reserve.total - totalTextHeight);
-        let y = reserve.top + spare / 2 + fontSize;
-        const setAlign = settings.fontAlign || "left";
-        const indentSize = settings.textIndent ? fontSize : 0;
-
-        const lineBreak = settings.lineBreak || "byWord";
-        const maxLineWidth = width * 0.8;
-
-        function setFont(span) {
-            const fontWeight = span.bold ? "bold" : settings.fontWeight;
-            const fontStyle = span.italic ? "italic" : "normal";
-            const fontFamily = span.fontFamily && span.fontFamily !== "useGlobal" ? span.fontFamily : settings.fontFamily;
-            const setFontSize = span.fontSize || fontSize;
-            ctx.font = `${fontStyle} ${fontWeight} ${setFontSize}px ${getCSSFontFamily(fontFamily)}`;
-        }
-
-        function renderSpan(span, x, y, drawMode = "both") {
-            setFont(span);
-            ctx.letterSpacing = `${settings.fontSpacing}em`;
-            const metrics = ctx.measureText(span.text);
-            const textWidth = metrics.width;
-            const setFontSize = span.fontSize || fontSize;
-            const textHeight = setFontSize;
-
-            let currentStrokeWidth = strokeWidth;
-            if (span.strokeWidth !== undefined && span.strokeWidth !== null) {
-                if (span.strokeWidth === "inherit") {
-                    currentStrokeWidth = parseFloat(settings.strokeWidth) || 0;
-                } else {
-                    currentStrokeWidth = parseFloat(span.strokeWidth) || 0;
-                }
-            }
-
-            let textColor = settings.fontColor || "#000000";
-            if (span.fontColor) {
-                textColor = span.fontColor;
-            } else {
-                if (span.quote && settings.useQuotesColor) {
-                    textColor = settings.quotesFontColor || textColor;
-                } else if (span.strikethrough && settings.useStrikethroughColor) {
-                    textColor = settings.strikethroughFontColor || textColor;
-                } else if (span.underline && settings.useUnderlineColor) {
-                    textColor = settings.underlineFontColor || textColor;
-                } else if (span.bold && span.italic && settings.useBoldItalicColor) {
-                    textColor = settings.boldItalicFontColor || textColor;
-                } else if (span.bold && !span.italic && settings.useBoldColor) {
-                    textColor = settings.boldFontColor || textColor;
-                } else if (!span.bold && span.italic && settings.useItalicColor) {
-                    textColor = settings.italicFontColor || textColor;
-                }
-            }
-
-            if ((drawMode === "both" || drawMode === "background") && span.bgColor) {
-                const paddingX = 2;
-                const paddingY = 2;
-                ctx.fillStyle = span.bgColor;
-                const bgHeight = fontSize;
-                const bgY = y - fontSize + paddingY;
-                ctx.fillRect(x - paddingX, bgY, textWidth + 2 * paddingX, bgHeight);
-            }
-
-            if (drawMode === "both" || drawMode === "text") {
-                ctx.fillStyle = textColor;
-                if (currentStrokeWidth > 0) {
-                    ctx.strokeStyle = textColor;
-                    ctx.lineWidth = currentStrokeWidth;
-                    ctx.strokeText(span.text, x, y);
-                }
-                ctx.fillText(span.text, x, y);
-
-                if (span.strikethrough) {
-                    ctx.beginPath();
-                    ctx.moveTo(x, y - textHeight / 3);
-                    ctx.lineTo(x + textWidth, y - textHeight / 3);
-                    ctx.strokeStyle = textColor;
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-                }
-
-                if (span.underline) {
-                    ctx.beginPath();
-                    ctx.moveTo(x, y + 4);
-                    ctx.lineTo(x + textWidth, y + 4);
-                    ctx.strokeStyle = textColor;
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-                }
-            }
-
-            return textWidth;
-        }
-        function getAlignedX(totalTextWidth, indent = 0) {
-            if (setAlign === "center") return width / 2 - totalTextWidth / 2 + indent / 2;
-            if (setAlign === "right") return width * 0.9 - totalTextWidth;
-            return width * 0.1 + indent;
-        }
-        function isHrRenderLine(lineData) {
-            if (!lineData) return false;
-            if (Array.isArray(lineData)) {
-                return lineData.length === 1 && !!lineData[0]?.isHr;
-            }
-            return Array.isArray(lineData.spans) && lineData.spans.length === 1 && !!lineData.spans[0]?.isHr;
-        }
-        function renderHrLine(yPos) {
-            const startX = width * 0.1;
-            const endX = width * 0.9;
-            const centerY = yPos - lineHeight * 0.45;
-            const lineColor = settings.fontColor || "#000000";
-            const gradient = ctx.createLinearGradient(startX, centerY, endX, centerY);
-            gradient.addColorStop(0, "rgba(0,0,0,0)");
-            gradient.addColorStop(0.5, lineColor);
-            gradient.addColorStop(1, "rgba(0,0,0,0)");
-            ctx.beginPath();
-            ctx.moveTo(startX, centerY);
-            ctx.lineTo(endX, centerY);
-            ctx.strokeStyle = gradient;
-            ctx.globalAlpha = 0.4;
-            ctx.lineWidth = 1;
-            ctx.stroke();
-            ctx.globalAlpha = 1;
-        }
-
-        if (lineBreak === "byWord") {
-            for (let lineIndex = 0; lineIndex < chunk.length; lineIndex++) {
-                const line = chunk[lineIndex];
-                if (isHrRenderLine(line)) {
-                    renderHrLine(y);
-                    y += lineHeight;
-                    continue;
-                }
-                const textY = y;
-                let totalTextWidth = 0;
-                const measuredWidths = [];
-
-                line.forEach((span) => {
-                    setFont(span);
-                    const width = ctx.measureText(span.text).width;
-                    ctx.letterSpacing = `${settings.fontSpacing}em`;
-                    measuredWidths.push(width);
-                    totalTextWidth += width;
-                });
-
-                let alignX = getAlignedX(totalTextWidth, line.paraStart ? indentSize : 0);
-
-                ctx.textAlign = "left";
-                let x = alignX;
-                line.forEach((span, i) => {
-                    renderSpan(span, x, textY, "background");
-                    x += measuredWidths[i];
-                });
-
-                x = alignX;
-                line.forEach((span, i) => {
-                    x += renderSpan(span, x, textY, "text");
-                });
-
-                y += lineHeight;
-            }
-        } else {
-            for (let index = 0; index < chunk.length; index++) {
-                const lineObj = chunk[index];
-                if (isHrRenderLine(lineObj)) {
-                    renderHrLine(y);
-                    y += lineHeight;
-                    continue;
-                }
-                const textY = y;
-                const line = lineObj.spans;
-                const isLastLine = index === chunk.length - 1;
-                const isBlankLine = line.every((span) => span.text.trim() === "");
-                const shouldJustify = setAlign === "left" && !isLastLine && lineObj.softBreak && !isBlankLine;
-
-                let totalTextWidth = 0;
-                const measuredWidths = [];
-
-                line.forEach((span) => {
-                    setFont(span);
-                    const width = ctx.measureText(span.text).width;
-                    ctx.letterSpacing = `${settings.fontSpacing}em`;
-                    measuredWidths.push(width);
-                    totalTextWidth += width;
-                });
-
-                const lineIndent = lineObj.paraStart ? indentSize : 0;
-                let alignX = getAlignedX(totalTextWidth, lineIndent);
-
-                const gapCount = line.length - 1;
-                const spacing = gapCount > 0 && shouldJustify ? (maxLineWidth - lineIndent - totalTextWidth) / gapCount : 0;
-
-                let x = alignX;
-                line.forEach((span, i) => {
-                    renderSpan(span, x, textY, "background");
-                    x += measuredWidths[i];
-                    if (i < line.length - 1) x += spacing;
-                });
-
-                x = alignX;
-                line.forEach((span, i) => {
-                    x += renderSpan(span, x, textY, "text");
-                    if (i < line.length - 1) x += spacing;
-                });
-
-                y += lineHeight;
-            }
-        }
-
-        metaStartY = y - fontSize;
-    };
-
-    const textWallpaper = (img) => {
-        const fillMode = settings.imageFillMode || "cover";
-
-        const drawBackground = () => {
-            if (!useBgColor) return;
-
-            if (useSecondBgColor) {
-                const gradient = ctx.createLinearGradient(0, 0, width, calcHeight);
-                addSmoothGradientStops(gradient, bgColor, secondBgColor);
-                ctx.fillStyle = gradient;
-            } else {
-                ctx.fillStyle = bgColor;
-            }
-            ctx.fillRect(0, 0, width, calcHeight);
-        };
-
-        if (fillMode === "pattern") {
-            if (useBgColor) {
-                drawBackground();
-            } else {
-                const scale = width / img.width;
-                const tempCanvas = document.createElement("canvas");
-                tempCanvas.width = width;
-                tempCanvas.height = Math.round(img.height * scale);
-                const tempCtx = tempCanvas.getContext("2d");
-                tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
-
-                const pattern = ctx.createPattern(tempCanvas, "repeat");
-                ctx.fillStyle = pattern;
-                ctx.fillRect(0, 0, width, calcHeight);
-            }
-        } else if (fillMode === "mix-top" || fillMode === "mix-bottom") {
-            drawBackground();
-
-            const scale = width / img.width;
-            const drawWidth = width;
-            const drawHeight = img.height * scale;
-            const offsetY = fillMode === "mix-top" ? 0 : calcHeight - drawHeight;
-
-            const tempCanvas = document.createElement("canvas");
-            tempCanvas.width = width;
-            tempCanvas.height = calcHeight;
-            const tempCtx = tempCanvas.getContext("2d");
-            tempCtx.drawImage(img, 0, offsetY, drawWidth, drawHeight);
-
-            const gradientHeight = Math.min(drawHeight * 0.4, calcHeight * 0.3);
-            const gradient = tempCtx.createLinearGradient(0, fillMode === "mix-top" ? offsetY + drawHeight - gradientHeight : offsetY + gradientHeight, 0, fillMode === "mix-top" ? offsetY + drawHeight : offsetY);
-            gradient.addColorStop(0, "rgba(0,0,0,1)");
-            gradient.addColorStop(1, "rgba(0,0,0,0)");
-
-            tempCtx.globalCompositeOperation = "destination-in";
-            tempCtx.fillStyle = gradient;
-            tempCtx.fillRect(0, 0, width, calcHeight);
-
-            ctx.drawImage(tempCanvas, 0, 0, width, calcHeight);
-        } else {
-            if (useBgColor) {
-                drawBackground();
-            } else {
-                const imgRatio = img.width / img.height;
-                const canvasRatio = width / calcHeight;
-                let drawWidth,
-                    drawHeight,
-                    offsetX = 0,
-                    offsetY = 0;
-
-                if (imgRatio > canvasRatio) {
-                    drawHeight = calcHeight;
-                    drawWidth = img.width * (calcHeight / img.height);
-                    offsetX = (width - drawWidth) / 2;
-                } else {
-                    drawWidth = width;
-                    drawHeight = img.height * (width / img.width);
-                    offsetY = (calcHeight - drawHeight) / 2;
-                }
-                ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
-            }
-        }
-
-        let filterEffects = [];
-        if (settings.bgBlur > 0) filterEffects.push(`blur(${settings.bgBlur}px)`);
-        if (settings.bgBrightness !== undefined) filterEffects.push(`brightness(${settings.bgBrightness}%)`);
-        if (settings.bgHue !== undefined) filterEffects.push(`hue-rotate(${settings.bgHue}deg)`);
-
-        if (filterEffects.length > 0) {
-            const blurPad = Math.ceil((Number(settings.bgBlur) || 0) * 3);
-            const snapshot = document.createElement("canvas");
-            snapshot.width = canvas.width;
-            snapshot.height = canvas.height;
-            snapshot.getContext("2d").drawImage(canvas, 0, 0);
-            ctx.save();
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.restore();
-            ctx.filter = filterEffects.join(" ");
-            ctx.drawImage(snapshot, -blurPad, -blurPad, width + blurPad * 2, calcHeight + blurPad * 2);
-            ctx.filter = "none";
-        }
-
-        if (settings.bgGrayscale > 0) {
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-            const grayscaleFactor = settings.bgGrayscale / 100;
-            for (let i = 0; i < data.length; i += 4) {
-                const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                data[i] = data[i] + (avg - data[i]) * grayscaleFactor;
-                data[i + 1] = data[i + 1] + (avg - data[i + 1]) * grayscaleFactor;
-                data[i + 2] = data[i + 2] + (avg - data[i + 2]) * grayscaleFactor;
-            }
-            ctx.putImageData(imageData, 0, 0);
-        }
-
-        if (settings.bgNoise > 0) {
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-            const noiseLevel = settings.bgNoise / 100;
-            for (let i = 0; i < data.length; i += 4) {
-                const noise = (Math.random() - 0.5) * 255 * noiseLevel;
-                data[i] = Math.min(255, Math.max(0, data[i] + noise));
-                data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + noise));
-                data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + noise));
-            }
-            ctx.putImageData(imageData, 0, 0);
-        }
-    };
-
-    const drawOverlay = () => {
-        if (settings.overlayOpacity > 0) {
-            ctx.fillStyle = `${settings.overlayColor}${Math.round(settings.overlayOpacity * 255)
-                .toString(16)
-                .padStart(2, "0")}`;
-            ctx.fillRect(0, 0, width, calcHeight);
-        }
-    };
-
-    const drawFooter = () => {
-        const textColor = settings.fontColor || "#000000";
-        ctx.textBaseline = "alphabetic";
-
-        if (metaLines.length) {
-            let y = metaStartY + reserve.metaGap + metaMetrics.fontSize;
-            ctx.font = `${metaMetrics.fontSize}px ${getCSSFontFamily("Pretendard-Regular")}`;
-            ctx.textAlign = "left";
-            ctx.fillStyle = textColor;
-            metaLines.forEach((line) => {
-                ctx.globalAlpha = line.alpha;
-                ctx.fillText(line.text, width * 0.1, y);
-                y += metaMetrics.lineStep;
-            });
-            ctx.globalAlpha = 1;
-        }
-
-        if (isWatermarkEnabled(settings)) {
-            ctx.font = `900 ${metaMetrics.watermarkSize}px ${getCSSFontFamily("Paperozi")}`;
-            ctx.textAlign = "right";
-            ctx.fillStyle = textColor;
-            ctx.globalAlpha = 0.32;
-            ctx.fillText(WATERMARK_MARK, width - metaMetrics.watermarkInset, calcHeight - metaMetrics.watermarkInset);
-            ctx.globalAlpha = 1;
-        }
-
-        ctx.textAlign = "left";
-    };
-
-    const $preview = $("<div>").addClass("image-preview-item");
-    const $img = $("<img>").attr({alt: `Generated Image ${index + 1}`});
-    const $downloadBtn = $("<button>")
-        .addClass("download-btn")
-        .text("Download")
-        .on("click", () => saveImage(canvas.toDataURL("image/png"), `${index + 1}.png`));
-
-    if (sbHeader) {
-        ctx.fillStyle = settings.backgroundColor || SILLYBOOKS_DEFAULTS.backgroundColor;
-        ctx.fillRect(0, 0, width, calcHeight);
-        drawSillybooksHeader(ctx, sbHeader, settings);
-        drawText();
-        drawFooter();
-        $img.attr("src", canvas.toDataURL("image/png"));
-    } else if (useBgColor && !bgImage) {
-        if (useSecondBgColor) {
-            const gradient = ctx.createLinearGradient(0, 0, width, calcHeight);
-            addSmoothGradientStops(gradient, bgColor, secondBgColor);
-            ctx.fillStyle = gradient;
-        } else {
-            ctx.fillStyle = bgColor;
-        }
-        ctx.fillRect(0, 0, width, calcHeight);
-        drawOverlay();
-        drawText();
-        drawFooter();
-        $img.attr("src", canvas.toDataURL("image/png"));
-    } else if (bgImage) {
-        const img = new Image();
-        img.onload = () => {
-            textWallpaper(img);
-            drawOverlay();
-            drawText();
-            drawFooter();
-            $img.attr("src", canvas.toDataURL("image/png"));
-        };
-        img.onerror = () => {
-            drawOverlay();
-            drawText();
-            drawFooter();
-            $img.attr("src", canvas.toDataURL("image/png"));
-        };
-        img.src = bgImage;
-    } else {
-        ctx.fillRect(0, 0, width, calcHeight);
-        drawOverlay();
-        drawText();
-        drawFooter();
-        $img.attr("src", canvas.toDataURL("image/png"));
-    }
-
-    if (getImageRatio(settings) === "rectangular") $img.addClass("rectangular");
-    if (isFullSize) $img.addClass("full");
-    $preview.append($img, $downloadBtn);
-    return $preview;
-}
-function wrapCanvasText(ctx, text, maxWidth) {
-    const lines = [];
-    let current = "";
-    String(text)
-        .split(/(\s+)/)
-        .forEach((token) => {
-            if (!token) return;
-            const candidate = current + token;
-            if (!current.trim() || ctx.measureText(candidate.trimEnd()).width <= maxWidth) {
-                current = candidate;
-                return;
-            }
-            lines.push(current.trimEnd());
-            current = token.trimStart();
-        });
-    if (current.trim()) lines.push(current.trimEnd());
-    return lines.flatMap((line) => {
-        if (ctx.measureText(line).width <= maxWidth) return [line];
-        const parts = [];
-        let part = "";
-        Array.from(line).forEach((char) => {
-            if (part && ctx.measureText(part + char).width > maxWidth) {
-                parts.push(part);
-                part = char;
-            } else {
-                part += char;
-            }
-        });
-        if (part) parts.push(part);
-        return parts;
-    });
-}
 function getSillybooksHeaderTexts(settings = extension_settings[extensionName]) {
     return {
         title: resolveMetaText(settings?.chatTitleMode, settings?.chatTitleCustom),
         name: resolveMetaText(settings?.charNameMode, settings?.charNameCustom),
     };
 }
-function layoutSillybooksHeader(width, fontSize, settings) {
-    const scale = width / SHARE_REFERENCE_WIDTH;
-    const paddingTop = Math.round(150 * scale);
-    const paddingBottom = Math.round(160 * scale);
-    const {title, name} = getSillybooksHeaderTexts(settings);
-    const family = getCSSFontFamily(settings.fontFamily);
-    const titleSize = Math.round(fontSize * 1.55);
-    const nameSize = Math.round(fontSize * 0.78);
-    const titleStep = Math.round(titleSize * 1.3);
-    const measure = document.createElement("canvas").getContext("2d");
-    measure.font = `bold ${titleSize}px ${family}`;
-    const titleLines = title ? wrapCanvasText(measure, title, width * 0.8) : [];
-    let y = paddingTop;
-    const titleTop = y;
-    y += titleLines.length * titleStep;
-    if (titleLines.length && name) y += Math.round(fontSize * 0.35);
-    const nameTop = y;
-    if (name) y += Math.round(nameSize * 1.4);
-    if (titleLines.length || name) y += fontSize * 2;
-    return {family, titleSize, nameSize, titleStep, titleLines, titleTop, name, nameTop, bodyTop: y, paddingBottom};
-}
-function drawSillybooksHeader(ctx, header, settings) {
-    const x = ctx.canvas.width * 0.1;
-    const color = settings.fontColor || SILLYBOOKS_DEFAULTS.fontColor;
-    ctx.save();
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-    ctx.fillStyle = color;
-    ctx.letterSpacing = "0em";
-    ctx.font = `bold ${header.titleSize}px ${header.family}`;
-    header.titleLines.forEach((line, index) => {
-        ctx.fillText(line, x, header.titleTop + index * header.titleStep + (header.titleStep - header.titleSize) / 2);
-    });
-    if (header.name) {
-        ctx.font = `${header.nameSize}px ${header.family}`;
-        ctx.globalAlpha = 0.56;
-        ctx.fillText(header.name, x, header.nameTop);
-    }
-    ctx.restore();
-}
-function escapeHTML(text = "") {
-    return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-}
-function escapeCSSURL(url = "") {
-    return String(url).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-}
-function toRGBA(hex, alpha = 1) {
-    const fallback = `rgba(255,255,255,${alpha})`;
-    if (!hex || typeof hex !== "string") return fallback;
-
-    const cleanHex = hex.replace("#", "").trim();
-    if (![3, 6].includes(cleanHex.length)) return fallback;
-
-    const fullHex =
-        cleanHex.length === 3 ?
-            cleanHex
-                .split("")
-                .map((ch) => ch + ch)
-                .join("")
-        :   cleanHex;
-
-    const r = parseInt(fullHex.slice(0, 2), 16);
-    const g = parseInt(fullHex.slice(2, 4), 16);
-    const b = parseInt(fullHex.slice(4, 6), 16);
-
-    if ([r, g, b].some(Number.isNaN)) return fallback;
-    return `rgba(${r},${g},${b},${alpha})`;
-}
-function normalizeHexColor(color = "#000000") {
-    const normalized = String(color || "")
-        .trim()
-        .toLowerCase();
-    if (!normalized) return null;
-    let hex = normalized.startsWith("#") ? normalized.slice(1) : normalized;
-    if (hex.length === 3) {
-        hex = hex
-            .split("")
-            .map((ch) => ch + ch)
-            .join("");
-    }
-    if (!/^[0-9a-f]{6}$/.test(hex)) return null;
-    return `#${hex}`;
-}
-function mixHexColors(colorA, colorB, ratio = 0.5) {
-    const a = normalizeHexColor(colorA);
-    const b = normalizeHexColor(colorB);
-    if (!a || !b) return a || b || "#000000";
-
-    const clampRatio = Math.max(0, Math.min(1, Number(ratio)));
-    const ar = parseInt(a.slice(1, 3), 16);
-    const ag = parseInt(a.slice(3, 5), 16);
-    const ab = parseInt(a.slice(5, 7), 16);
-    const br = parseInt(b.slice(1, 3), 16);
-    const bg = parseInt(b.slice(3, 5), 16);
-    const bb = parseInt(b.slice(5, 7), 16);
-
-    const r = Math.round(ar + (br - ar) * clampRatio);
-    const g = Math.round(ag + (bg - ag) * clampRatio);
-    const bl = Math.round(ab + (bb - ab) * clampRatio);
-    const toHex = (n) => n.toString(16).padStart(2, "0");
-    return `#${toHex(r)}${toHex(g)}${toHex(bl)}`;
-}
-function buildSmoothGradientCSS(colorA, colorB, angle = "135deg") {
-    const c1 = normalizeHexColor(colorA) || colorA;
-    const c2 = normalizeHexColor(colorB) || colorB;
-    const c25 = mixHexColors(c1, c2, 0.25);
-    const c50 = mixHexColors(c1, c2, 0.5);
-    const c75 = mixHexColors(c1, c2, 0.75);
-    return `linear-gradient(${angle}, ${c1} 0%, ${c25} 35%, ${c50} 60%, ${c75} 80%, ${c2} 100%)`;
-}
-function addSmoothGradientStops(gradient, colorA, colorB) {
-    const c1 = normalizeHexColor(colorA) || colorA;
-    const c2 = normalizeHexColor(colorB) || colorB;
-    gradient.addColorStop(0, c1);
-    gradient.addColorStop(0.35, mixHexColors(c1, c2, 0.25));
-    gradient.addColorStop(0.6, mixHexColors(c1, c2, 0.5));
-    gradient.addColorStop(0.8, mixHexColors(c1, c2, 0.75));
-    gradient.addColorStop(1, c2);
-}
-function mapHtmlStrokeWidth(value) {
-    const numeric = parseFloat(value) || 0;
-    if (numeric === 0.8) return 0.1;
-    if (numeric === 1.5) return 0.3;
-    return numeric;
-}
-function getSpanColor(span, settings) {
-    let textColor = span.isBlockquote ? settings.blockquoteFontColor || defaultSettings.blockquoteFontColor : settings.fontColor || "#000000";
-    if (span.fontColor) {
-        textColor = span.fontColor;
-    } else {
-        if (span.quote && settings.useQuotesColor) {
-            textColor = settings.quotesFontColor || textColor;
-        } else if (span.strikethrough && settings.useStrikethroughColor) {
-            textColor = settings.strikethroughFontColor || textColor;
-        } else if (span.underline && settings.useUnderlineColor) {
-            textColor = settings.underlineFontColor || textColor;
-        } else if (span.bold && span.italic && settings.useBoldItalicColor) {
-            textColor = settings.boldItalicFontColor || textColor;
-        } else if (span.bold && !span.italic && settings.useBoldColor) {
-            textColor = settings.boldFontColor || textColor;
-        } else if (!span.bold && span.italic && settings.useItalicColor) {
-            textColor = settings.italicFontColor || textColor;
-        }
-    }
-    return textColor;
-}
-function getSpanStrokeWidth(span, settings) {
-    if (span.strokeWidth !== undefined && span.strokeWidth !== null) {
-        if (span.strokeWidth === "inherit") {
-            return mapHtmlStrokeWidth(settings.strokeWidth);
-        }
-        return mapHtmlStrokeWidth(span.strokeWidth);
-    }
-    return mapHtmlStrokeWidth(settings.strokeWidth);
-}
-function buildSpanStyle(span, settings) {
-    const style = [];
-    const decorations = [];
-    const strokeWidth = getSpanStrokeWidth(span, settings);
-    const textColor = getSpanColor(span, settings);
-    const baseColor = span.isBlockquote ? settings.blockquoteFontColor || defaultSettings.blockquoteFontColor : settings.fontColor || "#000000";
-    const inheritColor = textColor === baseColor;
-
-    style.push(`color:${inheritColor ? "inherit" : textColor} !important`);
-    if (!inheritColor) style.push(`-webkit-text-fill-color:${textColor} !important`);
-    style.push("line-height:inherit !important");
-    style.push("letter-spacing:inherit !important");
-    style.push("font-size:inherit !important");
-    if (span.bold) style.push("font-weight:700 !important");
-    if (span.italic) style.push("font-style:italic !important");
-    if (span.underline) decorations.push("underline");
-    if (span.strikethrough) decorations.push("line-through");
-    if (decorations.length) {
-        style.push(`text-decoration:${decorations.join(" ")} !important`);
-        if (!inheritColor) style.push(`text-decoration-color:${textColor} !important`);
-    }
-    if (span.bgColor) {
-        style.push(`background-color:${span.bgColor} !important`);
-        const isGangwon = span.htmlFontFamily === "GangwonEducationModuche" || ((!span.htmlFontFamily || span.htmlFontFamily === "useGlobal") && settings?.htmlFontFace === "GangwonEducationModuche");
-        if (isGangwon) {
-            style.push("padding: 0.23em 0 0.1em 0 !important");
-        }
-        style.push("-webkit-box-decoration-break:clone !important");
-        style.push("box-decoration-break:clone !important");
-    }
-    if (span.fontSize) {
-        style.push(`font-size:${span.fontSize}px !important`);
-    }
-    if (strokeWidth > 0) {
-        style.push(`-webkit-text-stroke:${strokeWidth}px ${inheritColor ? "currentColor" : textColor} !important`);
-    }
-    return style.join("; ");
-}
-function renderMarkdownHTML(text, settings) {
-    const lines = String(text || "").split(/\n/);
-    const htmlFontFace = getHtmlFontFace(settings);
-    const indentHTML = settings.textIndent ? `<span style="display:inline-block !important;width:1em !important;height:0 !important;"></span>` : "";
-    const renderLineHTML = (lineText, isBlockquoteLine = false) => {
-        let spans = enableMarkdown(lineText);
-        if (isBlockquoteLine) {
-            spans = spans.map((span) => ({...span, isBlockquote: true}));
-        }
-        if (!spans.length) return `<font face="${htmlFontFace}"></font>`;
-
-        const groups = [];
-        let currentGroup = {face: htmlFontFace, parts: []};
-        spans.forEach((span) => {
-            const spanFace = span.htmlFontFamily && span.htmlFontFamily !== "useGlobal" ? normalizeHtmlFontFace(span.htmlFontFamily) : htmlFontFace;
-            if (spanFace !== currentGroup.face) {
-                if (currentGroup.parts.length) groups.push(currentGroup);
-                currentGroup = {face: spanFace, parts: []};
-            }
-            const spanText = escapeHTML(span.text || "");
-            const spanStyle = buildSpanStyle(span, settings);
-            currentGroup.parts.push(spanStyle ? `<span style="${spanStyle}">${spanText}</span>` : spanText);
-        });
-        if (currentGroup.parts.length) groups.push(currentGroup);
-
-        return groups.map((g) => `<font face="${g.face}">${g.parts.join("")}</font>`).join("");
+function getRenderDeps(generation = previewRenderGeneration) {
+    return {
+        getSettings: () => extension_settings[extensionName],
+        defaultSettings,
+        SILLYBOOKS_DEFAULTS,
+        SHARE_REFERENCE_WIDTH,
+        WATERMARK_MARK,
+        getCanvasSize,
+        getActiveFontSize,
+        getImageRatio,
+        getMetaLines,
+        getMetaMetrics,
+        getVerticalReserve,
+        isWatermarkEnabled,
+        isSillybooksTemplate,
+        isHtmlModeEnabled,
+        getCSSFontFamily,
+        getSillybooksHeaderTexts,
+        getHtmlFontFace,
+        normalizeHtmlFontFace,
+        getHtmlPreviewFontFamily,
+        getWebFonts,
+        webFontStyleMarkup,
+        getFooterLayoutMode,
+        parsePositiveInt,
+        resolveBackgroundURLForHTML,
+        getHtmlSwitcherTexts,
+        replaceWords,
+        saveImage,
+        copyToClipboard,
+        isRenderStale: () => generation !== previewRenderGeneration,
     };
+}
 
-    const htmlLines = [];
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const trimmedLine = line.trim();
+// 텍스트 정리
+function wrappingTexts(text, mode = "word") {
+    return wrapTextChunks(text, mode, getRenderDeps());
+}
 
-        if (/^-{3,}$/.test(trimmedLine) || /^<hr\s*\/?>$/i.test(trimmedLine)) {
-            htmlLines.push(`<hr style="display: block !important; opacity: 0.4 !important; border:0 !important;height:1px !important;background-image:linear-gradient(90deg, transparent, ${settings.fontColor || "#000000"}, transparent) !important;margin:28px auto calc(28px - 1rem) !important;" />`);
-            continue;
-        }
-
-        const quoteMatch = line.match(/^\s*>\s?(.*)$/);
-        if (quoteMatch) {
-            const quoteLines = [];
-            let j = i;
-            while (j < lines.length) {
-                const m = lines[j].match(/^\s*>\s?(.*)$/);
-                if (!m) break;
-                quoteLines.push(m[1] ?? "");
-                j++;
-            }
-            const fontColor = settings.blockquoteFontColor || defaultSettings.blockquoteFontColor;
-            const borderColor = settings.blockquoteBorderColor || defaultSettings.blockquoteBorderColor;
-            const bgColor = toRGBA(settings.blockquoteBgColor || defaultSettings.blockquoteBgColor, 0.3);
-            const quoteHTML = quoteLines.map((quoteLine) => `<div style="margin:0 !important;">${renderLineHTML(quoteLine, true)}</div>`).join("");
-            htmlLines.push(`<div class="blockquote" style="width:auto !important;color:${fontColor} !important;-webkit-text-fill-color:${fontColor} !important;border-radius:5px !important;border-left:5px solid ${borderColor} !important;padding:8px !important;background:${bgColor} !important;-webkit-backdrop-filter:blur(10px) !important;backdrop-filter:blur(10px) !important;margin:8px 0 !important;"><div style="display:flex !important;flex-direction:column !important;gap:0 !important;margin:0 !important;">${quoteHTML}</div></div>`);
-            i = j - 1;
-            continue;
-        }
-        htmlLines.push(`${trimmedLine ? indentHTML : ""}${renderLineHTML(line)}`);
-    }
-
-    return htmlLines.join("\n");
+// 텍스트를 이미지로
+function generateTextImage(chunk, index, generation = previewRenderGeneration) {
+    return renderTextImageCanvas(chunk, index, getRenderDeps(generation));
 }
 function createHTMLSnippet(text, index) {
-    const settings = extension_settings[extensionName];
-    const sillybooks = isSillybooksTemplate(settings);
-    const htmlSelectedBackground = settings.selectedBackgroundImageHtml || settings.selectedBackgroundImage;
-    const bgURL = sillybooks ? "" : resolveBackgroundURLForHTML(htmlSelectedBackground);
-    const markdownHTML = renderMarkdownHTML(replaceWords(text), settings);
-    const switcherTexts = getHtmlSwitcherTexts();
-    const switcherRenderedHTML = switcherTexts.map((itemText) => renderMarkdownHTML(replaceWords(itemText), settings));
-    const switcherUid = `tti-switch-${index}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1679616).toString(36)}`;
-    const switcherBaseId = `${switcherUid}-base`;
-
-    const backgroundColor = settings.backgroundColor || "#ffffff";
-    const secondColor = settings.secondBackgroundColor || backgroundColor;
-    const smoothGradient = buildSmoothGradientCSS(backgroundColor, secondColor);
-    const useBgColor = sillybooks || !!settings.useBackgroundColor;
-    const useSecondBgColor = !sillybooks && !!settings.useSecondBackgroundColor;
-    const escapedURL = bgURL ? escapeCSSURL(bgURL) : "";
-    const colorBackground =
-        useBgColor ?
-            useSecondBgColor ? smoothGradient
-            :   backgroundColor
-        :   "transparent";
-    const colorBackgroundImage =
-        useBgColor ?
-            useSecondBgColor ? smoothGradient
-            :   `linear-gradient(${backgroundColor}, ${backgroundColor})`
-        :   "none";
-    const bgLayerImage =
-        escapedURL ?
-            useBgColor ? `${colorBackgroundImage}, url('${escapedURL}')`
-            :   `url('${escapedURL}')`
-        :   "none";
-
-    const filterEffects = [];
-    filterEffects.push(`brightness(${settings.bgBrightness ?? 100}%)`);
-    filterEffects.push(`hue-rotate(${settings.bgHue ?? 0}deg)`);
-    if (settings.bgGrayscale > 0) filterEffects.push(`grayscale(${settings.bgGrayscale}%)`);
-    const bgFilter = sillybooks ? "none" : filterEffects.join(" ");
-
-    const overlayOpacity = sillybooks ? 0 : Math.min(1, Math.max(0, Number(settings.overlayOpacity) || 0));
-    const blurStrength = sillybooks ? 0 : Math.max(0, Number(settings.bgBlur) || 0);
-    const lineBreakByChar = (settings.lineBreak || "byWord") === "byChar";
-    const globalStrokeWidth = mapHtmlStrokeWidth(settings.strokeWidth);
-    const globalTextColor = settings.fontColor || "#000000";
-    const htmlFontSize = parseInt(settings.fontSizeHtml, 10) || defaultSettings.fontSizeHtml;
-    const footerLayoutMode = getFooterLayoutMode(settings);
-    const footerWidthPx = parsePositiveInt(settings.footerWidth, defaultSettings.footerWidth);
-    const footerHeightPx = parsePositiveInt(settings.footerHeight, defaultSettings.footerHeight);
-    const metaLines = sillybooks ? [] : getMetaLines(settings);
-    const showWatermark = isWatermarkEnabled(settings);
-    const hasMeta = metaLines.length > 0;
-    const hasFooter = hasMeta || showWatermark;
-    const isScrollFooterLayout = footerLayoutMode === "scroll";
-    const contentMaxHeightValue = "none";
-    const containerInlineStyle = ["background:transparent !important", "box-sizing:border-box !important", "width:100% !important", `max-width:${footerWidthPx}px !important`, "display:grid !important", "grid-template-rows:minmax(0,1fr) !important", isScrollFooterLayout ? `aspect-ratio:${footerWidthPx} / ${Math.max(footerWidthPx, footerHeightPx)} !important` : "aspect-ratio:auto !important", isScrollFooterLayout || sillybooks ? "min-height:0 !important" : `min-height:min(${footerWidthPx}px, 100vw) !important`, "height:auto !important", "max-height:none !important", "margin:0 auto !important", sillybooks ? "padding:30px 28px !important" : "padding:24px !important", "border-radius:5px !important", "overflow:hidden !important", "isolation:isolate !important"].join(";");
-    const bgInlineStyle = ["border-radius:5px !important", `background:${useBgColor ? colorBackground : "transparent"} !important`, `background-image:${bgLayerImage} !important`, "background-size:cover !important", "background-position:center !important", "background-repeat:no-repeat !important", `filter:${bgFilter || "none"} !important`].join(";");
-    const overlayInlineStyle = ["border-radius:5px !important", `background:${toRGBA(settings.overlayColor || "#ffffff", overlayOpacity)} !important`, `-webkit-backdrop-filter:blur(${blurStrength}px) !important`, `backdrop-filter:blur(${blurStrength}px) !important`, "pointer-events:none !important"].join(";");
-    const switcherDotsWrapStyle = ["display:flex !important", "justify-content:flex-end !important", "margin:6px 10px 0 0 !important", "gap:6px !important", "z-index:1 !important", "pointer-events:auto !important"].join(";");
-    const switcherDotStyle = ["display:block !important", "width:15px !important", "height:10px !important", "border-radius:999px !important", "background:rgba(255,255,255,0.55) !important", "border:1px solid rgba(0,0,0,0.18) !important", "cursor:pointer !important", "transition:transform .15s ease, background-color .15s ease !important"].join(";");
-    const contentInlineStyle = ["grid-area:1 / 1 !important", ...(sillybooks ? ["flex:1 1 auto !important"] : []), `min-height:${isScrollFooterLayout ? "0" : "min-content"} !important`, "box-sizing:border-box !important", "width:100% !important", "margin-left:0 !important", "margin-right:0 !important", "padding:0 !important", `max-height:${contentMaxHeightValue} !important`, `overflow-y:${isScrollFooterLayout ? "auto" : "visible"} !important`, `color:${globalTextColor} !important`, `font-size:${htmlFontSize}px !important`, "font-weight:400 !important", `letter-spacing:${settings.fontSpacing || 0}em !important`, `line-height:${settings.fontLineHeight || 1.5} !important`, `text-align:${settings.fontAlign || "left"} !important`, "white-space:pre-wrap !important", `word-break:${lineBreakByChar ? "break-all" : "break-word"} !important`, "overflow-wrap:anywhere !important", "margin-bottom:0 !important", `-webkit-text-stroke:${globalStrokeWidth}px ${globalTextColor} !important`, `-webkit-text-fill-color:${globalTextColor} !important`].join(";");
-    const htmlFontFace = getHtmlFontFace(settings);
-    const metaLineStyle = ["display:block !important", "margin:0 !important", `color:${globalTextColor} !important`, `-webkit-text-fill-color:${globalTextColor} !important`, `font-size:${Math.max(10, Math.round((htmlFontSize * 28) / 38))}px !important`, "line-height:1.6 !important", "text-align:left !important"].join(";");
-    const metaLinesHTML = metaLines.map((line) => `<span style="${metaLineStyle}opacity:${line.alpha} !important"><font face="${htmlFontFace}">${escapeHTML(line.text)}</font></span>`).join("");
-    const watermarkStyle = ["position:relative !important", "right:0px !important", "left:auto !important", "display:block !important", "width:100% !important", "margin:30px 0 0 0 !important", "text-align:right !important", "bottom:0px !important", `color:${globalTextColor} !important`, `-webkit-text-fill-color:${globalTextColor} !important`, "opacity:0.32 !important", "font-family:Paperozi, Pretendard-Regular, sans-serif !important", `font-size:${Math.round((htmlFontSize * 42) / 38)}px !important`, "font-weight:900 !important", "letter-spacing:-0.01em !important", "line-height:1 !important"].join(";");
-    const watermarkHTML =
-        showWatermark ?
-            `
-  <span class="tti-watermark" style="${watermarkStyle}">${WATERMARK_MARK}</span>`
-        :   "";
-    const footerInlineStyle = ["position:relative !important", "flex:0 0 auto !important", "display:flex !important", "flex-direction:column !important", "gap:2px !important", "width:100% !important", "box-sizing:border-box !important", "padding:0 !important", "margin:18px 0 14px 0 !important", "z-index:3 !important"].join(";");
-    const stackInlineStyle = ["grid-area:1 / 1 !important", "position:relative !important", "display:flex !important", "flex-direction:column !important", ...(sillybooks ? ["justify-content:flex-start !important"] : ["justify-content:center !important", "justify-content:safe center !important"]), "box-sizing:border-box !important", "width:100% !important", "min-height:0 !important", "margin:0 !important", "padding:0 !important", "z-index:3 !important"].join(";");
-    const footerHTML =
-        hasMeta ?
-            `
-    <div class="tti-footer" style="${footerInlineStyle}">${metaLinesHTML}</div>`
-        :   "";
-    const sbTexts = sillybooks ? getSillybooksHeaderTexts(settings) : {title: "", name: ""};
-    const sbHeadStyle = ["position:relative !important", "flex:0 0 auto !important", "display:block !important", "box-sizing:border-box !important", "width:100% !important", "margin:0 0 2em 0 !important", "padding:0 !important", `color:${globalTextColor} !important`, `-webkit-text-fill-color:${globalTextColor} !important`, `font-size:${htmlFontSize}px !important`, "text-align:left !important", "white-space:normal !important", "word-break:keep-all !important", "overflow-wrap:anywhere !important", "-webkit-text-stroke:0 !important", "z-index:3 !important"].join(";");
-    const sbTitleStyle = ["display:block !important", "margin:0 !important", "font-size:1.55em !important", "font-weight:700 !important", "line-height:1.3 !important", "letter-spacing:0 !important"].join(";");
-    const sbNameStyle = ["display:block !important", `margin:${sbTexts.title ? "0.35em" : "0"} 0 0 0 !important`, "font-size:0.78em !important", "line-height:1.4 !important", "opacity:0.56 !important"].join(";");
-    const sbHeadHTML =
-        sbTexts.title || sbTexts.name ?
-            `
-    <div class="tti-sb-head" style="${sbHeadStyle}">${sbTexts.title ? `<span style="${sbTitleStyle}"><font face="${htmlFontFace}">${escapeHTML(sbTexts.title)}</font></span>` : ""}${sbTexts.name ? `<span style="${sbNameStyle}"><font face="${htmlFontFace}">${escapeHTML(sbTexts.name)}</font></span>` : ""}</div>`
-        :   "";
-    const shouldRenderBg = escapedURL || useBgColor;
-    const backgroundHTML =
-        shouldRenderBg ?
-            `
-  <div class="tti-bg" style="${bgInlineStyle}"></div>`
-        :   "";
-    const hasSwitcher = switcherRenderedHTML.length > 0;
-    const switcherItems = switcherRenderedHTML.map((html, itemIndex) => ({
-        id: `${switcherUid}-${itemIndex}`,
-        panelClass: `tti-panel-${itemIndex}`,
-        html,
-        itemIndex,
-    }));
-    const switcherRadiosHTML =
-        hasSwitcher ?
-            `
-  <input type="radio" class="tti-switch-input" name="${switcherUid}" id="${switcherBaseId}" checked>
-${switcherItems.map((item) => `  <input type="radio" class="tti-switch-input" name="${switcherUid}" id="${item.id}">`).join("\n")}`
-        :   "";
-    const switcherDotsHTML = hasSwitcher ? `<div class="tti-switcher-dots" style="${switcherDotsWrapStyle}"><label style="${switcherDotStyle}" title="기본 텍스트" for="${switcherBaseId}"></label>${switcherItems.map((item) => `<label style="${switcherDotStyle}" title="텍스트 ${item.itemIndex + 1}" for="${item.id}"></label>`).join("")}</div>` : "";
-    const overlayHTML = `
-  <div class="tti-overlay" style="${overlayInlineStyle}">${switcherDotsHTML}</div>`;
-    const contentHTML =
-        hasSwitcher ?
-            `
-    <div class="tti-panels" style="margin-top:10px !important;">
-      <div class="tti-content tti-panel tti-panel-base" style="${contentInlineStyle}">${markdownHTML}</div>
-${switcherItems.map((item) => `    <div class="tti-content tti-panel ${item.panelClass}" style="${contentInlineStyle}">${item.html}</div>`).join("\n")}
-    </div>`
-        :   `
-    <div class="tti-content" style="${contentInlineStyle}">${markdownHTML}</div>`;
-    const switcherRuleStyle = hasSwitcher ? [".tti .tti-panels{display:grid !important;min-height:0 !important;margin:0 !important;}", `.tti-switch-input{position:absolute !important;opacity:0 !important;pointer-events:none !important;}`, `.tti-panels{position:relative !important;z-index:3 !important;}`, `.tti-panel{display:none !important;}`, `#${switcherBaseId}:checked ~ .tti-stack .tti-panels .tti-panel-base{display:block !important;}`, `#${switcherBaseId}:checked ~ .tti-overlay .tti-switcher-dots label[for="${switcherBaseId}"]{background:rgba(255,255,255,0.95) !important;transform:scale(1.12) !important;}`, ...switcherItems.map((item) => `#${item.id}:checked ~ .tti-stack .tti-panels .${item.panelClass}{display:block !important;}`), ...switcherItems.map((item) => `#${item.id}:checked ~ .tti-overlay .tti-switcher-dots label[for="${item.id}"]{background:rgba(255,255,255,0.95) !important;transform:scale(1.12) !important;}`)].join("") : "";
-    const scopedStyle = `.tti{position:relative !important;}.tti-bg{position:absolute !important;inset:0 !important;z-index:0 !important;}.tti-overlay{position:absolute !important;inset:0 !important;margin:0 !important;padding:0 !important;z-index:2 !important;}.tti-content{position:relative !important;z-index:3 !important;}.tti-footer{position:relative !important;z-index:4 !important;scrollbar-width:none !important;}.tti-footer::-webkit-scrollbar{height:0 !important;}.tti-watermark{z-index:4 !important;}${switcherRuleStyle}`;
-
-    return `${webFontStyleMarkup()}<div>
-<style>${scopedStyle}</style>
-<div class="tti" style="${containerInlineStyle}">
-${backgroundHTML}${switcherRadiosHTML}${overlayHTML}
-  <div class="tti-stack" style="${stackInlineStyle}">${sbHeadHTML}${contentHTML}${footerHTML}
-  </div>${watermarkHTML}
-</div>
-</div>`;
+    return buildHTMLSnippet(text, index, getRenderDeps());
 }
 function generateHTMLPreview(text, index) {
-    const htmlCode = createHTMLSnippet(text, index);
-    const previewFontFamily = getHtmlPreviewFontFamily();
-    const fontFaceMap = {
-        Ridibatang: "RIDIBatang",
-        "Nanum Gothic": "Pretendard-Regular",
-        GangwonEducationModuche: "GangwonEducationModuche",
-        OngleipParkDahyeon: "OngleipParkDahyeon",
-    };
-    getWebFonts()
-        .filter((font) => font.html)
-        .forEach((font) => {
-            fontFaceMap[font.family] = getCSSFontFamily(font.family);
-        });
-    const perFontFaceRules = Object.entries(fontFaceMap)
-        .map(([face, family]) => `.html-render-preview .tti-content font[face="${face}"],.html-render-preview .tti-content font[face="${face}"] span[style]{font-family:${family} !important;}`)
-        .join("");
-    const previewOnlyStyle = `<style>.html-render-preview .tti-content,.html-render-preview .tti-content span[style],.html-render-preview .tti-footer,.html-render-preview .tti-footer *,.html-render-preview .tti-sb-head,.html-render-preview .tti-sb-head *{font-family:${previewFontFamily} !important;}${perFontFaceRules}</style>`;
-
-    const $preview = $("<div>").addClass("image-preview-item html-preview-item");
-    const $rendered = $("<div>")
-        .addClass("html-render-preview")
-        .html(htmlCode + previewOnlyStyle);
-    const $copyBtn = $("<button>")
-        .addClass("download-btn")
-        .text("코드 복사")
-        .on("click", async () => {
-            const copied = await copyToClipboard(htmlCode);
-            if (!copied) {
-                alert("코드 복사에 실패했습니다.");
-            }
-        });
-
-    $preview.append($rendered, $copyBtn);
-    return $preview;
+    return buildHTMLPreview(text, index, getRenderDeps());
 }
 
 // 일괄 다운 zip
-function autoDownload(allDLbuttons, delay = 1500) {
-    setTimeout(() => {
-        const DLbuttons = $(allDLbuttons);
-        if (DLbuttons.length > 1) {
-            zipDL(DLbuttons);
-        } else {
-            let index = 0;
-            controlDL(DLbuttons, index);
+async function autoDownload(allDLbuttons, delay = 0) {
+    await lastPreviewReadyPromise;
+    if (delay > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+    const DLbuttons = $(allDLbuttons);
+    if (DLbuttons.length > 1) {
+        await zipDL(DLbuttons);
+    } else if (DLbuttons.length === 1) {
+        await downloadSingleButton(DLbuttons[0], 0);
+    }
+}
+async function downloadSingleButton(button, index) {
+    const getBlob = $(button).data("ttiGetBlob");
+    if (typeof getBlob === "function") {
+        const blob = await getBlob();
+        if (blob) {
+            await saveImage(blob, `${index + 1}.png`);
+            return;
         }
-    }, delay);
+    }
+    $(button).trigger("click");
+}
+async function getBlobFromDownloadButton(button) {
+    const getBlob = $(button).data("ttiGetBlob");
+    if (typeof getBlob === "function") {
+        const blob = await getBlob();
+        if (blob) return blob;
+    }
+    const imgSrc = $(button).closest(".image-preview-item").find("img").attr("src");
+    if (!imgSrc) return null;
+    if (imgSrc.startsWith("blob:")) {
+        return (await fetch(imgSrc)).blob();
+    }
+    const base64ori = imgSrc.split(",")[1];
+    if (!base64ori) return null;
+    const imageData = atob(base64ori);
+    const imgArray = new Uint8Array(imageData.length);
+    for (let j = 0; j < imageData.length; j++) {
+        imgArray[j] = imageData.charCodeAt(j);
+    }
+    return new Blob([imgArray], {type: "image/png"});
+}
+function buildLogDateString() {
+    const now = new Date();
+    return `[Log] ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}-${now.getHours()}-${now.getMinutes()}`;
 }
 async function zipDL(DLbuttons) {
+    await lastPreviewReadyPromise;
     if (typeof JSZip === "undefined") {
         await loadScript(JSZipLocal, JSZipCDN);
     }
@@ -4819,33 +3594,15 @@ async function zipDL(DLbuttons) {
     }
 
     const zip = new JSZip();
-    const now = new Date();
-    const dateString = `[Log] ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}-${now.getHours()}-${now.getMinutes()}`;
-
-    const zipper = `${dateString}`;
-    const zipFormat = ".zip";
-    const promises = [];
+    const zipper = buildLogDateString();
 
     for (let i = 0; i < DLbuttons.length; i++) {
-        const $img = $(DLbuttons[i]).siblings("img");
-        const imgSrc = $img.attr("src");
-        const imageName = `${zipper} (${i + 1}).png`;
-
-        const base64ori = imgSrc.split(",")[1];
-        const imageData = atob(base64ori);
-        const imgArray = new Uint8Array(imageData.length);
-
-        for (let j = 0; j < imageData.length; j++) {
-            imgArray[j] = imageData.charCodeAt(j);
-        }
-
-        zip.file(imageName, imgArray);
+        const blob = await getBlobFromDownloadButton(DLbuttons[i]);
+        if (!blob) continue;
+        zip.file(`${zipper} (${i + 1}).png`, blob);
     }
-    Promise.all(promises).then(() => {
-        zip.generateAsync({type: "blob"}).then((content) => {
-            saveAs(content, zipper + zipFormat);
-        });
-    });
+    const content = await zip.generateAsync({type: "blob"});
+    saveAs(content, `${zipper}.zip`);
 }
 function loadScript(src, fallbackSrc) {
     return new Promise((resolve, reject) => {
@@ -4876,24 +3633,45 @@ function controlDL(DLbuttons, index) {
 }
 
 // 저장 이미지 형식
-async function saveImage(dataUrl, filename) {
+async function saveImage(blobOrDataUrl, filename) {
     if (typeof saveAs === "undefined") {
         await loadScript(FileSaverLocal, FileSaverCDN);
     }
 
-    const now = new Date();
-    const dateString = `[Log] ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}-${now.getHours()}-${now.getMinutes()}`;
+    const dateString = buildLogDateString();
     const index = filename.replace(".png", "");
 
-    const base64ori = dataUrl.split(",")[1];
-    const binary = atob(base64ori);
-    const imgArray = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-        imgArray[i] = binary.charCodeAt(i);
+    let blob = blobOrDataUrl;
+    if (!(blob instanceof Blob)) {
+        const base64ori = String(blobOrDataUrl || "").split(",")[1];
+        const binary = atob(base64ori);
+        const imgArray = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            imgArray[i] = binary.charCodeAt(i);
+        }
+        blob = new Blob([imgArray], {type: "image/png"});
     }
-    const blob = new Blob([imgArray], {type: "image/png"});
 
     saveAs(blob, `${dateString} (${index}).png`);
+}
+async function shareCurrentPreviewImage() {
+    await lastPreviewReadyPromise;
+    const $btn = $("#image_preview_container .image-preview-item.current .download-btn");
+    if (!$btn.length) return false;
+    const blob = await getBlobFromDownloadButton($btn[0]);
+    if (!blob) return false;
+    const fileName = `${buildLogDateString()} (${previewIndex + 1}).png`;
+    const file = new File([blob], fileName, {type: "image/png"});
+    if (navigator.canShare?.({files: [file]}) && navigator.share) {
+        try {
+            await navigator.share({files: [file]});
+            return true;
+        } catch (error) {
+            if (error?.name === "AbortError") return true;
+        }
+    }
+    await saveImage(blob, `${previewIndex + 1}.png`);
+    return true;
 }
 async function copyToClipboard(content) {
     if (navigator.clipboard && window.isSecureContext) {
@@ -4935,6 +3713,11 @@ jQuery(async () => {
         bindingFunctions();
         restoreButtons();
         tabButtons();
+        setupMobileEditor({
+            isHtmlMode: isHtmlModeEnabled,
+            downloadAll: () => autoDownload("#image_preview_container .download-btn", 0),
+            shareCurrent: shareCurrentPreviewImage,
+        });
         highlighterOption();
         setupSettingsPopup();
     } catch (error) {
@@ -5192,7 +3975,7 @@ function highlighterOption() {
         const index = $(this).closest(".tag-item").data("index");
         const checked = $(this).prop("checked");
         updateHighlightTag(index, "useTagFontColor", checked);
-        $(this).closest(".tag-color-chip").find(".tag-font-color").prop("disabled", !checked);
+        $(this).closest(".tti-field").find(".tag-font-color").prop("disabled", !checked);
         syncTagSwatch($(this).closest(".tag-item"));
     });
     $(document).on("change", ".tag-font-color", function () {
@@ -5205,13 +3988,28 @@ function highlighterOption() {
         const index = $(this).closest(".tag-item").data("index");
         const checked = $(this).prop("checked");
         updateHighlightTag(index, "useTagBgColor", checked);
-        $(this).closest(".tag-color-chip").find(".tag-bg-color").prop("disabled", !checked);
+        $(this).closest(".tti-field").find(".tag-bg-color").prop("disabled", !checked);
         syncTagSwatch($(this).closest(".tag-item"));
     });
     $(document).on("change", ".tag-bg-color", function () {
         const index = $(this).closest(".tag-item").data("index");
         updateHighlightTag(index, "bgColor", $(this).val());
         syncTagSwatch($(this).closest(".tag-item"));
+    });
+
+    $(document).on("click", ".tag-size-mode button", function () {
+        const $item = $(this).closest(".tag-item");
+        const index = $item.data("index");
+        const useCustom = $(this).data("size-mode") === "custom";
+        $(this).addClass("active").siblings("button").removeClass("active");
+        const $sizeInput = $item.find(".tag-font-size");
+        $sizeInput.prop("hidden", !useCustom);
+        updateHighlightTag(index, "useTagFontSize", useCustom);
+        if (useCustom) {
+            const value = $sizeInput[0]?.valueAsNumber;
+            if (Number.isFinite(value)) updateHighlightTag(index, "fontSize", value);
+            $sizeInput.trigger("focus");
+        }
     });
 
     $(document).on("input", ".tag-font-size", function () {

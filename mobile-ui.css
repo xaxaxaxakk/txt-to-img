@@ -1,5 +1,7 @@
 .tti-mobile-bar,
-.tti-mobile-sheet-header {
+.tti-mobile-sheet-header,
+.tti-mobile-share-btn,
+.tti-mobile-save-menu {
     display: none;
 }
 .tti-mobile-scroll {
@@ -7,6 +9,12 @@
 }
 
 @media (max-width: 1000px) {
+    .tti-modal-backdrop {
+        height: var(--tti-vvh, 100dvh);
+    }
+    .tti-modal {
+        max-height: calc(var(--tti-vvh, 100dvh) - 32px);
+    }
     .tti-mobile-ready {
         grid-template-rows: 48px minmax(0, 1fr) auto;
     }
@@ -19,16 +27,31 @@
     }
     .tti-mobile-ready[data-mobile-sheet="half"] .tti-editor-controls {
         height: 48%;
+        transition:
+            height 0.22s cubic-bezier(0.2, 0.8, 0.3, 1),
+            visibility 0s;
     }
     .tti-mobile-ready[data-mobile-sheet="expanded"] .tti-editor-controls {
         height: 82%;
+        transition:
+            height 0.22s cubic-bezier(0.2, 0.8, 0.3, 1),
+            visibility 0s;
+    }
+    .tti-mobile-ready .tti-editor-controls.tti-dragging {
+        transition: none !important;
     }
     .tti-mobile-ready .tti-preview-pane {
+        height: 100%;
         min-height: 0;
         padding: 6px 8px;
         border: 0;
         overflow: hidden;
+        transition: height 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
         scrollbar-gutter: auto;
+    }
+    .tti-mobile-ready[data-mobile-sheet="half"] .tti-preview-pane {
+        height: 52%;
+        align-self: start;
     }
     .tti-mobile-ready .tti-preview-pane h4 {
         flex: 0 0 auto;
@@ -36,6 +59,23 @@
         margin: 0 0 4px !important;
         padding: 0 4px;
         font-size: 11px !important;
+    }
+    .tti-mobile-share-btn {
+        display: inline-grid;
+        width: 28px;
+        height: 28px;
+        margin-left: 6px;
+        padding: 0;
+        border: 1px solid var(--ui-border) !important;
+        border-radius: 8px;
+        background: var(--ui-surface) !important;
+        color: var(--ui-text-soft) !important;
+        font-size: 12px !important;
+        cursor: pointer;
+        place-items: center;
+    }
+    .tti-mobile-share-btn[hidden] {
+        display: none;
     }
     .tti-mobile-ready .tti-preview-stage {
         padding: 0 32px 30px;
@@ -78,6 +118,9 @@
         border: 1px solid var(--ui-border);
         border-radius: 20px 20px 0 0;
         overflow: hidden;
+        transition:
+            height 0.22s cubic-bezier(0.2, 0.8, 0.3, 1),
+            visibility 0s linear 0.22s;
         inset: auto 0 0;
         border-bottom: 0;
         box-shadow: 0 -6px 24px #00000010;
@@ -85,6 +128,43 @@
     }
     .tti-mobile-ready[data-mobile-sheet="closed"] .tti-editor-controls {
         visibility: hidden;
+    }
+    .tti-mobile-save-menu {
+        display: grid;
+        position: absolute;
+        right: max(10px, env(safe-area-inset-right));
+        bottom: calc(68px + env(safe-area-inset-bottom));
+        z-index: 5;
+        min-width: 176px;
+        padding: 6px;
+        border: 1px solid var(--ui-border-strong) !important;
+        border-radius: 14px;
+        background: var(--ui-surface-raised);
+        gap: 4px;
+        box-shadow: var(--ui-shadow);
+    }
+    .tti-mobile-save-menu[hidden] {
+        display: none;
+    }
+    .tti-mobile-save-menu button {
+        display: flex;
+        align-items: center;
+        min-height: 40px;
+        padding: 0 12px;
+        border: 0 !important;
+        border-radius: 10px;
+        background: transparent !important;
+        color: var(--ui-text) !important;
+        font-size: 13px !important;
+        font-weight: 700;
+        text-align: left;
+        cursor: pointer;
+        gap: 9px;
+    }
+    .tti-mobile-save-menu button:active,
+    .tti-mobile-save-menu button:hover {
+        background: var(--ui-hover) !important;
+        color: var(--ui-accent) !important;
     }
     .tti-mobile-sheet-header {
         display: block;
@@ -223,6 +303,10 @@
         outline-offset: -2px;
     }
     #tti_text_modal_backdrop .tti-bottom-sheet {
-        max-height: 92dvh;
+        max-height: min(92dvh, calc(var(--tti-vvh, 100dvh) - 16px));
+    }
+    #tti_text_modal_backdrop .tti-rich-text-editor {
+        height: min(38dvh, 320px);
+        min-height: 150px;
     }
 }

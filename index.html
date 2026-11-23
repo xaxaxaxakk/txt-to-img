@@ -13,8 +13,7 @@
     </script>
     <link type="text/css" rel="stylesheet" href="./style.css" />
     <link rel="stylesheet" href="./mobile-ui.css" />
-    <script src="./index.js" defer></script>
-    <script src="./mobile-ui.js" defer></script>
+    <script type="module" src="./index.js"></script>
   </head>
   <body id="text-to-image">
     <div class="text-to-image-converter-settings">
@@ -418,6 +417,16 @@
           <button id="clear_text_btn" class="buttons clear"><i class="fa-solid fa-eraser"></i> 내용 삭제</button>
         </div>
 
+        <div id="tti_editor_highlight_menu" class="tti-highlight-float" role="toolbar" aria-label="형광펜 메뉴">
+          <span class="tti-highlight-label" aria-hidden="true"><i class="fa-solid fa-highlighter"></i></span>
+          <div class="tti-highlight-color-control">
+            <div id="tti_highlight_palette" class="tti-highlight-palette" role="menu" aria-label="형광펜 색상 목록"></div>
+          </div>
+          <button type="button" id="tti_highlight_remove" class="tti-highlight-action danger">
+            <i class="fa-solid fa-eraser"></i><span>제거</span>
+          </button>
+        </div>
+
         <div id="tti_rich_text_editor" class="tti-rich-text-editor" contenteditable="true" role="textbox"
           aria-multiline="true" data-placeholder="여기에 텍스트를 입력하세요."></div>
         <textarea id="text_to_image" class="tti-editor-source" aria-hidden="true" tabindex="-1" placeholder="여기에 텍스트를 입력하세요.
@@ -426,19 +435,6 @@
       *이탤릭*, **볼드**, ***볼드 이탤릭***
       ~~취소선~~, __밑줄__
       --- (구분선, hr태그도 가능)"></textarea>
-
-        <div id="tti_editor_highlight_menu" class="tti-highlight-float placement-top" role="toolbar" aria-label="형광펜 메뉴">
-          <button type="button" id="tti_highlight_apply" class="tti-highlight-action">
-            <i class="fa-solid fa-highlighter"></i><span>표시</span>
-          </button>
-          <div class="tti-highlight-color-control">
-            <button type="button" id="tti_highlight_color" class="tti-highlight-color" aria-label="형광펜 색상 선택" aria-expanded="false"></button>
-            <div id="tti_highlight_palette" class="tti-highlight-palette" role="menu" aria-label="형광펜 색상 목록"></div>
-          </div>
-          <button type="button" id="tti_highlight_remove" class="tti-highlight-action danger">
-            <i class="fa-solid fa-eraser"></i><span>제거</span>
-          </button>
-        </div>
 
         <div class="text-field-buttons">
           <button id="organize_text_btn" class="buttons"><i class="fa-solid fa-align-left"></i> 문단 정리</button>
@@ -483,6 +479,14 @@
         </header>
 
         <div id="text-replacer">
+          <div class="tti-replace-option-row">
+            <div class="replace-control">
+              <input type="checkbox" id="letter_control" name="letter_control" />
+              <label for="letter_control" title="대소문자 구분">Aa</label>
+              <input type="checkbox" id="unit_control" name="unit_control" />
+              <label for="unit_control" title="단어 단위 일치">ab</label>
+            </div>
+          </div>
           <p class="tti-section-desc">        
             여러 단어를 하나로 교체할 때는 <b>단어||단어</b> 형식으로 입력하세요.
             바꿀 단어를 비워두면 해당 문자는 지워지고, 은/는/이/가 같은 조사는 자동으로 정리됩니다.
