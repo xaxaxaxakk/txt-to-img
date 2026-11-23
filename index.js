@@ -3697,7 +3697,7 @@ async function copyToClipboard(content) {
 }
 
 // 추가 다운로드 버튼
-jQuery(async () => {
+jQuery(() => {
     try {
         setupReplaceRuleUI();
         setupMetaUI();
@@ -3705,10 +3705,9 @@ jQuery(async () => {
         setupModals();
         setupRichTextHighlighter();
         setupPreviewCarousel();
-        await initSettings();
+        initSettings();
         presetUI();
         presetBackupSys();
-        await customBG();
         setupHtmlSwitcherInputs();
         bindingFunctions();
         restoreButtons();
@@ -3720,8 +3719,12 @@ jQuery(async () => {
         });
         highlighterOption();
         setupSettingsPopup();
+        customBG().catch((error) => {
+            console.warn("[txt-to-img] 커스텀 배경 로드 실패:", error);
+        });
     } catch (error) {
         console.error("[txt-to-img] 초기화 실패:", error);
+        setupSettingsPopup();
     }
 });
 
