@@ -1,7 +1,7 @@
-import {setupMobileEditor} from "./mobile-ui.js";
-import {escapeRegExp, replaceWordsWithRules} from "./replace-words.js";
-import {generateTextImage as renderTextImageCanvas, revokePreviewObjectURLs, wrappingTexts as wrapTextChunks} from "./canvas-renderer.js";
-import {createHTMLSnippet as buildHTMLSnippet, generateHTMLPreview as buildHTMLPreview} from "./html-export.js";
+import {setupMobileEditor} from "./modules/mobile-ui.js";
+import {escapeRegExp, replaceWordsWithRules} from "./modules/replace-words.js";
+import {generateTextImage as renderTextImageCanvas, revokePreviewObjectURLs, wrappingTexts as wrapTextChunks} from "./modules/canvas-renderer.js";
+import {createHTMLSnippet as buildHTMLSnippet, generateHTMLPreview as buildHTMLPreview} from "./modules/html-export.js";
 
 if (typeof toastr === "undefined") {
     window.toastr = (function () {
