@@ -418,7 +418,17 @@
 
         <div class="text-field-top-buttons">
           <button id="restore_text_btn" class="buttons"><i class="fa-solid fa-rotate-right"></i> 되돌리기</button>   
-          <button id="clear_text_btn" class="buttons clear"><i class="fa-solid fa-eraser"></i> 내용 삭제</button>
+          <button id="clear_text_btn" class="buttons clear"><i class="fa-solid fa-eraser"></i> 지우기</button>
+        </div>
+
+        <div id="tti_html_page_bar" class="tti-page-bar html-mode-only" data-html-only="html_switcher_inputs" role="toolbar" aria-label="HTML 페이지">
+          <span class="tti-page-bar-label" aria-hidden="true"><i class="fa-solid fa-book-open"></i></span>
+          <div id="tti_html_page_tabs" class="tti-page-tabs"></div>
+          <div class="tti-page-actions">
+            <button type="button" id="tti_page_move_left" class="tti-page-mini-btn" title="앞으로 이동" aria-label="앞으로 이동"><i class="fa-solid fa-chevron-left"></i></button>
+            <button type="button" id="tti_page_move_right" class="tti-page-mini-btn" title="뒤로 이동" aria-label="뒤로 이동"><i class="fa-solid fa-chevron-right"></i></button>
+            <button type="button" id="tti_page_delete" class="tti-page-mini-btn danger" title="현재 페이지 삭제" aria-label="현재 페이지 삭제"><i class="fa-solid fa-trash"></i></button>
+          </div>
         </div>
 
         <div id="tti_editor_highlight_menu" class="tti-highlight-float" role="toolbar" aria-label="형광펜 메뉴">
@@ -443,15 +453,6 @@
         <div class="text-field-buttons">
           <button id="organize_text_btn" class="buttons"><i class="fa-solid fa-align-left"></i> 문단 정리</button>
           <button id="apply_replace_btn" class="buttons"><i class="fa-solid fa-marker"></i> 바꾸기</button>   
-        </div>
-
-        <div class="html-switcher-inputs html-mode-only" data-html-only="html_switcher_inputs">
-          <div class="html-switcher-inputs-header">
-            <span>책갈피</span>
-            <button type="button" id="add_html_switcher_text" class="buttons">추가</button>
-          </div>
-          <div id="tti_html_switcher_list" class="html-switcher-inputs-list"></div>
-          <div class="html-switcher-inputs-empty">[추가] 버튼을 클릭해 내용을 추가하세요.</div>
         </div>
 
         <footer>

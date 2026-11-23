@@ -2154,10 +2154,15 @@ function autoPreview(event) {
     }
 }
 function htmlMode(event) {
+    if (!event.target.checked && activeHtmlPageIndex !== 0) {
+        switchHtmlPage(0, {skipPreview: true});
+    }
     extension_settings[extensionName].htmlMode = event.target.checked;
     extension_settings[extensionName].fontSize = getActiveFontSize();
     saveSettings();
     applyHtmlModeUIState();
+    renderHtmlPageTabs();
+    updateTextLengthBadge();
     updateFooterLayoutUIState();
     loadCustomBG();
     syncSelectedBackgroundUI();
@@ -2236,11 +2241,12 @@ function sillybooksTemplate(event) {
     setLayoutTemplate(event.target.checked ? "sillybooks" : "default");
 }
 function getPreviewChunks() {
-    const text = $("#text_to_image").val() || "";
     if (isHtmlModeEnabled()) {
-        return [text];
+        syncActiveHtmlPageFromInput();
+        return [getHtmlMainText()];
     }
 
+    const text = $("#text_to_image").val() || "";
     const lineBreak = extension_settings[extensionName].lineBreak || "byWord";
     return wrappingTexts(replaceWords(text), lineBreak === "byWord" ? "word" : "char");
 }
@@ -2453,45 +2459,140 @@ function manualRefresh() {
         ensurePreviewFontsLoaded().then(renderPreviewContent);
     }
 }
-function syncHtmlSwitcherInputUIState() {
-    const hasItems = $("#tti_html_switcher_list .tti-html-switcher-text").length > 0;
-    $(".html-switcher-inputs").toggleClass("has-items", hasItems);
+let htmlPages = [""];
+let activeHtmlPageIndex = 0;
+let htmlPagesUndoSnapshot = null;
+
+function syncActiveHtmlPageFromInput() {
+    const value = String($("#text_to_image").val() || "");
+    if (!Array.isArray(htmlPages) || htmlPages.length === 0) {
+        htmlPages = [""];
+        activeHtmlPageIndex = 0;
+    }
+    htmlPages[activeHtmlPageIndex] = value;
 }
-function appendHtmlSwitcherInput(value = "") {
-    const itemCount = $("#tti_html_switcher_list .html-switcher-input-item").length + 1;
-    const $item = $(`
-    <div class="html-switcher-input-item">
-      <textarea class="tti-html-switcher-text" placeholder="전환 텍스트 ${itemCount}"></textarea>
-      <button type="button" class="html-switcher-remove-btn buttons clear" title="삭제"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-  `);
-    $item.find(".tti-html-switcher-text").val(value);
-    $("#tti_html_switcher_list").append($item);
-    syncHtmlSwitcherInputUIState();
-    return $item;
+function captureHtmlPagesUndoState() {
+    syncActiveHtmlPageFromInput();
+    htmlPagesUndoSnapshot = {
+        pages: [...htmlPages],
+        activeIndex: activeHtmlPageIndex,
+    };
+}
+function getHtmlMainText() {
+    syncActiveHtmlPageFromInput();
+    return String(htmlPages[0] || "");
 }
 function getHtmlSwitcherTexts() {
-    return $("#tti_html_switcher_list .tti-html-switcher-text")
-        .map(function () {
-            const value = String($(this).val() || "");
-            return value;
-        })
-        .get()
-        .filter((value) => value.trim().length > 0);
+    syncActiveHtmlPageFromInput();
+    return htmlPages.slice(1).filter((value) => String(value || "").trim().length > 0);
+}
+function getActivePreviewPageIndex() {
+    if (activeHtmlPageIndex <= 0) return 0;
+    let previewIndex = 0;
+    for (let i = 1; i <= activeHtmlPageIndex && i < htmlPages.length; i++) {
+        if (String(htmlPages[i] || "").trim().length > 0) {
+            previewIndex++;
+        }
+    }
+    return String(htmlPages[activeHtmlPageIndex] || "").trim().length > 0 ? previewIndex : 0;
+}
+function syncPreviewActiveHtmlPage() {
+    const previewIndex = getActivePreviewPageIndex();
+    const $radios = $("#image_preview_container .html-render-preview .tti-switch-input");
+    if ($radios.length > previewIndex) {
+        $radios.prop("checked", false).eq(previewIndex).prop("checked", true);
+    }
+}
+function renderHtmlPageTabs() {
+    const $tabs = $("#tti_html_page_tabs");
+    if (!$tabs.length) return;
+    $tabs.empty();
+    htmlPages.forEach((_, idx) => {
+        const $btn = $("<button>", {
+            type: "button",
+            class: `tti-page-tab${idx === activeHtmlPageIndex ? " active" : ""}`,
+            title: `${idx + 1}페이지`,
+            "data-page-index": idx,
+            text: String(idx + 1),
+        });
+        $tabs.append($btn);
+    });
+    const $addBtn = $("<button>", {
+        type: "button",
+        id: "add_html_switcher_text",
+        class: "tti-page-tab add-btn",
+        title: "페이지 추가",
+        "aria-label": "페이지 추가",
+        html: '<i class="fa-solid fa-plus"></i>',
+    });
+    $tabs.append($addBtn);
+    $("#tti_page_move_left").prop("disabled", activeHtmlPageIndex <= 0);
+    $("#tti_page_move_right").prop("disabled", activeHtmlPageIndex >= htmlPages.length - 1);
+    $("#tti_page_delete").prop("disabled", htmlPages.length <= 1);
+}
+function switchHtmlPage(index, options = {}) {
+    if (!options.skipSaveCurrent) {
+        syncActiveHtmlPageFromInput();
+    }
+    const clamped = Math.min(Math.max(0, Number(index) || 0), Math.max(0, htmlPages.length - 1));
+    activeHtmlPageIndex = clamped;
+    $("#text_to_image").val(htmlPages[activeHtmlPageIndex] || "");
+    if (!options.skipEditorSync) {
+        syncRichEditorFromSource();
+    }
+    updateTextLengthBadge();
+    renderHtmlPageTabs();
+    if (!options.skipPreview) {
+        syncPreviewActiveHtmlPage();
+    }
+}
+function setHtmlPagesState(pages = [""], activeIndex = 0, options = {}) {
+    const normalized = Array.isArray(pages) && pages.length > 0 ? pages.map((value) => String(value ?? "")) : [""];
+    htmlPages = normalized;
+    activeHtmlPageIndex = Math.min(Math.max(0, Number(activeIndex) || 0), htmlPages.length - 1);
+    $("#text_to_image").val(htmlPages[activeHtmlPageIndex] || "");
+    if (!options.skipEditorSync) {
+        syncRichEditorFromSource();
+    }
+    updateTextLengthBadge();
+    renderHtmlPageTabs();
+    if (!options.skipPreview) {
+        syncPreviewActiveHtmlPage();
+    }
+}
+function addHtmlPage() {
+    syncActiveHtmlPageFromInput();
+    htmlPages.push("");
+    switchHtmlPage(htmlPages.length - 1);
+    $("#tti_rich_text_editor").trigger("focus");
+}
+function moveActiveHtmlPage(delta) {
+    syncActiveHtmlPageFromInput();
+    const target = activeHtmlPageIndex + delta;
+    if (target < 0 || target >= htmlPages.length) return;
+    [htmlPages[activeHtmlPageIndex], htmlPages[target]] = [htmlPages[target], htmlPages[activeHtmlPageIndex]];
+    activeHtmlPageIndex = target;
+    renderHtmlPageTabs();
+    refreshPreview();
+}
+function deleteActiveHtmlPage() {
+    if (htmlPages.length <= 1) return;
+    captureHtmlPagesUndoState();
+    htmlPages.splice(activeHtmlPageIndex, 1);
+    const nextIndex = Math.min(activeHtmlPageIndex, htmlPages.length - 1);
+    switchHtmlPage(nextIndex, {skipSaveCurrent: true, skipPreview: true});
+    refreshPreview();
 }
 function setupHtmlSwitcherInputs() {
-    $("#add_html_switcher_text").on("click", () => {
-        const $item = appendHtmlSwitcherInput("");
-        $item.find(".tti-html-switcher-text").trigger("focus");
-        refreshPreview();
+    $(document).on("click", "#tti_html_page_tabs .tti-page-tab:not(.add-btn)", function () {
+        switchHtmlPage(Number($(this).data("page-index")));
     });
-    $(document).on("input change", "#tti_html_switcher_list .tti-html-switcher-text", refreshPreview);
-    $(document).on("click", "#tti_html_switcher_list .html-switcher-remove-btn", function () {
-        $(this).closest(".html-switcher-input-item").remove();
-        syncHtmlSwitcherInputUIState();
-        refreshPreview();
-    });
-    syncHtmlSwitcherInputUIState();
+    $(document).on("click", "#add_html_switcher_text", addHtmlPage);
+    $(document).on("click", "#tti_page_move_left", () => moveActiveHtmlPage(-1));
+    $(document).on("click", "#tti_page_move_right", () => moveActiveHtmlPage(1));
+    $(document).on("click", "#tti_page_delete", deleteActiveHtmlPage);
+    $(document).on("input change", "#text_to_image", syncActiveHtmlPageFromInput);
+    renderHtmlPageTabs();
 }
 
 /* =========================================================
@@ -2882,11 +2983,18 @@ function setupCompositeControls() {
     UI: 내용 편집 하단 패널
 ========================================================= */
 function updateTextLengthBadge() {
+    syncActiveHtmlPageFromInput();
+    if (isHtmlModeEnabled() && htmlPages.length > 1) {
+        const totalLength = htmlPages.reduce((sum, page) => sum + String(page || "").length, 0);
+        $("#tti_text_length_badge").text(`${totalLength.toLocaleString()}자 · ${htmlPages.length}p`);
+        return;
+    }
     const length = ($("#text_to_image").val() || "").length;
     $("#tti_text_length_badge").text(`${length.toLocaleString()}자`);
 }
 function openTextModal() {
     ensureFloatingHighlightTags();
+    renderHtmlPageTabs();
     syncRichEditorFromSource();
     $("#tti_text_modal_backdrop").addClass("open");
 }
@@ -3513,6 +3621,7 @@ function getRenderDeps(generation = previewRenderGeneration) {
         parsePositiveInt,
         resolveBackgroundURLForHTML,
         getHtmlSwitcherTexts,
+        getActivePreviewPageIndex,
         replaceWords,
         saveImage,
         copyToClipboard,
@@ -3878,47 +3987,39 @@ function organizeDialogueText(rawText) {
     return resultLines.join("\n");
 }
 function restoreButtons() {
-    let lastText = null;
-
-    const saveUndoState = () => {
-        lastText = $("#text_to_image").val();
-    };
-
     $("#clear_text_btn").on("click", () => {
-        saveUndoState();
+        captureHtmlPagesUndoState();
         $("#text_to_image").val("");
+        syncActiveHtmlPageFromInput();
         syncRichEditorFromSource();
+        updateTextLengthBadge();
         refreshPreview();
     });
     $("#restore_text_btn").on("click", () => {
-        if (lastText !== null) {
-            const current = $("#text_to_image").val();
-            $("#text_to_image").val(lastText);
-            syncRichEditorFromSource();
+        if (htmlPagesUndoSnapshot !== null) {
+            syncActiveHtmlPageFromInput();
+            const current = {pages: [...htmlPages], activeIndex: activeHtmlPageIndex};
+            setHtmlPagesState(htmlPagesUndoSnapshot.pages, htmlPagesUndoSnapshot.activeIndex, {skipPreview: true});
             refreshPreview();
-            lastText = current;
+            htmlPagesUndoSnapshot = current;
         }
     });
     $("#organize_text_btn").on("click", () => {
-        saveUndoState();
-        const current = $("#text_to_image").val();
-        const organized = organizeDialogueText(current);
-        $("#text_to_image").val(organized);
+        captureHtmlPagesUndoState();
+        htmlPages = htmlPages.map((page) => organizeDialogueText(page));
+        $("#text_to_image").val(htmlPages[activeHtmlPageIndex] || "");
         syncRichEditorFromSource();
-
-        $("#tti_html_switcher_list .tti-html-switcher-text").each(function () {
-            const $this = $(this);
-            $this.val(organizeDialogueText($this.val()));
-        });
-
+        updateTextLengthBadge();
         refreshPreview();
     });
     $("#apply_replace_btn").on("click", () => {
-        saveUndoState();
+        captureHtmlPagesUndoState();
         const current = $("#text_to_image").val();
         const replaced = replaceWords(current);
         $("#text_to_image").val(replaced);
+        syncActiveHtmlPageFromInput();
         syncRichEditorFromSource();
+        updateTextLengthBadge();
         refreshPreview();
     });
     $(".text-field-copy").on("click", async () => {

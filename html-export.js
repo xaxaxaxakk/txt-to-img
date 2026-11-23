@@ -202,18 +202,13 @@ export function createHTMLSnippet(text, index, deps) {
     const containerInlineStyle = ["background:transparent !important", "box-sizing:border-box !important", "width:100% !important", `max-width:${footerWidthPx}px !important`, "display:grid !important", "grid-template-rows:minmax(0,1fr) !important", isScrollFooterLayout ? `aspect-ratio:${footerWidthPx} / ${Math.max(footerWidthPx, footerHeightPx)} !important` : "aspect-ratio:auto !important", isScrollFooterLayout || sillybooks ? "min-height:0 !important" : `min-height:min(${footerWidthPx}px, 100vw) !important`, "height:auto !important", "max-height:none !important", "margin:0 auto !important", sillybooks ? "padding:30px 28px !important" : "padding:24px !important", "border-radius:5px !important", "overflow:hidden !important", "isolation:isolate !important"].join(";");
     const bgInlineStyle = ["border-radius:5px !important", `background:${useBgColor ? colorBackground : "transparent"} !important`, `background-image:${bgLayerImage} !important`, "background-size:cover !important", "background-position:center !important", "background-repeat:no-repeat !important", `filter:${bgFilter || "none"} !important`].join(";");
     const overlayInlineStyle = ["border-radius:5px !important", `background:${toRGBA(settings.overlayColor || "#ffffff", overlayOpacity)} !important`, `-webkit-backdrop-filter:blur(${blurStrength}px) !important`, `backdrop-filter:blur(${blurStrength}px) !important`, "pointer-events:none !important"].join(";");
-    const switcherDotsWrapStyle = ["display:flex !important", "justify-content:flex-end !important", "margin:6px 10px 0 0 !important", "gap:6px !important", "z-index:1 !important", "pointer-events:auto !important"].join(";");
-    const switcherDotStyle = ["display:block !important", "width:15px !important", "height:10px !important", "border-radius:999px !important", "background:rgba(255,255,255,0.55) !important", "border:1px solid rgba(0,0,0,0.18) !important", "cursor:pointer !important", "transition:transform .15s ease, background-color .15s ease !important"].join(";");
     const contentInlineStyle = ["grid-area:1 / 1 !important", ...(sillybooks ? ["flex:1 1 auto !important"] : []), `min-height:${isScrollFooterLayout ? "0" : "min-content"} !important`, "box-sizing:border-box !important", "width:100% !important", "margin-left:0 !important", "margin-right:0 !important", "padding:0 !important", `max-height:${contentMaxHeightValue} !important`, `overflow-y:${isScrollFooterLayout ? "auto" : "visible"} !important`, `color:${globalTextColor} !important`, `font-size:${htmlFontSize}px !important`, "font-weight:400 !important", `letter-spacing:${settings.fontSpacing || 0}em !important`, `line-height:${settings.fontLineHeight || 1.5} !important`, `text-align:${settings.fontAlign || "left"} !important`, "white-space:pre-wrap !important", `word-break:${lineBreakByChar ? "break-all" : "break-word"} !important`, "overflow-wrap:anywhere !important", "margin-bottom:0 !important", `-webkit-text-stroke:${globalStrokeWidth}px ${globalTextColor} !important`, `-webkit-text-fill-color:${globalTextColor} !important`].join(";");
     const htmlFontFace = deps.getHtmlFontFace(settings);
     const metaLineStyle = ["display:block !important", "margin:0 !important", `color:${globalTextColor} !important`, `-webkit-text-fill-color:${globalTextColor} !important`, `font-size:${Math.max(10, Math.round((htmlFontSize * 28) / 38))}px !important`, "line-height:1.6 !important", "text-align:left !important"].join(";");
     const metaLinesHTML = metaLines.map((line) => `<span style="${metaLineStyle}opacity:${line.alpha} !important"><font face="${htmlFontFace}">${escapeHTML(line.text)}</font></span>`).join("");
-    const watermarkStyle = ["position:relative !important", "right:0px !important", "left:auto !important", "display:block !important", "width:100% !important", "margin:30px 0 0 0 !important", "text-align:right !important", "bottom:0px !important", `color:${globalTextColor} !important`, `-webkit-text-fill-color:${globalTextColor} !important`, "opacity:0.32 !important", "font-family:Paperozi, Pretendard-Regular, sans-serif !important", `font-size:${Math.round((htmlFontSize * 42) / 38)}px !important`, "font-weight:900 !important", "letter-spacing:-0.01em !important", "line-height:1 !important"].join(";");
-    const watermarkHTML =
-        showWatermark ?
-            `
-  <span class="tti-watermark" style="${watermarkStyle}">${deps.WATERMARK_MARK}</span>`
-        :   "";
+    const hasSwitcher = switcherRenderedHTML.length > 0;
+    const watermarkStyle = ["position:relative !important", "right:0px !important", "left:auto !important", "display:block !important", hasSwitcher ? "width:auto !important" : "width:100% !important", hasSwitcher ? "margin:0 !important" : "margin:30px 0 0 0 !important", "text-align:right !important", "bottom:0px !important", `color:${globalTextColor} !important`, `-webkit-text-fill-color:${globalTextColor} !important`, "opacity:0.32 !important", "font-family:Paperozi, Pretendard-Regular, sans-serif !important", `font-size:${Math.round((htmlFontSize * 42) / 38)}px !important`, "font-weight:900 !important", "letter-spacing:-0.01em !important", "line-height:1 !important"].join(";");
+    const watermarkSpanHTML = showWatermark ? `<span class="tti-watermark" style="${watermarkStyle}">${deps.WATERMARK_MARK}</span>` : "";
     const footerInlineStyle = ["position:relative !important", "flex:0 0 auto !important", "display:flex !important", "flex-direction:column !important", "gap:2px !important", "width:100% !important", "box-sizing:border-box !important", "padding:0 !important", "margin:18px 0 14px 0 !important", "z-index:3 !important"].join(";");
     const stackInlineStyle = ["grid-area:1 / 1 !important", "position:relative !important", "display:flex !important", "flex-direction:column !important", ...(sillybooks ? ["justify-content:flex-start !important"] : ["justify-content:center !important", "justify-content:safe center !important"]), "box-sizing:border-box !important", "width:100% !important", "min-height:0 !important", "margin:0 !important", "padding:0 !important", "z-index:3 !important"].join(";");
     const footerHTML =
@@ -236,32 +231,65 @@ export function createHTMLSnippet(text, index, deps) {
             `
   <div class="tti-bg" style="${bgInlineStyle}"></div>`
         :   "";
-    const hasSwitcher = switcherRenderedHTML.length > 0;
-    const switcherItems = switcherRenderedHTML.map((html, itemIndex) => ({
-        id: `${switcherUid}-${itemIndex}`,
-        panelClass: `tti-panel-${itemIndex}`,
-        html,
-        itemIndex,
-    }));
+    const allPages = [
+        {id: switcherBaseId, panelClass: "tti-panel-0", html: markdownHTML},
+        ...switcherRenderedHTML.map((html, itemIndex) => ({
+            id: `${switcherUid}-${itemIndex}`,
+            panelClass: `tti-panel-${itemIndex + 1}`,
+            html,
+        })),
+    ];
+    const totalPages = allPages.length;
     const switcherRadiosHTML =
         hasSwitcher ?
             `
-  <input type="radio" class="tti-switch-input" name="${switcherUid}" id="${switcherBaseId}" checked>
-${switcherItems.map((item) => `  <input type="radio" class="tti-switch-input" name="${switcherUid}" id="${item.id}">`).join("\n")}`
+${allPages.map((page, pageIndex) => `  <input type="radio" class="tti-switch-input" name="${switcherUid}" id="${page.id}"${pageIndex === 0 ? " checked" : ""}>`).join("\n")}`
         :   "";
-    const switcherDotsHTML = hasSwitcher ? `<div class="tti-switcher-dots" style="${switcherDotsWrapStyle}"><label style="${switcherDotStyle}" title="기본 텍스트" for="${switcherBaseId}"></label>${switcherItems.map((item) => `<label style="${switcherDotStyle}" title="텍스트 ${item.itemIndex + 1}" for="${item.id}"></label>`).join("")}</div>` : "";
     const overlayHTML = `
-  <div class="tti-overlay" style="${overlayInlineStyle}">${switcherDotsHTML}</div>`;
+  <div class="tti-overlay" style="${overlayInlineStyle}"></div>`;
+    const panelsWrapStyle = ["display:flex !important", "flex-direction:column !important", sillybooks ? "flex:1 1 auto !important" : "flex:0 1 auto !important", "min-height:0 !important", "width:100% !important", "margin:0 !important", "padding:0 !important"].join(";");
     const contentHTML =
         hasSwitcher ?
             `
-    <div class="tti-panels" style="margin-top:10px !important;">
-      <div class="tti-content tti-panel tti-panel-base" style="${contentInlineStyle}">${markdownHTML}</div>
-${switcherItems.map((item) => `    <div class="tti-content tti-panel ${item.panelClass}" style="${contentInlineStyle}">${item.html}</div>`).join("\n")}
+    <div class="tti-panels" style="${panelsWrapStyle}">
+${allPages.map((page) => `      <div class="tti-content tti-panel ${page.panelClass}" style="${contentInlineStyle}">${page.html}</div>`).join("\n")}
     </div>`
         :   `
     <div class="tti-content" style="${contentInlineStyle}">${markdownHTML}</div>`;
-    const switcherRuleStyle = hasSwitcher ? [".tti .tti-panels{display:grid !important;min-height:0 !important;margin:0 !important;}", `.tti-switch-input{position:absolute !important;opacity:0 !important;pointer-events:none !important;}`, `.tti-panels{position:relative !important;z-index:3 !important;}`, `.tti-panel{display:none !important;}`, `#${switcherBaseId}:checked ~ .tti-stack .tti-panels .tti-panel-base{display:block !important;}`, `#${switcherBaseId}:checked ~ .tti-overlay .tti-switcher-dots label[for="${switcherBaseId}"]{background:rgba(255,255,255,0.95) !important;transform:scale(1.12) !important;}`, ...switcherItems.map((item) => `#${item.id}:checked ~ .tti-stack .tti-panels .${item.panelClass}{display:block !important;}`), ...switcherItems.map((item) => `#${item.id}:checked ~ .tti-overlay .tti-switcher-dots label[for="${item.id}"]{background:rgba(255,255,255,0.95) !important;transform:scale(1.12) !important;}`)].join("") : "";
+    let bottomAreaHTML = "";
+    if (hasSwitcher) {
+        const prevLabels = allPages
+            .map((_, pageIndex) => (pageIndex > 0 ? `<label class="tti-tbtn tti-prev-${pageIndex}" for="${allPages[pageIndex - 1].id}" title="이전 페이지">‹</label>` : `<span class="tti-tbtn tti-prev-0 is-off">‹</span>`))
+            .join("");
+        const nextLabels = allPages
+            .map((_, pageIndex) => (pageIndex < totalPages - 1 ? `<label class="tti-tbtn tti-next-${pageIndex}" for="${allPages[pageIndex + 1].id}" title="다음 페이지">›</label>` : `<span class="tti-tbtn tti-next-${totalPages - 1} is-off">›</span>`))
+            .join("");
+        const counters = allPages.map((_, pageIndex) => `<span class="tti-tcnt tti-cnt-${pageIndex}">${pageIndex + 1}<span style="opacity:0.45 !important;margin:0 3px !important;">/</span>${totalPages}</span>`).join("");
+        const typoNavStyle = ["display:inline-flex !important", "align-items:center !important", "gap:4px !important", `color:${globalTextColor} !important`, `-webkit-text-fill-color:${globalTextColor} !important`, 'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif !important', "user-select:none !important", "font-variant-numeric:tabular-nums !important", "-webkit-text-stroke:0 !important"].join(";");
+        const bottomBarStyle = ["grid-area:2 / 1 !important", "position:relative !important", "z-index:4 !important", "display:flex !important", "align-items:center !important", showWatermark ? "justify-content:space-between !important" : "justify-content:center !important", "gap:12px !important", "width:100% !important", "margin:20px 0 0 0 !important", "padding:0 !important"].join(";");
+        bottomAreaHTML = `
+  <div class="tti-bottom-bar" style="${bottomBarStyle}"><div class="tti-typo-nav" style="${typoNavStyle}">${prevLabels}<span class="tti-tcnt-box">${counters}</span>${nextLabels}</div>${watermarkSpanHTML}</div>`;
+    } else if (showWatermark) {
+        bottomAreaHTML = `
+  ${watermarkSpanHTML}`;
+    }
+    const switcherRuleStyle =
+        hasSwitcher ?
+            [
+                `.tti-switch-input{position:absolute !important;opacity:0 !important;pointer-events:none !important;}`,
+                `.tti-panels{position:relative !important;z-index:3 !important;}`,
+                `.tti-panel{display:none !important;}`,
+                `.tti-tbtn{display:none !important;width:22px !important;height:22px !important;text-align:center !important;margin:0 !important;padding:0 !important;border:0 !important;background:transparent !important;color:${globalTextColor} !important;-webkit-text-fill-color:${globalTextColor} !important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif !important;font-size:18px !important;font-weight:600 !important;line-height:20px !important;cursor:pointer !important;opacity:0.85 !important;vertical-align:middle !important;}`,
+                `.tti-tbtn:hover{opacity:1 !important;}`,
+                `.tti-tbtn.is-off{opacity:0.28 !important;cursor:default !important;pointer-events:none !important;}`,
+                `.tti-tcnt-box{display:inline-block !important;min-width:30px !important;text-align:center !important;color:${globalTextColor} !important;-webkit-text-fill-color:${globalTextColor} !important;font-size:11px !important;font-weight:600 !important;letter-spacing:0.06em !important;line-height:22px !important;opacity:0.75 !important;vertical-align:middle !important;}`,
+                `.tti-tcnt{display:none !important;}`,
+                ...allPages.map((page) => `#${page.id}:checked ~ .tti-stack .tti-panels .${page.panelClass}{display:block !important;}`),
+                ...allPages.map((page, pageIndex) => `#${page.id}:checked ~ .tti-bottom-bar .tti-prev-${pageIndex}{display:inline-block !important;}`),
+                ...allPages.map((page, pageIndex) => `#${page.id}:checked ~ .tti-bottom-bar .tti-next-${pageIndex}{display:inline-block !important;}`),
+                ...allPages.map((page, pageIndex) => `#${page.id}:checked ~ .tti-bottom-bar .tti-cnt-${pageIndex}{display:inline !important;}`),
+            ].join("")
+        :   "";
     const scopedStyle = `.tti{position:relative !important;}.tti-bg{position:absolute !important;inset:0 !important;z-index:0 !important;}.tti-overlay{position:absolute !important;inset:0 !important;margin:0 !important;padding:0 !important;z-index:2 !important;}.tti-content{position:relative !important;z-index:3 !important;}.tti-footer{position:relative !important;z-index:4 !important;scrollbar-width:none !important;}.tti-footer::-webkit-scrollbar{height:0 !important;}.tti-watermark{z-index:4 !important;}${switcherRuleStyle}`;
 
     return `${deps.webFontStyleMarkup()}<div>
@@ -269,7 +297,7 @@ ${switcherItems.map((item) => `    <div class="tti-content tti-panel ${item.pane
 <div class="tti" style="${containerInlineStyle}">
 ${backgroundHTML}${switcherRadiosHTML}${overlayHTML}
   <div class="tti-stack" style="${stackInlineStyle}">${sbHeadHTML}${contentHTML}${footerHTML}
-  </div>${watermarkHTML}
+  </div>${bottomAreaHTML}
 </div>
 </div>`;
 }
@@ -298,6 +326,13 @@ export function generateHTMLPreview(text, index, deps) {
     const $rendered = $("<div>")
         .addClass("html-render-preview")
         .html(htmlCode + previewOnlyStyle);
+    const activePreviewPage = typeof deps.getActivePreviewPageIndex === "function" ? deps.getActivePreviewPageIndex() : 0;
+    if (activePreviewPage > 0) {
+        const radios = $rendered.find(".tti-switch-input");
+        if (radios.length > activePreviewPage) {
+            radios.prop("checked", false).eq(activePreviewPage).prop("checked", true);
+        }
+    }
     const $copyBtn = $("<button>")
         .addClass("download-btn")
         .text("코드 복사")

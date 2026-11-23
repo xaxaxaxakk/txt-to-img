@@ -2193,59 +2193,110 @@ html[data-tti-theme="light"] body {
 }
 
 /* 책갈피 */
-.html-switcher-inputs {
-    margin-top: 16px;
-    padding: 14px;
-    border: 1px solid var(--ui-border);
+.tti-page-bar {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 44px;
+    margin-bottom: 10px;
+    padding: 5px 10px;
+    border: 1px solid var(--ui-border) !important;
     border-radius: 12px;
     background: var(--ui-surface);
+    gap: 8px;
 }
-.html-switcher-inputs-header {
+.tti-page-bar-label {
+    display: inline-grid;
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    color: var(--ui-text-muted);
+    font-size: 13px !important;
+    place-items: center;
+}
+.tti-page-tabs {
     display: flex;
-    justify-content: space-between;
+    flex: 1 1 0;
     align-items: center;
-    margin-bottom: 10px;
-    color: var(--ui-text-muted) !important;
-    font-size: 11px !important;
+    min-width: 0;
+    padding: 2px 0;
+    gap: 5px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.tti-page-tabs::-webkit-scrollbar {
+    display: none;
+}
+.tti-page-tab {
+    display: inline-flex;
+    flex: 0 0 auto;
+    justify-content: center;
+    align-items: center;
+    min-width: 32px;
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid transparent !important;
+    border-radius: 8px;
+    background: transparent !important;
+    color: var(--ui-text-soft) !important;
+    font-size: 12.5px !important;
     font-weight: 800;
-    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: 0.14s ease;
 }
-.html-switcher-inputs-list {
+.tti-page-tab:hover {
+    background: var(--ui-hover) !important;
+    color: var(--ui-text) !important;
+}
+.tti-page-tab.active {
+    border-color: var(--ui-accent) !important;
+    background: var(--ui-accent) !important;
+    color: var(--ui-on-accent) !important;
+}
+.tti-page-tab.add-btn {
+    padding: 0 9px;
+    border: 1px dashed var(--ui-border-strong) !important;
+    color: var(--ui-text-muted) !important;
+}
+.tti-page-tab.add-btn:hover {
+    border-color: var(--ui-accent) !important;
+    background: var(--ui-surface-raised) !important;
+    color: var(--ui-accent) !important;
+}
+.tti-page-actions {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    padding-left: 6px;
+    border-left: 1px solid var(--ui-border);
+    gap: 3px;
+}
+.tti-page-mini-btn {
     display: grid;
-    gap: 8px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid transparent !important;
+    border-radius: 8px;
+    background: transparent !important;
+    color: var(--ui-text-soft) !important;
+    font-size: 12px !important;
+    cursor: pointer;
+    transition: 0.14s ease;
+    place-items: center;
 }
-.html-switcher-input-item {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 34px;
-    gap: 8px;
-}
-.tti-html-switcher-text {
-    width: 100%;
-    min-height: 74px;
-    padding: 10px 12px;
-    border: 1px solid var(--ui-border-strong) !important;
-    border-radius: 10px;
+.tti-page-mini-btn:hover:not(:disabled) {
+    border-color: var(--ui-border-strong) !important;
     background: var(--ui-surface-raised) !important;
     color: var(--ui-text) !important;
-    outline: 0;
-    font:
-        13px/1.7 "Pretendard-Regular",
-        sans-serif;
-    resize: vertical;
 }
-.html-switcher-remove-btn {
-    width: 34px;
-    height: 34px;
-    min-height: 34px !important;
-    padding: 0 !important;
-    align-self: start;
+.tti-page-mini-btn.danger:hover:not(:disabled) {
+    border-color: var(--ui-danger) !important;
+    color: var(--ui-danger) !important;
 }
-.html-switcher-inputs-empty {
-    color: var(--ui-text-muted);
-    font-size: 12px !important;
-}
-.html-switcher-inputs.has-items .html-switcher-inputs-empty {
-    display: none;
+.tti-page-mini-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
 }
 
 /* ---------- 반응형 ---------- */
