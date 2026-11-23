@@ -1527,6 +1527,7 @@ html[data-tti-theme="light"] body {
     display: block;
 }
 .tti-pen-settings-modal .tag-item-left > .tti-field {
+    flex-wrap: nowrap;
     gap: 12px;
 }
 .tti-pen-settings-modal .tag-item-left > .tti-field:last-child {
@@ -1535,9 +1536,14 @@ html[data-tti-theme="light"] body {
 .tti-pen-settings-modal .tag-item-left > .tti-field > span {
     flex: 0 0 58px;
 }
-.tti-pen-settings-modal .tag-item-left > .tti-field > input[type="text"],
+.tti-pen-settings-modal .tag-item-left > .tti-field > input[type="text"] {
+    flex: 0 1 168px;
+    width: 168px;
+    max-width: 168px;
+    min-width: 0;
+}
 .tti-pen-settings-modal .tag-item-left > .tti-field > .tti-select-trigger {
-    flex: 1 1 auto;
+    flex: 0 1 200px;
     min-width: 0;
 }
 .tti-pen-settings-modal .tag-size-control {
